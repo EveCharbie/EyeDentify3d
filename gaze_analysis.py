@@ -1,4 +1,8 @@
-
+"""
+This code aims to identify visual behavior sequences, namely fixation, saccades, blink, and smooth pursuite.
+We consider that when the head rotates, the image in the VR helmet (eye-tracker) rotates by the same amount, making it
+as if the head was rotating around the subjects eyes instead of the neck joint center.
+"""
 import numpy as np
 import pickle
 import os
@@ -64,9 +68,8 @@ test_data = pd.read_csv(datapath+test_path, sep=';')
 """
 time_vector in seconds
 gaze_origin in meters
-gaze_direction is a unit vector
+eye_direction is a unit vector
 gaze_distance in meters
-gaze_endpoint in meters
 """
 
 # Parameters to define ---------------------------------------
@@ -76,11 +79,12 @@ PLOT_BAD_DATA_FLAG = True
 # ------------------------------------------------------------
 
 time_vector = np.array((test_data["time_stamp(ms)"] - test_data["time_stamp(ms)"][0]) / 1000)
-gaze_origin = np.array(
+eye_origin = np.array(
     [test_data["gaze_origin_L.x(mm)"] / 1000, test_data["gaze_origin_L.y(mm)"] / 1000, test_data["gaze_origin_L.z(mm)"] / 1000])
-gaze_direction = np.array(
+eye_direction = np.array(
     [test_data["gaze_direct_L.x"], test_data["gaze_direct_L.y"], test_data["gaze_direct_L.z"]])
-gaze_distance = np.array(test_data["distance_C(mm)"] / 1000)
+gaze_distance = np.ones(test_data["distance_C(mm)"].shape) * gaze_distance_fixed
+# np.array(test_data["distance_C(mm)"] / 1000)  # It should be recorded, but the data seems invalid
 helmet_rotation = np.array([test_data["helmet_rot_x"], test_data["helmet_rot_y"], test_data["helmet_rot_z"]])
 
 if np.sum(test_data['eye_valid_L']) != 31 * len(test_data['eye_valid_L']) or np.sum(test_data['eye_valid_R']) != 31 * len(test_data['eye_valid_R']):
@@ -93,12 +97,12 @@ if np.sum(test_data['eye_valid_L']) != 31 * len(test_data['eye_valid_L']) or np.
     plt.show()
     raise ValueError("The eye_valid data is not valid, please see graph for more information.")
 
-def detect_valid_data(time_vector, gaze_direction):
+def detect_invalid_data(time_vector, eye_direction):
 
     # Find where the data does not change
-    zero_diffs_x = np.where(np.abs(gaze_direction[0, 1:] - gaze_direction[0, :-1]) < 1e-8)[0]
-    zero_diffs_y = np.where(np.abs(gaze_direction[1, 1:] - gaze_direction[1, :-1]) < 1e-8)[0]
-    zero_diffs_z = np.where(np.abs(gaze_direction[2, 1:] - gaze_direction[2, :-1]) < 1e-8)[0]
+    zero_diffs_x = np.where(np.abs(eye_direction[0, 1:] - eye_direction[0, :-1]) < 1e-8)[0]
+    zero_diffs_y = np.where(np.abs(eye_direction[1, 1:] - eye_direction[1, :-1]) < 1e-8)[0]
+    zero_diffs_z = np.where(np.abs(eye_direction[2, 1:] - eye_direction[2, :-1]) < 1e-8)[0]
 
     # Find the common indices
     zero_diffs = np.intersect1d(np.intersect1d(zero_diffs_x, zero_diffs_y), zero_diffs_z)
@@ -136,71 +140,57 @@ def detect_blinks(time_vector, test_data, blink_threshold):
 
     return blink_sequences
 
-def detect_saccades(time_vector, gaze_origin, gaze_direction, gaze_distance, helmet_rotation):
-    """
-    I arbitrarily decided that the system origin is positioned 10 cm away from the neck joint center.
-    """
-    neck_system_origin_shift = np.array([0, 0, 0.1])
-    gaze_endpoint_system_origin = gaze_origin + gaze_direction * gaze_distance
+def detect_saccades(time_vector, eye_direction, helmet_rotation):
+
     helmet_rotation_in_rad = helmet_rotation * np.pi / 180
 
-    gaze_endpoint_word_origin = np.zeros(gaze_endpoint_system_origin.shape)
+    gaze_direction = np.zeros(eye_direction.shape)
     for i_frame in range(helmet_rotation_in_rad.shape[1]):
         rotation_matrix = biorbd.Rotation.fromEulerAngles(helmet_rotation_in_rad[:, i_frame], 'xyz').to_array()
-        gaze_endpoint_word_origin[:, i_frame] = rotation_matrix @ (neck_system_origin_shift + gaze_endpoint_system_origin[:, i_frame])
+        gaze_direction[:, i_frame] = rotation_matrix @ eye_direction[:, i_frame]
 
     plt.figure()
     plt.plot(time_vector, gaze_distance)
     plt.savefig("figures/distance.png")
     plt.show()
 
-    gaze_endpoint_angular_velocity_rad = np.zeros((gaze_endpoint_word_origin.shape[1], ))
-    for i_frame in range(1, gaze_endpoint_word_origin.shape[1]):  # Skipping the first frame
-        vector_before = gaze_endpoint_word_origin[:, i_frame - 1]
-        vector_after = gaze_endpoint_word_origin[:, i_frame]
-        gaze_endpoint_angular_velocity_rad[i_frame] = np.arccos(np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)) / (time_vector[i_frame] - time_vector[i_frame - 1])
+    gaze_angular_velocity_rad = np.zeros((gaze_direction.shape[1], ))
+    for i_frame in range(1, gaze_direction.shape[1]):  # Skipping the first frame
+        vector_before = gaze_direction[:, i_frame - 1]
+        vector_after = gaze_direction[:, i_frame]
+        gaze_angular_velocity_rad[i_frame] = np.arccos(np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)) / (time_vector[i_frame] - time_vector[i_frame - 1])
 
-    threshold_5sigma = 5 * np.nanstd(gaze_endpoint_angular_velocity_rad * 180 / np.pi)
+    threshold_5sigma = 5 * np.nanstd(gaze_angular_velocity_rad * 180 / np.pi)
     plt.figure()
-    plt.plot(time_vector, gaze_endpoint_angular_velocity_rad * 180 / np.pi, label='Angular Velocity')
+    plt.plot(time_vector, gaze_angular_velocity_rad * 180 / np.pi, label='Angular Velocity')
     plt.plot(np.array([time_vector[0], time_vector[-1]]), np.array([100, 100]), 'k--', label=r'Threshold 100$\^circ/s$')
     plt.plot(np.array([time_vector[0], time_vector[-1]]), np.array([threshold_5sigma, threshold_5sigma]), 'b--', label=r'Threshold 5$\sigma$')
     plt.legend()
     plt.savefig("figures/saccade_detection_test.png")
     plt.show()
 
-    saccade_timing = np.where(gaze_endpoint_angular_velocity_rad * 180 / np.pi > threshold_5sigma)[0]
+    saccade_timing = np.where(gaze_angular_velocity_rad * 180 / np.pi > threshold_5sigma)[0]
     saccade_sequences = np.array_split(saccade_timing, np.flatnonzero(np.diff(saccade_timing) > 1) + 1)
 
-    return saccade_sequences, gaze_endpoint_word_origin
+    return saccade_sequences
 
 
 def detect_fixations(test_data):
 
-    gaze_endpoint = gaze_origin + gaze_direction * gaze_distance
 
-    gaze_displacement_angle = np.zeros(len(gaze_origin[0]))
-    for i in range(len(gaze_origin[0])):
-        gaze_displacement_angle[i] = np.arccos(np.dot(gaze_direction[:, i], gaze_direction[:, i+1]) / (np.linalg.norm(gaze_direction[:, i]) * np.linalg.norm(gaze_direction[:, i+1])))
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot(gaze_origin[0, :], gaze_origin[1, :], gaze_origin[2, :], ".g", label='gaze_origin')
-    ax.plot(gaze_endpoint[0, :], gaze_endpoint[1, :], gaze_endpoint[2, :], ".r", label='gaze_endpoint')
-    plt.savefig("figures/gaze_3D_test.png")
-    plt.show()
     return
 
 # Remove invalid sequences where the eye-tracker did not detect any eye movement
-invalid_sequences = detect_valid_data(time_vector, gaze_direction)
+invalid_sequences = detect_invalid_data(time_vector, eye_direction)
 # Remove blinks
 blink_sequences = detect_blinks(time_vector, test_data, blink_threshold)
 
 if PLOT_BAD_DATA_FLAG:
     # Plot the timing of the bad data
     plt.figure()
-    plt.plot(time_vector, gaze_direction[0], label='gaze_direction_x')
-    plt.plot(time_vector, gaze_direction[1], label='gaze_direction_y')
-    plt.plot(time_vector, gaze_direction[2], label='gaze_direction_z')
+    plt.plot(time_vector, eye_direction[0], label='eye_direction_x')
+    plt.plot(time_vector, eye_direction[1], label='eye_direction_y')
+    plt.plot(time_vector, eye_direction[2], label='eye_direction_z')
     label_flag = True
     for i in invalid_sequences:
         if label_flag:
@@ -223,26 +213,26 @@ if PLOT_BAD_DATA_FLAG:
 
 # Remove invalid sequences from the variable vectors
 for invalid in invalid_sequences:
-    gaze_origin[:, invalid] = np.nan
-    gaze_direction[:, invalid] = np.nan
-    gaze_distance[invalid] = np.nan
+    eye_origin[:, invalid] = np.nan
+    eye_direction[:, invalid] = np.nan
+    eye_distance[invalid] = np.nan
 
 # Remove blink sequences from the variable vectors
 for blink in blink_sequences:
-    gaze_origin[:, blink] = np.nan
-    gaze_direction[:, blink] = np.nan
-    gaze_distance[blink] = np.nan
+    eye_origin[:, blink] = np.nan
+    eye_direction[:, blink] = np.nan
+    eye_distance[blink] = np.nan
 
 
 # Detect saccades
-saccade_sequences, gaze_endpoint_word_origin = detect_saccades(time_vector, gaze_origin, gaze_direction, gaze_distance, helmet_rotation)
+saccade_sequences = detect_saccades(time_vector, eye_direction, helmet_rotation)
 
 
 # Plot the classification of gaze data
 plt.figure()
-plt.plot(time_vector, gaze_direction[0], label='gaze_direction_x')
-plt.plot(time_vector, gaze_direction[1], label='gaze_direction_y')
-plt.plot(time_vector, gaze_direction[2], label='gaze_direction_z')
+plt.plot(time_vector, eye_direction[0], label='eye_direction_x')
+plt.plot(time_vector, eye_direction[1], label='eye_direction_y')
+plt.plot(time_vector, eye_direction[2], label='eye_direction_z')
 label_flag = True
 for i in invalid_sequences:
     if label_flag:
@@ -290,20 +280,13 @@ fig, axs = plt.subplots(3, 1)
 axs[0].plot(test_data["time_stamp(ms)"], test_data["gaze_direct_L.x"], label='gaze_direct_L.x')
 axs[1].plot(test_data["time_stamp(ms)"], test_data["gaze_direct_L.y"], label='gaze_direct_L.y')
 axs[2].plot(test_data["time_stamp(ms)"], test_data["gaze_direct_L.z"], label='gaze_direct_L.z')
-plt.savefig("figures/gaze_direction_test.png")
+plt.savefig("figures/eye_direction_test.png")
 plt.show()
 
 
-gaze_origin = np.array([test_data["gaze_origin_L.x(mm)"], test_data["gaze_origin_L.y(mm)"], test_data["gaze_origin_L.z(mm)"]])
-gaze_direction = np.array([test_data["gaze_direct_L.x"], test_data["gaze_direct_L.y"], test_data["gaze_direct_L.z"]])
+eye_origin = np.array([test_data["gaze_origin_L.x(mm)"], test_data["gaze_origin_L.y(mm)"], test_data["gaze_origin_L.z(mm)"]])
+eye_direction = np.array([test_data["gaze_direct_L.x"], test_data["gaze_direct_L.y"], test_data["gaze_direct_L.z"]])
 gaze_distance = np.array(test_data["distance_C(mm)"])
-gaze_endpoint = gaze_origin + gaze_direction * gaze_distance
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.plot(gaze_origin[0, :], gaze_origin[1, :], gaze_origin[2, :], ".g", label='gaze_origin')
-ax.plot(gaze_endpoint[0, :], gaze_endpoint[1, :], gaze_endpoint[2, :], ".r", label='gaze_endpoint')
-plt.savefig("figures/gaze_3D_test.png")
-plt.show()
 
 
 
