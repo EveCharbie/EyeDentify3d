@@ -169,3 +169,5 @@ AllData
 figures/
 
 *.png
+
+.DS_Store

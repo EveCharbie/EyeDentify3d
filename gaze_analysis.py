@@ -8,7 +8,6 @@ import pickle
 import os
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from IPython import embed
 import pandas as pd
 import biorbd
 import pingouin as pg
@@ -17,8 +16,9 @@ import pingouin as pg
 # Define the path to the data
 datapath = "AllData/"
 test_path = "TESTNA01/VideoListOne/20231030161004_eye_tracking_VideoListOne_TESTNA01_Demo_Mode_2D_Pen1_000.csv"
-
+black_screen_timing_file_path = "length_before_black_screen.xlsx"
 test_data = pd.read_csv(datapath+test_path, sep=';')
+black_screen_timing_data = pd.read_excel(datapath+black_screen_timing_file_path)
 
 """
 -> 'time(100ns)' = time stamps of the recorded frames
@@ -80,7 +80,23 @@ PLOT_BAD_DATA_FLAG = False
 PLOT_SACCADES_FLAG = False
 # ------------------------------------------------------------
 
+trial_names = list(black_screen_timing_data['Video Name'])
+this_trial_name = test_path.split('_')[-2]
+if this_trial_name not in trial_names:
+    # @thomasromeas : this happens a lot!
+    print("This trial is not in the list of lengths of trials ('durée vidéos.xlsx'), what does it mean?")
+    length_trial = np.nan
+else:
+    length_trial = black_screen_timing_data['Lenght before black screen (s)'][trial_names.index(this_trial_name)]
+
 time_vector = np.array((test_data["time_stamp(ms)"] - test_data["time_stamp(ms)"][0]) / 1000)
+length_trial = time_vector[-1] if np.isnan(length_trial) else length_trial
+
+# cut the data after the black screen
+black_screen_index = np.where(time_vector > length_trial)[0][0] if length_trial < time_vector[-1] else len(time_vector)
+time_vector = time_vector[:black_screen_index]
+test_data = test_data.iloc[:black_screen_index, :]
+
 eye_origin = np.array(
     [test_data["gaze_origin_L.x(mm)"] / 1000, test_data["gaze_origin_L.y(mm)"] / 1000, test_data["gaze_origin_L.z(mm)"] / 1000])
 eye_direction = np.array(
@@ -181,10 +197,10 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     """
     Parameters t_wind (22000 micros), t_overlap (6000 micros) and eta_p (0.1) taken from the original paper.
     """
-    # Thomas: please confirm the values to use
+    # @thomasromeas : please confirm the values to use
     t_wind = 0.022 * 2  # Window size in ms
     t_overlap = 0.006  # Window overlap in ms
-    eta_p = 0.01 * 2 # Threshold for the p-value of the Rayleigh test
+    eta_p = 0.01 * 2  # Threshold for the p-value of the Rayleigh test
 
     intersaccadic_window_idx = []
     for i_intersaccadic_gap in intersaccadic_sequences:
@@ -198,7 +214,7 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
             if len(window_end_idx) != 0 and window_end_idx[0] < end_of_intersaccadic_gap:
                 window_end_idx = window_end_idx[0]
             else:
-                # Thomas: do we want to do this?
+                # @thomasromeas : do we want to do this?
                 window_end_idx = end_of_intersaccadic_gap
             if window_end_idx - window_start_idx > 1:
                 intersaccadic_window_idx.append(np.arange(window_start_idx, window_end_idx))
@@ -213,7 +229,7 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
         else:
             incoherent_windows += list(i_window)
 
-    # Thomas: Here I remove the duplicates,
+    # @thomasromeas : Here I remove the duplicates,
     # but in the original article the mean p-value is used
     # (which does not make sens since the coherence is determined with the neighbors....)
     coherent_windows_tempo = []
@@ -305,7 +321,7 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
     https://doi.org/10.1016/j.bspc.2014.12.008
     """
     # Parameters to define ---------------------------------------
-    # Thomas: please confirm the values to use
+    # @thomasromeas : please confirm the values to use
     eta_D = 0.45  #  is the threshold for dispersion (without units)
     eta_CD = 0.5  # is the threshold for consistency of direction (without units)
     eta_PD = 0.5  # is the threshold for position displacement (without units)
@@ -332,8 +348,8 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
             uncertain_timing += list(sequence)
 
     # Classify the ambiguous timings
-    uncertain_sequence = np.array_split(uncertain_timing, np.flatnonzero(np.diff(uncertain_timing) > 1) + 1)
-    for i_sequence, sequence in enumerate(uncertain_sequence):
+    uncertain_sequences = np.array_split(uncertain_timing, np.flatnonzero(np.diff(uncertain_timing) > 1) + 1)
+    for i_sequence, sequence in enumerate(uncertain_sequences):
         parameter_D, parameter_CD, parameter_PD, parameter_R = discriminate_fixations_and_smooth_pursuite(
             gaze_direction[:, sequence])
         criteria_3 = parameter_PD > eta_PD
@@ -387,23 +403,26 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
                     smooth_pursuite_timing += list(range(before_idx, after_idx))
                 else:
                     fixation_timing += list(range(before_idx, after_idx))
-                for i_uncertain_sequence, uncertain in enumerate(uncertain_sequence):
+                for i_uncertain_sequences, uncertain in enumerate(uncertain_sequences):
                     if before_idx in uncertain:
-                        uncertain_sequence.pop(i_uncertain_sequence)
+                        uncertain_sequences.pop(i_uncertain_sequences)
                     if after_idx in uncertain:
-                        uncertain_sequence.pop(i_uncertain_sequence)
+                        uncertain_sequences.pop(i_uncertain_sequences)
         else:
             # Fixation like segment
             if criteria_4:
                 smooth_pursuite_timing += list(sequence)
             else:
                 fixation_timing += list(sequence)
-            uncertain_sequence.pop(i_sequence)
+            uncertain_sequences.pop(i_sequence)
 
     fixation_sequences = np.array_split(np.array(fixation_timing), np.flatnonzero(np.diff(np.array(fixation_timing)) > 1) + 1)
     smooth_pursuite_sequences = np.array_split(np.array(smooth_pursuite_timing), np.flatnonzero(np.diff(np.array(smooth_pursuite_timing)) > 1) + 1)
+    # @thomasromeas : Do we want the last fixation or the longest or something else?
+    quiet_eye_sequences = fixation_sequences[-1]
+    longest_fixation_sequence = fixation_sequences[np.argmax([len(fixation) for fixation in fixation_sequences])]
 
-    return fixation_sequences, smooth_pursuite_sequences, uncertain_sequence
+    return fixation_sequences, smooth_pursuite_sequences, quiet_eye_sequences, uncertain_sequences
 
 
 # Remove invalid sequences where the eye-tracker did not detect any eye movement
@@ -467,7 +486,7 @@ for i in all_index:
 intersaccadic_timing = np.where(intersaccadic_interval == 1)[0]
 intersaccadic_sequences = np.array_split(intersaccadic_timing, np.flatnonzero(np.diff(intersaccadic_timing) > 1) + 1)
 intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = sliding_window(time_vector, intersaccadic_sequences, gaze_direction)
-fixation_sequences, smooth_pursuite_sequences, uncertain_sequence = detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersaccadic_gouped_sequences)
+fixation_sequences, smooth_pursuite_sequences, quiet_eye_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersaccadic_gouped_sequences)
 
 # Plot the classification of gaze data
 plt.figure(figsize=(15, 15))
@@ -517,180 +536,40 @@ for i in smooth_pursuite_sequences:
         label_flag = False
     else:
         plt.axvspan(time_vector[i[0]], time_vector[i[-1]], edgecolor=None, color='tab:orange', alpha=0.5)
+for i in quiet_eye_sequences:
+    if len(i) < 1:
+        continue
+    plt.axvspan(time_vector[i[0]], time_vector[i[-1]], edgecolor=None, color='tab:pink', alpha=0.5, label='Quiet Eye Sequence')
 plt.legend()
 plt.savefig("figures/gaze_classification_test.png")
 plt.show()
 
+# Intermediary metrics
+fixation_duration = []
+for i in fixation_sequences:
+    fixation_duration.append(time_vector[i[-1]] - time_vector[i[0]])
+total_fixation_duration = np.sum(np.array(fixation_duration))
+smooth_pursuite_duration = []
+for i in smooth_pursuite_sequences:
+    smooth_pursuite_duration.append(time_vector[i[-1]] - time_vector[i[0]])
+total_smooth_pursuite_duration = np.sum(np.array(smooth_pursuite_duration))
+quiet_eye_duration = time_vector[quiet_eye_sequences[0][-1]] - time_vector[quiet_eye_sequences[0][0]]
+blink_duration = []
+for i in blink_sequences:
+    blink_duration.append(time_vector[i[-1]] - time_vector[i[0]])
+total_blink_duration = np.sum(np.array(blink_duration))
 
+# Metrics
+# @thomasromeas: Please confirm which metrics we want to use
+nb_fixations = len(fixation_sequences)
+mean_fixation_duration = np.mean(np.array(fixation_duration))
+search_rate = nb_fixations / mean_fixation_duration
+nb_blinks = len(blink_sequences)
+nb_saccades = len(saccade_sequences)
+# mean_saccade_amplitude?
+# max_smooth_pursuite_trajectory?
+fixation_ratio = total_fixation_duration / time_vector[-1]
+smooth_pursuite_ratio = total_smooth_pursuite_duration / time_vector[-1]
+quiet_eye_ratio = quiet_eye_duration / time_vector[-1]
+blinking_ration = total_blink_duration / time_vector[-1]
 
-
-
-
-
-fig, axs = plt.subplots(3, 1)
-axs[0].plot(test_data["time_stamp(ms)"], np.unwrap(test_data["helmet_rot_x"]), label='helmet_rot_x')
-axs[1].plot(test_data["time_stamp(ms)"], np.unwrap(test_data["helmet_rot_y"]), label='helmet_rot_y')
-axs[2].plot(test_data["time_stamp(ms)"], np.unwrap(test_data["helmet_rot_z"]), label='helmet_rot_z')
-plt.savefig("figures/head_rotation_test.png")
-plt.show()
-
-fig, axs = plt.subplots(3, 1)
-axs[0].plot(test_data["time_stamp(ms)"], test_data["gaze_direct_L.x"], label='gaze_direct_L.x')
-axs[1].plot(test_data["time_stamp(ms)"], test_data["gaze_direct_L.y"], label='gaze_direct_L.y')
-axs[2].plot(test_data["time_stamp(ms)"], test_data["gaze_direct_L.z"], label='gaze_direct_L.z')
-plt.savefig("figures/eye_direction_test.png")
-plt.show()
-
-
-eye_origin = np.array([test_data["gaze_origin_L.x(mm)"], test_data["gaze_origin_L.y(mm)"], test_data["gaze_origin_L.z(mm)"]])
-eye_direction = np.array([test_data["gaze_direct_L.x"], test_data["gaze_direct_L.y"], test_data["gaze_direct_L.z"]])
-gaze_distance = np.array(test_data["distance_C(mm)"])
-
-
-
-
-
-
-
-# Get the list of CSV files
-files_names = list(datapath.rglob("*.csv"))
-nb_files = len(files_names)
-
-# Create a list for data names
-data_names = [file.stem for file in files_names]
-
-# Read all datasets into a list
-dataset_list = [pd.read_csv(file, sep=';') for file in files_names]
-
-# Add a column with the file name
-for i, df in enumerate(dataset_list):
-    df['idname'] = data_names[i]
-
-# Combine all datasets into one DataFrame
-dataout = pd.concat(dataset_list, ignore_index=True)
-
-# Remove spaces in the 'idname' column
-dataout['idname'] = dataout['idname'].str.replace(" ", "")
-
-# Create new columns from 'idname'
-dataout['idname1'] = dataout['idname'].str.replace("_", " ")
-dataout['participant'] = dataout['idname1'].apply(lambda x: x.split()[6])
-dataout['mode'] = dataout['idname1'].apply(lambda x: x.split()[9])
-dataout['Video.Name'] = dataout['idname1'].apply(lambda x: x.split()[10])
-dataout['Moment'] = dataout['idname1'].apply(lambda x: x.split()[7])
-dataout['Groupe'] = dataout['participant'].str[4:6]
-
-# Filter for 'Experiment' mode
-data = dataout[dataout['Moment'] == 'Experiment']
-
-# Read MinMax.xlsx
-min_max_path = "Results/MinMax.xlsx"
-MinMax1 = pd.read_excel(min_max_path)
-
-# Merge data with MinMax
-data = pd.merge(data, MinMax1, on=["Video.Name", "mode"])
-
-# Filter based on time.UnityVideoPlayer
-data['time.UnityVideoPlayer.'] = pd.to_numeric(data['time.UnityVideoPlayer.'], errors='coerce')
-data = data[data['time.UnityVideoPlayer.'] <= data['DureeVideo']]
-
-# Calculate velocity
-data['combinaisonDGx'] = data[['gaze_origin_L.x.mm.', 'gaze_origin_R.x.mm.']].mean(axis=1)
-data['combinaisonDGy'] = data[['gaze_origin_L.y.mm.', 'gaze_origin_R.y.mm.']].mean(axis=1)
-data['combinaisonDGz'] = data[['gaze_origin_L.z.mm.', 'gaze_origin_R.z.mm.']].mean(axis=1)
-
-# Filter for '2D' and '360VR' modes
-event2D = data[data['mode'] == '2D']
-event360VR = data[data['mode'] == '360VR']
-
-# Function to calculate velocity and filter data
-def calculate_velocity(data):
-    data['distancex'] = data['combinaisonDGx'].diff()
-    data['distancey'] = data['combinaisonDGy'].diff()
-    data['distance'] = np.sqrt(data['distancex']**2 + data['distancey']**2)
-    data['temps0'] = data['time_stamp.ms.'].diff()
-    data['temps'] = data['temps0'] * 10**-3
-    data['velocity'] = data['distance'] / data['temps']
-    data = data[(data['temps0'] >= 8) & (data['temps0'] <= 9)]
-    data = data[data['velocity'] > 0]
-    data = data[(data['pupil_diameter_L.mm.'] >= 0) & (data['pupil_diameter_R.mm.'] >= 0)]
-    return data
-
-data_velocity2D = calculate_velocity(event2D)
-data_velocity360VR = calculate_velocity(event360VR)
-
-# Function to calculate fixations and saccades
-def calculate_fixations(data_velocity):
-    data_velocity['seuil'] = np.where(data_velocity['velocity'] > 5 * data_velocity['velocity'].median(), 5 * data_velocity['velocity'].median(), 0)
-    data_velocity['duree'] = np.where(data_velocity['seuil'] == 0, 1, 0)
-    data_velocity['duree2'] = data_velocity.groupby((data_velocity['duree'] == 0).cumsum()).cumcount() + 1
-    data_velocity['dureefix'] = data_velocity['duree2'] * 8.33
-    data_velocity_fixations = data_velocity[data_velocity['dureefix'] > 0]
-    data_velocity_fixations = data_velocity_fixations[data_velocity_fixations['dureefix'] >= 100]
-    data_velocity['duree3'] = np.where(data_velocity['duree'] == 0, 1, 0)
-    data_velocity['duree4'] = data_velocity.groupby((data_velocity['duree3'] == 0).cumsum()).cumcount() + 1
-    data_velocity['dureesacc'] = data_velocity['duree4'] * 8.33
-    data_velocity_saccades = data_velocity[data_velocity['dureesacc'] > 0]
-    data_velocity_saccades = data_velocity_saccades[(data_velocity_saccades['dureesacc'] <= 50) & (data_velocity_saccades['dureesacc'] >= 20)]
-    return data_velocity_fixations, data_velocity_saccades
-
-data_velocity2D_fixations, data_velocity2D_saccades = calculate_fixations(data_velocity2D)
-data_velocity360VR_fixations, data_velocity360VR_saccades = calculate_fixations(data_velocity360VR)
-
-# Normalize data based on the duration of each video sequence
-def normalize_data(data_fixations, data_saccades, MinMax):
-    fixation_mean = data_fixations.groupby(['participant', 'mode', 'Video.Name'])['dureefix'].mean().reset_index()
-    fixation_nb = data_fixations.groupby(['participant', 'mode', 'Video.Name']).size().reset_index(name='nbfixation')
-    saccade_nb = data_saccades.groupby(['participant', 'mode', 'Video.Name']).size().reset_index(name='nbsaccade')
-    fixation_nb = pd.merge(fixation_nb, MinMax, on=['Video.Name', 'mode'])
-    fixation_nb['Nbfix_normalized'] = fixation_nb['nbfixation'] / fixation_nb['DureeVideo']
-    saccade_nb = pd.merge(saccade_nb, MinMax, on=['Video.Name', 'mode'])
-    saccade_nb['Nbsaccade_normalized'] = saccade_nb['nbsaccade'] / saccade_nb['DureeVideo']
-    return fixation_mean, fixation_nb, saccade_nb
-
-fixation_mean_2D, fixation_nb_2D, saccade_nb_2D = normalize_data(data_velocity2D_fixations, data_velocity2D_saccades, MinMax1)
-fixation_mean_360VR, fixation_nb_360VR, saccade_nb_360VR = normalize_data(data_velocity360VR_fixations, data_velocity360VR_saccades, MinMax1)
-
-# Further processing for fixations, saccades, and search rate
-def process_fixations(fixation_mean, fixation_nb, saccade_nb):
-    nb_fixation_participant = fixation_nb.groupby(['participant', 'mode'])['Nbfix_normalized'].mean().reset_index()
-    duree_fixation_participant = fixation_mean.groupby(['participant', 'mode'])['dureefix'].mean().reset_index()
-    search_rate = pd.merge(nb_fixation_participant, duree_fixation_participant, on=['participant', 'mode'])
-    search_rate['searchrate'] = search_rate['Nbfix_normalized'] / search_rate['dureefix']
-    nb_saccade_participant = saccade_nb.groupby(['participant', 'mode'])['Nbsaccade_normalized'].mean().reset_index()
-    return nb_fixation_participant, duree_fixation_participant, search_rate, nb_saccade_participant
-
-nb_fixation2D_participant, duree_fixation2D_participant, search_rate_2D, nb_saccade2D_participant = process_fixations(fixation_mean_2D, fixation_nb_2D, saccade_nb_2D)
-nb_fixation360VR_participant, duree_fixation360VR_participant, search_rate_360VR, nb_saccade360VR_participant = process_fixations(fixation_mean_360VR, fixation_nb_360VR, saccade_nb_360VR)
-
-# Combine data for Excel output
-Nbfixation = pd.concat([nb_fixation2D_participant, nb_fixation360VR_participant])
-Dureefixation = pd.concat([duree_fixation2D_participant, duree_fixation360VR_participant])
-Searchrate = pd.concat([search_rate_2D, search_rate_360VR])
-Nbsaccade = pd.concat([nb_saccade2D_participant, nb_saccade360VR_participant])
-
-GB = Nbfixation.merge(Dureefixation).merge(Searchrate).merge(Nbsaccade)
-GB.to_excel("/Users/MildredTaupin/Desktop/Pro/PostDoc/Canada/Code_Bishop_Basket/Results/GB.xlsx", index=False)
-
-# Process head rotation
-dataout['helmet_rot_x'] = pd.to_numeric(dataout['helmet_rot_x'], errors='coerce')
-dataout['helmet_rot_y'] = pd.to_numeric(dataout['helmet_rot_y'], errors='coerce')
-dataout['helmet_rot_z'] = pd.to_numeric(dataout['helmet_rot_z'], errors='coerce')
-
-dataout['helmet_rot_x'] = np.where(dataout['helmet_rot_x'] > 180, dataout['helmet_rot_x'] - 360, dataout['helmet_rot_x'])
-dataout['helmet_rot_y'] = np.where(dataout['helmet_rot_y'] > 180, dataout['helmet_rot_y'] - 360, dataout['helmet_rot_y'])
-dataout['helmet_rot_z'] = np.where(dataout['helmet_rot_z'] > 180, dataout['helmet_rot_z'] - 360, dataout['helmet_rot_z'])
-
-dataout['HRot_x'] = dataout.groupby('Video.Name')['helmet_rot_x'].diff().abs()
-dataout['HRot_y'] = dataout.groupby('Video.Name')['helmet_rot_y'].diff().abs()
-dataout['HRot_z'] = dataout.groupby('Video.Name')['helmet_rot_z'].diff().abs()
-
-HeadRot_Results = dataout.groupby(['Video.Name', 'participant', 'mode']).agg({'HRot_x': 'sum', 'HRot_y': 'sum', 'HRot_z': 'sum'}).reset_index()
-
-HeadRot_Results = pd.merge(HeadRot_Results, MinMax1, on=['Video.Name', 'mode'])
-HeadRot_Results['HRot_x_normalized'] = HeadRot_Results['HRot_x'] / HeadRot_Results['DureeVideo']
-HeadRot_Results['HRot_y_normalized'] = HeadRot_Results['HRot_y'] / HeadRot_Results['DureeVideo']
-HeadRot_Results['HRot_z_normalized'] = HeadRot_Results['HRot_z'] / HeadRot_Results['DureeVideo']
-
-HeadRot_Final = HeadRot_Results.groupby(['participant', 'mode']).agg({'HRot_x_normalized': 'mean', 'HRot_y_normalized': 'mean', 'HRot_z_normalized': 'mean'}).reset_index()
-HeadRot_Final.to_excel("/Users/MildredTaupin/Desktop/Pro/PostDoc/Canada/Code_Bishop_Basket/Results/TeteRotation.xlsx", index=False)
