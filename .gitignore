@@ -162,12 +162,8 @@ cython_debug/
 #.idea/
 
 .idea/
-
-AllData
-
-
-figures/
-
 *.png
-
+.DS_Store
+AllData/
+figures/
 Videos/
