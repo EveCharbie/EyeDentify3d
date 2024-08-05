@@ -95,25 +95,12 @@ def detect_invalid_data(time_vector, eye_direction):
     return invalid_sequences
 
 def detect_blinks(time_vector, data):
+    """
+    Blinks are detected when both eye openness drops bellow 0.5 il line with
+    https://ieeexplore.ieee.org/abstract/document/9483841
+    """
     blink_threshold = 0.5
-    blink_timing_right = np.where(data["openness_R"] < blink_threshold)[0]
-    blink_timing_left = np.where(data["openness_L"] < blink_threshold)[0]
     blink_timing_both = np.where((data["openness_R"] < blink_threshold) & (data["openness_L"] < blink_threshold))[0]
-    blink_timing_missmatch = np.where(((data["openness_R"] < blink_threshold) & (data["openness_L"] > blink_threshold)) | (
-                (data["openness_R"] > blink_threshold) & (data["openness_L"] < blink_threshold)))[0]
-
-    # plt.figure()
-    # plt.plot(time_vector, data["openness_R"], color='m', label='Openness Right')
-    # plt.plot(time_vector, data["openness_L"], color='c', label='Openness Left')
-    # if len(blink_timing_right) > 0 or len(blink_timing_left > 0):
-    #     for i in blink_timing_both:
-    #         plt.axvspan(time_vector[i], time_vector[i + 1], color='g', alpha=0.5)
-    #     for i in blink_timing_missmatch:
-    #         plt.axvspan(time_vector[i], time_vector[i + 1], color='r', alpha=0.5)
-    # plt.plot(np.array([0, time_vector[-1]]), np.array([blink_threshold, blink_threshold]), 'k--', label='Blink Threshold')
-    # plt.legend()
-    # plt.savefig("figures/blink_detection_test.png")
-    # plt.show()
 
     # Group the indices into sequences
     blink_sequences = np.array_split(blink_timing_both, np.flatnonzero(np.diff(blink_timing_both) > 1) + 1)
@@ -137,6 +124,8 @@ def detect_saccades(time_vector, eye_direction, helmet_rotation):
         vector_before = gaze_direction[:, i_frame - 1]
         vector_after = gaze_direction[:, i_frame + 1]
         gaze_angular_velocity_rad[i_frame] = np.arccos(np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)) / (time_vector[i_frame + 1] - time_vector[i_frame - 1])
+        if np.isnan(gaze_angular_velocity_rad[i_frame]) and not (any(np.isnan(vector_before)) or any(np.isnan(vector_after))):
+            print("nan")
     gaze_angular_velocity_rad[0] = np.arccos(
         np.dot(gaze_direction[:, 0], gaze_direction[:, 1]) / np.linalg.norm(gaze_direction[:, 0]) / np.linalg.norm(gaze_direction[:, 1])) / (
                                                      time_vector[1] - time_vector[0])
@@ -191,17 +180,28 @@ def detect_saccades(time_vector, eye_direction, helmet_rotation):
     #     if len(acceleration_above_threshold) > 2:
     #         saccade_sequences += [i]
 
-    return saccade_sequences, gaze_direction, gaze_angular_velocity_rad, gaze_angular_acceleration_rad
+    # Saccade amplitude
+    # Defined as the angle between the beginning and end of the saccade,
+    # note that there is no check made to detect if there is a larger amplitude reached during the saccade.
+    saccade_amplitudes = []
+    for sequence in saccade_sequences:
+        vector_before = gaze_direction[:, sequence[0]]
+        vector_after = gaze_direction[:, sequence[-1]]
+        angle = np.arccos(np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after))
+        saccade_amplitudes += [angle * 180 / np.pi]
+
+    return saccade_sequences, gaze_direction, gaze_angular_velocity_rad, gaze_angular_acceleration_rad, saccade_amplitudes
 
 
 def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     """
-    Parameters t_wind (22000 micros), t_overlap (6000 micros) and eta_p (0.1) taken from the original paper.
+    Parameters t_wind (22000 micros), t_overlap (6000 micros) and eta_p (0.1) taken from the original paper
+    https://doi.org/10.1016/j.bspc.2014.12.008
     """
-    # @thomasromeas : please confirm the values to use
+    # @thomasromeas : These parameter values are still to be adjusted
     t_wind = 0.022 * 2  # Window size in ms
     t_overlap = 0.006  # Window overlap in ms
-    eta_p = 0.01 * 2  # Threshold for the p-value of the Rayleigh test
+    eta_p = 0.01  # Threshold for the p-value of the Rayleigh test
 
     intersaccadic_window_idx = []
     for i_intersaccadic_gap in intersaccadic_sequences:
@@ -224,6 +224,7 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
 
             window_start_idx = np.where(time_vector < time_vector[window_end_idx - 1] - t_overlap)[0][-1]
 
+    # The mean p-value for each timestamp is used for the coherence/incoherence classification
     p_values = [[] for i in range(len(time_vector))]
     for i_window in intersaccadic_window_idx:
         nb_elements = int(np.prod(np.array(gaze_direction[:, i_window].shape)))
@@ -267,7 +268,7 @@ def detect_directionality_coherence(gaze_direction):
     for i_frame in range(gaze_direction.shape[1] - 1):
         alpha[i_frame] = np.arccos(np.dot(gaze_displacement_rad[:, i_frame], horizontal_vector_on_the_sphere[:, i_frame]) / np.linalg.norm(gaze_displacement_rad[:, i_frame]) / np.linalg.norm(horizontal_vector_on_the_sphere[:, i_frame]))
 
-    # Test that the gaze diplacement and orientation are coherent inside the window
+    # Test that the gaze displacement and orientation are coherent inside the window
     z_value_alpha, p_value_alpha = pg.circ_rayleigh(alpha)
     return p_value_alpha
 
@@ -318,7 +319,7 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
     https://doi.org/10.1016/j.bspc.2014.12.008
     """
     # Parameters to define ---------------------------------------
-    # @thomasromeas : please confirm the values to use
+    # @thomasromeas : These parameter values are still to be adjusted
     eta_D = 0.45  #  is the threshold for dispersion (without units)
     eta_CD = 0.5  # is the threshold for consistency of direction (without units)
     eta_PD = 0.5  # is the threshold for position displacement (without units)
@@ -368,8 +369,8 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
                     if before_idx in fixation_timing:
                         same_segment_backward = False
                     else:
-                        uncertain_mean = np.mean(gaze_direction[:, sequence], axis=1)
-                        current_mean = np.mean(gaze_direction[:, intersaccadic_gouped_sequences[current_i_sequence]], axis=1)
+                        uncertain_mean = np.nanmean(gaze_direction[:, sequence], axis=1)
+                        current_mean = np.nanmean(gaze_direction[:, intersaccadic_gouped_sequences[current_i_sequence]], axis=1)
                         angle = np.arccos(np.dot(uncertain_mean, current_mean) / np.linalg.norm(uncertain_mean) / np.linalg.norm(current_mean))
                         if np.abs(angle) < phi:
                             before_idx = intersaccadic_gouped_sequences[current_i_sequence][0]
@@ -388,8 +389,8 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
                     if after_idx in fixation_timing:
                         same_segment_forward = False
                     else:
-                        uncertain_mean = np.mean(gaze_direction[:, sequence], axis=1)
-                        current_mean = np.mean(gaze_direction[:, intersaccadic_gouped_sequences[current_i_sequence]], axis=1)
+                        uncertain_mean = np.nanmean(gaze_direction[:, sequence], axis=1)
+                        current_mean = np.nanmean(gaze_direction[:, intersaccadic_gouped_sequences[current_i_sequence]], axis=1)
                         angle = np.arccos(np.dot(uncertain_mean, current_mean) / np.linalg.norm(uncertain_mean) / np.linalg.norm(current_mean))
                         if np.abs(angle) < phi:
                             after_idx = intersaccadic_gouped_sequences[current_i_sequence][-1]
@@ -428,6 +429,22 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
 
     return fixation_sequences, smooth_pursuite_sequences, uncertain_sequences
 
+
+def measure_smooth_pursuite_trajectory(time_vector, smooth_pursuite_sequences, gaze_angular_velocity_rad, dt):
+    """
+    The length of the smooth pursuite trajectory is computed as the sum of the angle between two frames in degrees.
+    It can be seen as the integral of the angular velocity.
+    """
+    smooth_pursuite_trajectories = []
+    for sequence in smooth_pursuite_sequences:
+        trajectory_this_time = 0
+        for idx in sequence:
+            time_beginning = time_vector[idx]
+            time_end = time_vector[idx + 1] if idx+1 < len(time_vector) else time_vector[-1] + dt
+            d_trajectory = np.abs(gaze_angular_velocity_rad[idx] * 180 / np.pi) * (time_end - time_beginning)
+            trajectory_this_time += 0 if np.isnan(d_trajectory) else d_trajectory
+        smooth_pursuite_trajectories += [trajectory_this_time]
+    return smooth_pursuite_trajectories
 
 def plot_bad_data_timing(time_vector, eye_direction, file):
     """
@@ -634,7 +651,7 @@ for path, folders, files in os.walk(datapath):
             
             
             # Detect saccades
-            saccade_sequences, gaze_direction, gaze_angular_velocity_rad, gaze_angular_acceleration_rad = detect_saccades(time_vector, eye_direction, helmet_rotation)
+            saccade_sequences, gaze_direction, gaze_angular_velocity_rad, gaze_angular_acceleration_rad, saccade_amplitudes = detect_saccades(time_vector, eye_direction, helmet_rotation)
             
             # Detect fixations
             intersaccadic_interval = np.zeros((len(time_vector), ))
@@ -653,7 +670,7 @@ for path, folders, files in os.walk(datapath):
             intersaccadic_sequences = [np.hstack((intersaccadic_sequences_temporary[i], intersaccadic_sequences_temporary[i][-1] + 1)) for i in range(len(intersaccadic_sequences_temporary)) if len(intersaccadic_sequences_temporary[i]) > 2]
             intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = sliding_window(time_vector, intersaccadic_sequences, gaze_direction)
             fixation_sequences, smooth_pursuite_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersaccadic_gouped_sequences)
-            
+
             if PLOT_CLASSIFICATION_FLAG:
                 # The mean duration of a frame because we only have data at the frame and the duration of the events
                 # should be computed as a step function, thus we have to add a step after the last index.
@@ -673,11 +690,11 @@ for path, folders, files in os.walk(datapath):
                                          file)
 
             # Intermediary metrics
+            smooth_pursuite_trajectories = measure_smooth_pursuite_trajectory(time_vector, smooth_pursuite_sequences, gaze_angular_velocity_rad, dt)
             fixation_duration = []
             for i in fixation_sequences:
                 if len(i) > 0:
                     duration = time_vector[i[-1]] - time_vector[i[0]] + dt
-                    # @thomasromeas : see if one of the classififcation algorithm can be tuned to always have fixations of more than 100 ms and less than 3 degrees
                     fixation_duration_threshold = 0.1  # minimum of 100 ms for a fixation
                     if duration > fixation_duration_threshold:
                         fixation_duration.append(duration)
@@ -699,37 +716,43 @@ for path, folders, files in os.walk(datapath):
             total_saccade_duration = np.sum(np.array(saccade_duration))
             
             # Metrics
-            # @thomasromeas: Please confirm which metrics we want to use
             nb_fixations = len(fixation_sequences)
             mean_fixation_duration = np.mean(np.array(fixation_duration))
             search_rate = nb_fixations / mean_fixation_duration
             nb_blinks = len(blink_sequences)
             nb_saccades = len(saccade_sequences)
-            # mean_saccade_amplitude?
-            # max_smooth_pursuite_trajectory?
+            mean_saccade_duration = np.mean(np.array(saccade_duration))
+            max_saccade_amplitude = np.max(np.array(saccade_amplitudes))
+            mean_saccade_amplitude = np.mean(np.array(saccade_amplitudes))
+            nb_smooth_pursuite = len(smooth_pursuite_sequences)
+            mean_smooth_pursuite_duration = np.mean(np.array(smooth_pursuite_duration))
+            max_smooth_pursuite_trajectory = np.max(np.array(smooth_pursuite_trajectories))
+            mean_smooth_pursuite_trajectory = np.mean(np.array(smooth_pursuite_trajectories))
             fixation_ratio = total_fixation_duration / time_vector[-1]
             smooth_pursuite_ratio = total_smooth_pursuite_duration / time_vector[-1]
             blinking_ratio = total_blink_duration / time_vector[-1]
             saccade_ratio = total_saccade_duration / time_vector[-1]
             not_classified_ratio = 1 - (fixation_ratio + smooth_pursuite_ratio + blinking_ratio + saccade_ratio)
 
-            # @thomasromeas : comparisons will be across trial type, expertise, 2D vs 3D ?
-            # if yes, I need the corresponding classification of trials
-            if "2D" in file:
-                mode = "2D"
-            elif "360VR" in file:
-                mode = "360VR"
-            else:
-                raise RuntimeError(f"The file is not classified as 2D or 360VR: {file}")
             if output_metrics_dataframe is None:
                 output_metrics_dataframe = pd.DataFrame({
-                    'Trial Name': [file],
-                    'Mode': [mode],
+                    'File name': [file],
+                    'Participant ID': [file.split('_')[4]],
+                    'Mode': [file.split('_')[7]],
+                    'Trial name': [file.split('_')[8]],
+                    'Trial number': [file.split('_')[9][:-4]],
                     'Number of fixations': [nb_fixations],
-                    'Mean fixation duration': [mean_fixation_duration],
+                    'Mean fixation duration [s]': [mean_fixation_duration],
                     'Search rate': [search_rate],
                     'Number of blinks': [nb_blinks],
                     'Number of saccades': [nb_saccades],
+                    'Mean saccade duration [s]': [mean_saccade_duration],
+                    'Max saccade amplitude [deg]': [max_saccade_amplitude],
+                    'Mean saccade amplitude [deg]': [mean_saccade_amplitude],
+                    'Number of smooth pursuite': [nb_smooth_pursuite],
+                    'Mean smooth pursuite duration [s]': [mean_smooth_pursuite_duration],
+                    'Max smooth pursuite trajectory [deg]': [max_smooth_pursuite_trajectory],
+                    'Mean smooth pursuite trajectory [deg]': [mean_smooth_pursuite_trajectory],
                     'Fixation ratio': [fixation_ratio],
                     'Smooth pursuite ratio': [smooth_pursuite_ratio],
                     'Blinking ratio': [blinking_ratio],
@@ -738,13 +761,23 @@ for path, folders, files in os.walk(datapath):
                 })
             else:
                 output_metrics_dataframe = pd.concat([output_metrics_dataframe, pd.DataFrame({
-                    'Trial Name': [file],
-                    'Mode': [mode],
+                    'File name': [file],
+                    'Participant ID': [file.split('_')[4]],
+                    'Mode': [file.split('_')[7]],
+                    'Trial name': [file.split('_')[8]],
+                    'Trial number': [file.split('_')[9][:-4]],
                     'Number of fixations': [nb_fixations],
-                    'Mean fixation duration': [mean_fixation_duration],
+                    'Mean fixation duration [s]': [mean_fixation_duration],
                     'Search rate': [search_rate],
                     'Number of blinks': [nb_blinks],
                     'Number of saccades': [nb_saccades],
+                    'Mean saccade duration [s]': [mean_saccade_duration],
+                    'Max saccade amplitude [deg]': [max_saccade_amplitude],
+                    'Mean saccade amplitude [deg]': [mean_saccade_amplitude],
+                    'Number of smooth pursuite': [nb_smooth_pursuite],
+                    'Mean smooth pursuite duration [s]': [mean_smooth_pursuite_duration],
+                    'Max smooth pursuite trajectory [deg]': [max_smooth_pursuite_trajectory],
+                    'Mean smooth pursuite trajectory [deg]': [mean_smooth_pursuite_trajectory],
                     'Fixation ratio': [fixation_ratio],
                     'Smooth pursuite ratio': [smooth_pursuite_ratio],
                     'Blinking ratio': [blinking_ratio],
@@ -755,5 +788,7 @@ for path, folders, files in os.walk(datapath):
 
 with open("output_metrics.pkl", 'wb') as f:
     pickle.dump(output_metrics_dataframe, f)
-    # This dataframe will be used for statistical analysis in another script
+
+# Write a csv file that can be sed for statistical analysis later
+output_metrics_dataframe.to_csv('output_metrics.csv', index=False)
 
