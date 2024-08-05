@@ -167,3 +167,6 @@ cython_debug/
 AllData/
 figures/
 Videos/
+*.mov
+AI-Basketball-Referee-main/
+BasketballPlayerDetectection-BABPD-master/
