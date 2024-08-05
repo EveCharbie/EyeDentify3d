@@ -162,20 +162,11 @@ cython_debug/
 #.idea/
 
 .idea/
-
-AllData
-
-
-figures/
-
 *.png
-
 .DS_Store
-
-AI-Basketball-Referee-main/
-
-BasketballPlayerDetectection-BABPD-master/
-
-videos/
-
+AllData/
+figures/
+Videos/
 *.mov
+AI-Basketball-Referee-main/
+BasketballPlayerDetectection-BABPD-master/
