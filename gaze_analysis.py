@@ -125,7 +125,10 @@ def detect_saccades(time_vector, eye_direction, helmet_rotation):
         vector_after = gaze_direction[:, i_frame + 1]
         gaze_angular_velocity_rad[i_frame] = np.arccos(np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)) / (time_vector[i_frame + 1] - time_vector[i_frame - 1])
         if np.isnan(gaze_angular_velocity_rad[i_frame]) and not (any(np.isnan(vector_before)) or any(np.isnan(vector_after))):
-            print("nan")
+            raise RuntimeError(f" Please review these variable values : \n "
+                               f"gaze_angular_velocity_rad[i_frame] = {gaze_angular_velocity_rad[i_frame]} \n"
+                               f"vector_before = {vector_before} \n"
+                               f"vector_after = {vector_after} \n")
     gaze_angular_velocity_rad[0] = np.arccos(
         np.dot(gaze_direction[:, 0], gaze_direction[:, 1]) / np.linalg.norm(gaze_direction[:, 0]) / np.linalg.norm(gaze_direction[:, 1])) / (
                                                      time_vector[1] - time_vector[0])
@@ -487,9 +490,9 @@ def plot_gaze_classification(
     """
     time_vector_step = np.hstack((time_vector, time_vector[-1] + dt))
     fig, axs = plt.subplots(3, 1, figsize=(15, 20), gridspec_kw={'height_ratios': [3, 1, 1]})
-    axs[0].plot(time_vector, gaze_direction[0, :], 'k', label='Gaze x (head + eye)')
-    axs[0].plot(time_vector, gaze_direction[1, :], 'k', label='Gaze y (head + eye)')
-    axs[0].plot(time_vector, gaze_direction[2, :], 'k', label='Gaze z (head + eye)')
+    axs[0].plot(time_vector, gaze_direction[0, :], '-k', label='Gaze x (head + eye)')
+    axs[0].plot(time_vector, gaze_direction[1, :], '--k', label='Gaze y (head + eye)')
+    axs[0].plot(time_vector, gaze_direction[2, :], ':k', label='Gaze z (head + eye)')
 
     velocity_threshold = 5 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
     axs[1].plot(time_vector, np.abs(gaze_angular_velocity_rad * 180 / np.pi), 'r', label='Gaze velocity norm')
