@@ -69,6 +69,7 @@ gaze_distance in meters
 PLOT_BAD_DATA_FLAG = False
 PLOT_SACCADES_FLAG = False
 PLOT_CLASSIFICATION_FLAG = True
+PLOT_INTERSACCADIC_FLAG = True
 SKIP_LONG_TRIALS = True
 PLOT_ROTATION_VELOCITIES_FLAG = True
 quiet_eye_duration_threshold = 2  # Seconds
@@ -108,12 +109,12 @@ def detect_blinks(time_vector, data):
 
     return blink_sequences
 
-def detect_saccades(time_vector, eye_direction, helmet_rotation):
+def detect_saccades(time_vector, eye_direction, helmet_rotation_unwrapped_deg):
     """
     Detecting sequences where the gaze angular velocity is larger than 100 degrees per second.
     """
 
-    helmet_rotation_in_rad = helmet_rotation * np.pi / 180
+    helmet_rotation_in_rad = helmet_rotation_unwrapped_deg * np.pi / 180
 
     gaze_direction = np.zeros(eye_direction.shape)
     for i_frame in range(helmet_rotation_in_rad.shape[1]):
@@ -170,10 +171,12 @@ def detect_saccades(time_vector, eye_direction, helmet_rotation):
     saccade_timing = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > velocity_threshold)[0]
     saccade_sequences_tempo = np.array_split(saccade_timing, np.flatnonzero(np.diff(saccade_timing) > 1) + 1)
     saccade_sequences = []
-    for i in saccade_sequences_tempo:
-        acceleration_above_threshold = np.where(np.abs(gaze_angular_acceleration_rad[i[0]-1: i[-1]+1] * 180 / np.pi) > acceleration_threshold)[0]
-        if len(acceleration_above_threshold) > 1:
-            saccade_sequences += [i]
+
+    if saccade_sequences_tempo[0].shape != (0, ):
+        for i in saccade_sequences_tempo:
+            acceleration_above_threshold = np.where(np.abs(gaze_angular_acceleration_rad[i[0]-1: i[-1]+1] * 180 / np.pi) > acceleration_threshold)[0]
+            if len(acceleration_above_threshold) > 1:
+                saccade_sequences += [i]
 
     # # Velocity 100 + 3 frames acceleration classification
     # saccade_timing = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > 100)[0]
@@ -261,6 +264,29 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
 
     return intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences
 
+
+def plot_intersaccadic_interval_subinterval_cut(time_vector, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences, fig_name):
+    plt.figure()
+    coherent_label = False
+    if intersaccadic_coherent_sequences[0].shape != (0, ):
+        for i_sequence in intersaccadic_coherent_sequences:
+            if not coherent_label:
+                plt.axvspan(time_vector[i_sequence[0]], time_vector[i_sequence[-1]], edgecolor=None, color='tab:green', alpha=0.5, label='Coherent')
+                coherent_label = True
+            else:
+                plt.axvspan(time_vector[i_sequence[0]], time_vector[i_sequence[-1]], edgecolor=None, color='tab:green', alpha=0.5)
+    incoherent_label = False
+    if intersaccadic_incoherent_sequences[0].shape != (0,):
+        for i_sequence in intersaccadic_incoherent_sequences:
+            if not incoherent_label:
+                plt.axvspan(time_vector[i_sequence[0]], time_vector[i_sequence[-1]], edgecolor=None, color='tab:red', alpha=0.5, label='Incoherent')
+                incoherent_label = True
+            else:
+                plt.axvspan(time_vector[i_sequence[0]], time_vector[i_sequence[-1]], edgecolor=None, color='tab:red', alpha=0.5)
+    plt.xlim(time_vector[0], time_vector[-1])
+    plt.legend()
+    plt.savefig(f"figures/intersaccadic_interval_{fig_name}.png")
+    return
 
 def detect_directionality_coherence(gaze_direction):
 
@@ -367,6 +393,8 @@ def detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersacca
     axs[1].set_ylabel("Consistency of direction\nCD > eta_CD")
     axs[2].set_ylabel("Position displacement\nPD > eta_PD")
     axs[3].set_ylabel("Spacial range\nR > eta_maxFix")
+    for i_ax in range(4):
+        axs[i_ax].set_xlim(time_vector[0], time_vector[-1])
     plt.savefig(f"figures/criteria_{fig_name}.png")
 
     # Classify the ambiguous timings
@@ -590,7 +618,7 @@ def plot_gaze_classification(
     plt.show()
     return
 
-def plot_head_eye_rotation(eye_direction, helmet_rotation, gaze_angular_velocity_rad, time_vector, figname):
+def plot_head_eye_rotation(eye_direction, helmet_rotation_unwrapped_deg, head_angular_velocity_deg, gaze_angular_velocity_rad, time_vector, figname):
 
     eye_angular_velocity_rad = np.zeros((eye_direction.shape[1], ))
     for i_frame in range(1, eye_direction.shape[1] - 1):  # Skipping the first and last frames
@@ -610,28 +638,59 @@ def plot_head_eye_rotation(eye_direction, helmet_rotation, gaze_angular_velocity
             eye_direction[:, -1])) / (
                                            time_vector[-1] - time_vector[-2])
 
-    helmet_rotation_unwrapped = np.unwrap(helmet_rotation, period=360, axis=1)
-    head_3angular_velocity_deg = np.zeros((3, helmet_rotation.shape[1]))
-    for i_component in range(3):
-        head_3angular_velocity_deg[i_component, 0] = (helmet_rotation_unwrapped[i_component, 1] - helmet_rotation_unwrapped[i_component, 0]) / (time_vector[1] - time_vector[0])
-        head_3angular_velocity_deg[i_component, -1] = (helmet_rotation_unwrapped[i_component, -1] - helmet_rotation_unwrapped[i_component, -2]) / (time_vector[-1] - time_vector[-2])
-        head_3angular_velocity_deg[i_component, 1:-1] = (helmet_rotation_unwrapped[i_component, 2:] - helmet_rotation_unwrapped[i_component, :-2]) / (time_vector[2:] - time_vector[:-2])
-    head_angular_velocity_deg = np.linalg.norm(head_3angular_velocity_deg, axis=0)
-
-
     fig, axs = plt.subplots(2, 1)
     axs[0].plot(time_vector, eye_angular_velocity_rad * 180 / np.pi, 'r-', label='Eye velocity [deg/s]')
     axs[0].plot(time_vector, head_angular_velocity_deg, 'g-', label='Head velocity [deg/s]')
     axs[0].plot(time_vector, gaze_angular_velocity_rad * 180 / np.pi, 'b-', label='Gaze velocity [deg/s]')
     axs[0].legend()
-    axs[1].plot(time_vector, helmet_rotation_unwrapped[0], 'k-', label='Head rotation x [deg]')
-    axs[1].plot(time_vector, helmet_rotation_unwrapped[1], 'k--', label='Head rotation y [deg]')
-    axs[1].plot(time_vector, helmet_rotation_unwrapped[2], 'k:', label='Head rotation z [deg]')
+    axs[1].plot(time_vector, helmet_rotation_unwrapped_deg[0], 'k-', label='Head rotation x [deg]')
+    axs[1].plot(time_vector, helmet_rotation_unwrapped_deg[1], 'k--', label='Head rotation y [deg]')
+    axs[1].plot(time_vector, helmet_rotation_unwrapped_deg[2], 'k:', label='Head rotation z [deg]')
     axs[1].legend()
     plt.savefig(f"figures/head_eye_rotation_{figname}.png")
     # plt.show()
 
+    return
 
+def fix_helmet_rotation(time_vector, helmet_rotation):
+
+    # Unwrap the helmet rotation to avoid 360 jumps
+    helmet_rotation_unwrapped_deg = np.unwrap(helmet_rotation, period=360, axis=1)
+
+    # Interpolate to avoid frames being repeated, which will mess up with the velocities thresholds
+    i = 0
+    while i < len(time_vector) - 2:
+        j = i + 1
+        if helmet_rotation_unwrapped_deg[0, j] == helmet_rotation_unwrapped_deg[0, i]:
+            while helmet_rotation_unwrapped_deg[0, j] == helmet_rotation_unwrapped_deg[0, i]:
+                if j + 1 < len(time_vector) - 2:
+                    j += 1
+                else:
+                    break
+            for i_component in range(3):
+                helmet_rotation_unwrapped_deg[i_component, i:j] = np.linspace(helmet_rotation_unwrapped_deg[i_component, i], helmet_rotation_unwrapped_deg[i_component, j], j - i + 1)[:-1]
+        i = j
+
+    # Head angular velecity
+    head_3angular_velocity_deg = np.zeros((3, helmet_rotation.shape[1]))
+    for i_component in range(3):
+        head_3angular_velocity_deg[i_component, 0] = (helmet_rotation_unwrapped_deg[i_component, 1] - helmet_rotation_unwrapped_deg[i_component, 0]) / (time_vector[1] - time_vector[0])
+        head_3angular_velocity_deg[i_component, -1] = (helmet_rotation_unwrapped_deg[i_component, -1] - helmet_rotation_unwrapped_deg[i_component, -2]) / (time_vector[-1] - time_vector[-2])
+        head_3angular_velocity_deg[i_component, 1:-1] = (helmet_rotation_unwrapped_deg[i_component, 2:] - helmet_rotation_unwrapped_deg[i_component, :-2]) / (time_vector[2:] - time_vector[:-2])
+    head_angular_velocity_deg = np.linalg.norm(head_3angular_velocity_deg, axis=0)
+
+    # plt.figure()
+    # plt.plot(helmet_rotation[0, :])
+    # plt.plot(helmet_rotation[1, :])
+    # plt.plot(helmet_rotation[2, :])
+    # plt.plot(helmet_rotation_unwrapped_deg[0, :])
+    # plt.plot(helmet_rotation_unwrapped_deg[1, :])
+    # plt.plot(helmet_rotation_unwrapped_deg[2, :])
+    # plt.plot(head_angular_velocity_deg, 'k-')
+    # plt.savefig("figures/test.png")
+    # plt.show()
+
+    return helmet_rotation_unwrapped_deg, head_angular_velocity_deg
 
 
 if "figures" not in os.listdir():
@@ -670,7 +729,8 @@ for path, folders, files in os.walk(datapath):
                 else:
                     length_trial = black_screen_timing_data['Lenght before black screen (s)'][trial_names.index(this_trial_name)]
 
-            time_vector = np.array((data["time_stamp(ms)"] - data["time_stamp(ms)"][0]) / 1000)
+            time_vector = np.array((data["time(100ns)"] - data["time(100ns)"][0]) / 10000000)
+
             length_trial = time_vector[-1] if np.isnan(length_trial) else length_trial
 
             # cut the data after the black screen
@@ -687,6 +747,7 @@ for path, folders, files in os.walk(datapath):
             eye_direction = np.array(
                 [data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
             helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
+            helmet_rotation_unwrapped_deg, head_angular_velocity_deg = fix_helmet_rotation(time_vector, helmet_rotation)
 
             eyetracker_invalid_data_index = np.array([])
             if np.sum(data['eye_valid_L']) != 31 * len(data['eye_valid_L']) or np.sum(data['eye_valid_R']) != 31 * len(data['eye_valid_R']):
@@ -715,10 +776,10 @@ for path, folders, files in os.walk(datapath):
                 eye_direction[:, eyetracker_invalid_data_index] = np.nan
             
             # Detect saccades
-            saccade_sequences, gaze_direction, gaze_angular_velocity_rad, gaze_angular_acceleration_rad, saccade_amplitudes = detect_saccades(time_vector, eye_direction, helmet_rotation)
+            saccade_sequences, gaze_direction, gaze_angular_velocity_rad, gaze_angular_acceleration_rad, saccade_amplitudes = detect_saccades(time_vector, eye_direction, helmet_rotation_unwrapped_deg)
 
             if PLOT_ROTATION_VELOCITIES_FLAG:
-                plot_head_eye_rotation(eye_direction, helmet_rotation, gaze_angular_velocity_rad, time_vector, file[:-4])
+                plot_head_eye_rotation(eye_direction, helmet_rotation_unwrapped_deg, head_angular_velocity_deg, gaze_angular_velocity_rad, time_vector, file[:-4])
 
             # Detect fixations
             intersaccadic_interval = np.zeros((len(time_vector), ))
@@ -736,6 +797,8 @@ for path, folders, files in os.walk(datapath):
             intersaccadic_sequences_temporary = np.array_split(intersaccadic_timing, np.flatnonzero(np.diff(intersaccadic_timing) > 1) + 1)
             intersaccadic_sequences = [np.hstack((intersaccadic_sequences_temporary[i], intersaccadic_sequences_temporary[i][-1] + 1)) for i in range(len(intersaccadic_sequences_temporary)) if len(intersaccadic_sequences_temporary[i]) > 2]
             intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = sliding_window(time_vector, intersaccadic_sequences, gaze_direction)
+            if PLOT_INTERSACCADIC_FLAG:
+                plot_intersaccadic_interval_subinterval_cut(time_vector, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences, file[:-4])
             fixation_sequences, smooth_pursuite_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuite(time_vector, gaze_direction, intersaccadic_gouped_sequences, file[:-4])
 
             if PLOT_CLASSIFICATION_FLAG:
