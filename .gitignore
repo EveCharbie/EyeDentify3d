@@ -170,3 +170,6 @@ Videos/
 *.mov
 AI-Basketball-Referee-main/
 BasketballPlayerDetectection-BABPD-master/
+*.csv
+
+*.pkl

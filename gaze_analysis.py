@@ -206,9 +206,9 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     https://doi.org/10.1016/j.bspc.2014.12.008
     """
     # @thomasromeas : These parameter values are still to be adjusted
-    t_wind = 0.022 * 2  # Window size in ms
-    t_overlap = 0.006  # Window overlap in ms
-    eta_p = 0.01  # Threshold for the p-value of the Rayleigh test
+    t_wind = 0.022 * 5  # Window size in ms 0.022
+    t_overlap = 0.006 * 5  # Window overlap in ms 0.006
+    eta_p = 0.001  # Threshold for the p-value of the Rayleigh test
 
     intersaccadic_window_idx = []
     for i_intersaccadic_gap in intersaccadic_sequences:
@@ -244,6 +244,12 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     mean_p_values = np.array([np.nanmean(np.array(p)) for p in p_values])
     incoherent_windows = np.where(mean_p_values <= eta_p)[0]
     coherent_windows = np.where(mean_p_values > eta_p)[0]
+
+    plt.figure()
+    plt.plot(time_vector, mean_p_values)
+    plt.plot(np.array([0, 10]), np.array([eta_p, eta_p]), '--k')
+    plt.xlim(0, 10)
+    plt.show()
 
     intersaccadic_coherent_sequences = np.array_split(coherent_windows, np.flatnonzero(np.diff(coherent_windows) > 1) + 1)
     intersaccadic_incoherent_sequences = np.array_split(incoherent_windows, np.flatnonzero(np.diff(incoherent_windows) > 1) + 1)
@@ -290,13 +296,10 @@ def plot_intersaccadic_interval_subinterval_cut(time_vector, intersaccadic_coher
 
 def detect_directionality_coherence(gaze_direction):
 
-    gaze_displacement_rad = gaze_direction[:, 1:] - gaze_direction[:, :-1]
-
-    horizontal_vector_on_the_sphere = np.zeros(gaze_displacement_rad.shape)
-    horizontal_vector_on_the_sphere[:2, :] = gaze_displacement_rad[:2, :]
-    alpha = np.zeros((horizontal_vector_on_the_sphere.shape[1], ))
+    alpha = np.zeros((gaze_direction.shape[1],))
     for i_frame in range(gaze_direction.shape[1] - 1):
-        alpha[i_frame] = np.arccos(np.dot(gaze_displacement_rad[:, i_frame], horizontal_vector_on_the_sphere[:, i_frame]) / np.linalg.norm(gaze_displacement_rad[:, i_frame]) / np.linalg.norm(horizontal_vector_on_the_sphere[:, i_frame]))
+        gaze_displacement_this_time = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
+        alpha[i_frame] = np.arcsin(gaze_displacement_this_time[0] / np.linalg.norm(gaze_displacement_this_time))
 
     # Test that the gaze displacement and orientation are coherent inside the window
     z_value_alpha, p_value_alpha = pg.circ_rayleigh(alpha)
@@ -714,6 +717,8 @@ for path, folders, files in os.walk(datapath):
                 # skip trials that take too long to compute, useful for debugging only
                 if file in long_trials:
                     continue
+            # if "Spread1_001" not in file:
+            #     continue
 
             print(f"Treating the data from file : {file}")
             data = pd.read_csv(path+'/'+file, sep=';')
