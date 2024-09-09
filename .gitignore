@@ -173,3 +173,7 @@ BasketballPlayerDetectection-BABPD-master/
 *.csv
 
 *.pkl
+
+*.csv#
+
+*.txt
