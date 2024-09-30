@@ -141,7 +141,7 @@ def detect_saccades(time_vector, eye_direction):
     eye_angular_acceleration_rad = np.zeros((eye_direction.shape[1], ))
     eye_angular_acceleration_rad[:-1] = (eye_angular_velocity_rad[1:] - eye_angular_velocity_rad[:-1]) / (time_vector[1:] - time_vector[:-1])
 
-    velocity_threshold = 5 * np.nanmedian(eye_angular_velocity_rad * 180 / np.pi)
+    velocity_threshold = 5 * np.nanmedian(np.abs(eye_angular_velocity_rad) * 180 / np.pi)
     acceleration_threshold = 4000  # deg/s²
 
     if PLOT_SACCADES_FLAG:
@@ -233,7 +233,7 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
                                            time_vector[-1] - time_vector[-2])
 
     saccade_sequences_timing = np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
-    visual_scanning_candidates = np.where(gaze_angular_velocity_rad * 180 / np.pi > 100)[0]
+    visual_scanning_candidates = np.where(np.bs(gaze_angular_velocity_rad * 180 / np.pi) > 100)[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
