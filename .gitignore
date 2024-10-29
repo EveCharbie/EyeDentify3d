@@ -161,13 +161,22 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-.DS_Store
-
 .idea/
-
+*.png
+.DS_Store
 AllData/
-
 figures/
+Videos/
+*.mov
+AI-Basketball-Referee-main/
+BasketballPlayerDetectection-BABPD-master/
+*.csv
+
+*.pkl
+
+*.csv#
+
+*.txt
 
 *.csv
 
