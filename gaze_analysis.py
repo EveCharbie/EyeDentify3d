@@ -116,7 +116,10 @@ def detect_blinks(time_vector, data):
 
 def detect_saccades(time_vector, eye_direction):
     """
-    Detecting sequences where the eye angular velocity is larger than 100 degrees per second (and acceleration).
+    Detecting sequences where the :
+    - eye angular velocity is larger than 5 times the median of the trial
+    - eye angular acceleration is larger than 4000 deg/s² for at least one frame
+    - the saccade duration is larger than 20 ms
     Only the eye movements were used to identify saccades.
     """
 
@@ -178,46 +181,64 @@ def detect_saccades(time_vector, eye_direction):
         plt.savefig("figures/saccade_detection_test.png")
         plt.show()
 
-    # thomasromeas : Please confirm the method to use, so that I can delete the other ones
-    # # Velocity only classification
-    # saccade_timing = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > velocity_threshold)[0]
-    # saccade_sequences = np.array_split(saccade_timing, np.flatnonzero(np.diff(saccade_timing) > 1) + 1)
-
-    # # Velocity + acceleration classification
-    # saccade_timing = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > velocity_threshold)[0]
-    # saccade_sequences_tempo = np.array_split(saccade_timing, np.flatnonzero(np.diff(saccade_timing) > 1) + 1)
-    # saccade_sequences = []
-    # for i in saccade_sequences_tempo:
-    #     if any(np.abs(eye_angular_acceleration_rad[i[0]-1: i[-1]+1] * 180 / np.pi) > acceleration_threshold):
-    #         saccade_sequences += [i]
-
-    # Velocity + 2 frames acceleration classification
+    # Velocity + 1 frames acceleration classification
     saccade_timing = np.where(np.abs(eye_angular_velocity_rad * 180 / np.pi) > velocity_threshold)[0]
     saccade_sequences_tempo = np.array_split(saccade_timing, np.flatnonzero(np.diff(saccade_timing) > 1) + 1)
     saccade_sequences = []
 
     if saccade_sequences_tempo[0].shape != (0,):
         for i in saccade_sequences_tempo:
+            if len(i) <= 1:
+                continue
             acceleration_above_threshold = np.where(
                 np.abs(eye_angular_acceleration_rad[i[0] - 1 : i[-1] + 1] * 180 / np.pi) > acceleration_threshold
             )[0]
             if len(acceleration_above_threshold) > 1:
                 saccade_sequences += [i]
 
-    # # Velocity 100 + 3 frames acceleration classification
-    # saccade_timing = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > 100)[0]
-    # saccade_sequences_tempo = np.array_split(saccade_timing, np.flatnonzero(np.diff(saccade_timing) > 1) + 1)
-    # saccade_sequences = []
-    # for i in saccade_sequences_tempo:
-    #     acceleration_above_threshold = np.where(np.abs(eye_angular_acceleration_rad[i[0]-1: i[-1]+1] * 180 / np.pi) > acceleration_threshold)[0]
-    #     if len(acceleration_above_threshold) > 2:
-    #         saccade_sequences += [i]
+    ############
+    #             saccade_candidate_duration = time_vector[i[-1]] - time_vector[i[0]]
+    # saccade_candidate_duration > 0.02
+
+    # merge saccades events that are less than 5 frames appart and the gaze is moving in the same direction
+    saccade_sequences_merged = [saccade_sequences[0]]
+    current_merged_saccade = 0
+    current_saccade = 0
+    while current_saccade < len(saccade_sequences)-1:
+        for i in range(current_saccade+1, len(saccade_sequences)):
+            beginning_of_merged_saccade = saccade_sequences_merged[current_merged_saccade][0]
+            end_of_merged_saccade = saccade_sequences_merged[current_merged_saccade][-1]
+            beginning_of_new_saccade = saccade_sequences[i][0]
+            end_of_new_saccade = saccade_sequences[i][-1]
+            if beginning_of_new_saccade - end_of_merged_saccade < 5:
+                beginning_of_merged_saccade_direction = eye_direction[:, beginning_of_merged_saccade]
+                end_of_merged_saccade_direction = eye_direction[:, end_of_merged_saccade]
+                merged_saccade_direction = end_of_merged_saccade_direction - beginning_of_merged_saccade_direction
+
+                beginning_of_new_saccade_direction = eye_direction[:, beginning_of_new_saccade]
+                end_of_new_saccade_direction = eye_direction[:, end_of_new_saccade]
+                new_saccade_direction = end_of_new_saccade_direction - beginning_of_new_saccade_direction
+
+                angle = np.arccos(
+                    np.dot(merged_saccade_direction, new_saccade_direction) / np.linalg.norm(merged_saccade_direction) / np.linalg.norm(new_saccade_direction)
+                )
+                if angle < 30 * np.pi / 180:
+                    saccade_sequences_merged[current_merged_saccade] = np.array(range(saccade_sequences[current_merged_saccade][0], saccade_sequences[i][-1] + 1))
+                else:
+                    saccade_sequences_merged += [saccade_sequences[i]]
+                    current_merged_saccade += 1
+                    current_saccade = i
+            else:
+                saccade_sequences_merged += [saccade_sequences[i]]
+                current_merged_saccade += 1
+                current_saccade = i
+                break
 
     # Saccade amplitude
     # Defined as the angle between the beginning and end of the saccade,
     # note that there is no check made to detect if there is a larger amplitude reached during the saccade.
     saccade_amplitudes = []
-    for sequence in saccade_sequences:
+    for sequence in saccade_sequences_merged:
         vector_before = eye_direction[:, sequence[0]]
         vector_after = eye_direction[:, sequence[-1]]
         angle = np.arccos(
@@ -225,7 +246,7 @@ def detect_saccades(time_vector, eye_direction):
         )
         saccade_amplitudes += [angle * 180 / np.pi]
 
-    return saccade_sequences, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes
+    return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes
 
 
 def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
@@ -712,6 +733,8 @@ def plot_gaze_classification(
     eye_angular_acceleration_rad,
     dt,
     figname,
+    fixation_duration_threshold,
+    smooth_pursuite_duration_threshold,
 ):
     """
     Plot the final gaze classification
@@ -779,6 +802,8 @@ def plot_gaze_classification(
     for i in fixation_sequences:
         if i.shape == (1, 0) or i.shape == (0,) or len(i) < 1:
             continue
+        if time_vector_step[i[-1] + 1] - time_vector[i[0]] < fixation_duration_threshold:
+            continue
         if label_flag:
             axs[0].axvspan(
                 time_vector[i[0]],
@@ -796,6 +821,8 @@ def plot_gaze_classification(
     label_flag = True
     for i in smooth_pursuite_sequences:
         if i.shape == (1, 0) or i.shape == (0,) or len(i) < 1:
+            continue
+        if time_vector_step[i[-1] + 1] - time_vector[i[0]] < smooth_pursuite_duration_threshold:
             continue
         if label_flag:
             axs[0].axvspan(
@@ -988,6 +1015,8 @@ def compute_intermediary_metrics(
     dt,
     quiet_eye_duration_threshold,
     cut_file,
+    fixation_duration_threshold,
+    smooth_pursuite_duration_threshold,
 ):
 
     def split_sequences_before_and_after_quiet_eye(last_2s_timing_idx, sequences):
@@ -1062,7 +1091,7 @@ def compute_intermediary_metrics(
     # Total time spent in fixations
     fixation_duration, fixation_duration_before_quiet_eye, fixation_duration_last_2s = (
         split_durations_before_and_after_quiet_eye(
-            "Fixation", cut_file, fixation_sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0.1
+            "Fixation", cut_file, fixation_sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=fixation_duration_threshold
         )
     )
     total_fixation_duration = np.sum(np.array(fixation_duration))
@@ -1071,7 +1100,7 @@ def compute_intermediary_metrics(
 
     # Total time spent in smooth pursuite
     smooth_pursuite_duration, smooth_pursuite_duration_before_quiet_eye, smooth_pursuite_duration_last_2s = (
-        split_durations_before_and_after_quiet_eye("Smooth pursuite", cut_file, smooth_pursuite_sequences, last_2s_timing_idx, dt, time_vector)
+        split_durations_before_and_after_quiet_eye("Smooth pursuite", cut_file, smooth_pursuite_sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=smooth_pursuite_duration_threshold)
     )
     total_smooth_pursuite_duration = np.sum(np.array(smooth_pursuite_duration))
     total_smooth_pursuite_duration_before_quiet_eye = np.sum(np.array(smooth_pursuite_duration_before_quiet_eye))
@@ -1148,6 +1177,25 @@ def compute_intermediary_metrics(
         last_2s_timing_idx,
     )
 
+def check_if_there_is_sequence_overlap(fixation_sequences, smooth_pursuite_sequences, visual_scanning_sequences, blink_sequences, saccade_sequences, eyetracker_invalid_sequences):
+
+    # Blinks and invalid data must not overlap with any other sequences
+    for i_blink in blink_sequences + eyetracker_invalid_sequences:
+        for i_sequence in fixation_sequences + smooth_pursuite_sequences + visual_scanning_sequences + saccade_sequences:
+            if any(item in i_blink for item in i_sequence):
+                raise ValueError("Problem: Blink or Invalid data sequences overlap with another sequence")
+
+    # Fixations, smooth pursuite and visual scanning must not overlap with each other
+    for i_fixation in fixation_sequences:
+        for i_sequence in smooth_pursuite_sequences + visual_scanning_sequences:
+            if any(item in i_fixation for item in i_sequence):
+                raise ValueError("Problem: Fixation sequences overlap with Smooth pursuite or Visual scanning sequences")
+    for i_smooth_pursuite in smooth_pursuite_sequences:
+        for i_sequence in visual_scanning_sequences:
+            if any(item in i_smooth_pursuite for item in i_sequence):
+                raise ValueError("Problem: Smooth pursuite sequences overlap with Visual scanning sequences")
+
+
 
 if "figures" not in os.listdir():
     os.mkdir("figures")
@@ -1157,7 +1205,8 @@ datapath = "AllData/"
 black_screen_timing_file_path = "length_before_black_screen.xlsx"
 black_screen_timing_data = pd.read_excel(datapath + black_screen_timing_file_path)
 trial_names = list(black_screen_timing_data["Video Name"])
-
+fixation_duration_threshold = 0.1  # 100 ms
+smooth_pursuite_duration_threshold = 0.1  # 100 ms
 
 # ----------------------------------------------------------------
 # Create a file with the name of the data files that were excluded for poor quality
@@ -1329,6 +1378,8 @@ for path, folders, files in os.walk(datapath):
                 time_vector, gaze_direction, intersaccadic_gouped_sequences, figname, PLOT_CRITERIA_FLAG
             )
 
+            check_if_there_is_sequence_overlap(fixation_sequences, smooth_pursuite_sequences, visual_scanning_sequences, blink_sequences, saccade_sequences, eyetracker_invalid_sequences)
+
             if PLOT_CLASSIFICATION_FLAG:
                 # The mean duration of a frame because we only have data at the frame and the duration of the events
                 # should be computed as a step function, thus we have to add a step after the last index.
@@ -1347,6 +1398,8 @@ for path, folders, files in os.walk(datapath):
                     eye_angular_acceleration_rad,
                     dt,
                     figname,
+                    fixation_duration_threshold,
+                    smooth_pursuite_duration_threshold,
                 )
 
             (
@@ -1404,7 +1457,9 @@ for path, folders, files in os.walk(datapath):
                 gaze_angular_velocity_rad,
                 dt,
                 quiet_eye_duration_threshold,
-                cut_file
+                cut_file,
+                fixation_duration_threshold,
+                smooth_pursuite_duration_threshold,
             )
 
             # Metrics
