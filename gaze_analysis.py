@@ -987,6 +987,7 @@ def compute_intermediary_metrics(
     gaze_angular_velocity_rad,
     dt,
     quiet_eye_duration_threshold,
+    cut_file,
 ):
 
     def split_sequences_before_and_after_quiet_eye(last_2s_timing_idx, sequences):
@@ -997,18 +998,19 @@ def compute_intermediary_metrics(
         for i_sequence in sequences:
             if i_sequence[-1] < last_2s_timing_idx:
                 sequences_before_quiet_eye.append(i_sequence)
-            elif last_2s_timing_idx in i_sequence:
-                last_2s_idx_this_sequence = np.where(i_sequence == last_2s_timing_idx)[0][0]
-                sequences_before_quiet_eye.append(i_sequence[: last_2s_idx_this_sequence + 1])
-                sequences_last_2s.append(i_sequence[last_2s_idx_this_sequence + 1 :])
             elif i_sequence[0] > last_2s_timing_idx:
                 sequences_last_2s.append(i_sequence)
-            else:
-                raise RuntimeError("The sequence is not properly classified.")
+            # elif last_2s_timing_idx in i_sequence:
+            #     last_2s_idx_this_sequence = np.where(i_sequence == last_2s_timing_idx)[0][0]
+            #     sequences_before_quiet_eye.append(i_sequence[: last_2s_idx_this_sequence + 1])
+            #     sequences_last_2s.append(i_sequence[last_2s_idx_this_sequence + 1:])
+            # else:
+            #     raise ValueError("The sequence is not split correctly.")
+
         return sequences_before_quiet_eye, sequences_last_2s
 
     def split_durations_before_and_after_quiet_eye(
-        sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0
+        sequence_type, cut_file, sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0
     ):
         durations = []
         durations_before_quiet_eye = []
@@ -1021,8 +1023,9 @@ def compute_intermediary_metrics(
                     if i[-1] < last_2s_timing_idx:
                         durations_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
                     elif last_2s_timing_idx in i:
-                        durations_before_quiet_eye.append(time_vector[last_2s_timing_idx + 1] - time_vector[i[0]])
-                        durations_last_2s.append(time_vector[i[-1]] - time_vector[last_2s_timing_idx + 1] + dt)
+                        # durations_before_quiet_eye.append(time_vector[last_2s_timing_idx + 1] - time_vector[i[0]])
+                        # durations_last_2s.append(time_vector[i[-1]] - time_vector[last_2s_timing_idx + 1] + dt)
+                        cut_file.write(f"{sequence_type} : {time_vector[i[-1]] - time_vector[i[0]] + dt} s \n")
                     elif i[0] > last_2s_timing_idx:
                         durations_last_2s.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
         return durations, durations_before_quiet_eye, durations_last_2s
@@ -1059,7 +1062,7 @@ def compute_intermediary_metrics(
     # Total time spent in fixations
     fixation_duration, fixation_duration_before_quiet_eye, fixation_duration_last_2s = (
         split_durations_before_and_after_quiet_eye(
-            fixation_sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0.1
+            "Fixation", cut_file, fixation_sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0.1
         )
     )
     total_fixation_duration = np.sum(np.array(fixation_duration))
@@ -1068,7 +1071,7 @@ def compute_intermediary_metrics(
 
     # Total time spent in smooth pursuite
     smooth_pursuite_duration, smooth_pursuite_duration_before_quiet_eye, smooth_pursuite_duration_last_2s = (
-        split_durations_before_and_after_quiet_eye(smooth_pursuite_sequences, last_2s_timing_idx, dt, time_vector)
+        split_durations_before_and_after_quiet_eye("Smooth pursuite", cut_file, smooth_pursuite_sequences, last_2s_timing_idx, dt, time_vector)
     )
     total_smooth_pursuite_duration = np.sum(np.array(smooth_pursuite_duration))
     total_smooth_pursuite_duration_before_quiet_eye = np.sum(np.array(smooth_pursuite_duration_before_quiet_eye))
@@ -1076,7 +1079,7 @@ def compute_intermediary_metrics(
 
     # Total time spent in blinks
     blink_duration, blink_duration_before_quiet_eye, blink_duration_last_2s = (
-        split_durations_before_and_after_quiet_eye(blink_sequences, last_2s_timing_idx, dt, time_vector)
+        split_durations_before_and_after_quiet_eye("Blink", cut_file, blink_sequences, last_2s_timing_idx, dt, time_vector)
     )
     total_blink_duration = np.sum(np.array(blink_duration))
     total_blink_duration_before_quiet_eye = np.sum(np.array(blink_duration_before_quiet_eye))
@@ -1084,7 +1087,7 @@ def compute_intermediary_metrics(
 
     # Total time spent in saccades
     saccade_duration, saccade_duration_before_quiet_eye, saccade_duration_last_2s = (
-        split_durations_before_and_after_quiet_eye(saccade_sequences, last_2s_timing_idx, dt, time_vector)
+        split_durations_before_and_after_quiet_eye("Saccade", cut_file, saccade_sequences, last_2s_timing_idx, dt, time_vector)
     )
     total_saccade_duration = np.sum(np.array(saccade_duration))
     total_saccade_duration_before_quiet_eye = np.sum(np.array(saccade_duration_before_quiet_eye))
@@ -1092,7 +1095,7 @@ def compute_intermediary_metrics(
 
     # Total time spent in visual scanning
     visual_scanning_duration, visual_scanning_duration_before_quiet_eye, visual_scanning_duration_last_2s = (
-        split_durations_before_and_after_quiet_eye(visual_scanning_sequences, last_2s_timing_idx, dt, time_vector)
+        split_durations_before_and_after_quiet_eye("Visual scanning", cut_file, visual_scanning_sequences, last_2s_timing_idx, dt, time_vector)
     )
     total_visual_scanning_duration = np.sum(np.array(visual_scanning_duration))
     total_visual_scanning_duration_before_quiet_eye = np.sum(np.array(visual_scanning_duration_before_quiet_eye))
@@ -1161,6 +1164,13 @@ trial_names = list(black_screen_timing_data["Video Name"])
 bad_data_file = open("bad_data_files.txt", "w")
 bad_data_file.write(
     "The following files were excluded because more than 50% of the points were excluded by the eye-tracker : \n\n"
+)
+
+# ----------------------------------------------------------------
+# Create a file with the length of the event happening at the 2s cut
+cut_file = open("event_excluded_at_cut_off.txt", "w")
+cut_file.write(
+    "The following events were excluded because they happened at the moment of the 2s cut : \n\n"
 )
 
 # ----------------------------------------------------------------
@@ -1394,6 +1404,7 @@ for path, folders, files in os.walk(datapath):
                 gaze_angular_velocity_rad,
                 dt,
                 quiet_eye_duration_threshold,
+                cut_file
             )
 
             # Metrics
@@ -1630,8 +1641,16 @@ for path, folders, files in os.walk(datapath):
                 else pd.concat([output_metrics_dataframe, output], ignore_index=True)
             )
 
+
 with open("output_metrics.pkl", "wb") as f:
     pickle.dump(output_metrics_dataframe, f)
+
+with open("output_log.txt", "w") as f:
+    f.write(f"Variable: Mean [Min ; Max] \n\n")
+    for key in output_metrics_dataframe.keys():
+        if key in ["File name", "Figure name", "Participant ID", "Mode", "Trial name", "Trial number"]:
+            continue
+        f.write(f"{key}: {output_metrics_dataframe[key].mean()} [{output_metrics_dataframe[key].min()} ; {output_metrics_dataframe[key].max()}] \n")
 
 # Write a csv file that can be sed for statistical analysis later
 output_metrics_dataframe.to_csv("output_metrics.csv", index=False)
