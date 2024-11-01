@@ -233,7 +233,7 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
                                            time_vector[-1] - time_vector[-2])
 
     saccade_sequences_timing = np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
-    visual_scanning_candidates = np.where(np.bs(gaze_angular_velocity_rad * 180 / np.pi) > 100)[0]
+    visual_scanning_candidates = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > 100)[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
@@ -780,21 +780,39 @@ def compute_intermediary_metrics(time_vector,
         if len(sequences) == 0 or sequences[0].shape == (0, ) or sequences[0].shape == (1, 0):
             return sequences, sequences  # returning two empty sequences
         for i_sequence in sequences:
-            if i_sequence[0] < last_2s_timing_idx:
+            if i_sequence[-1] < last_2s_timing_idx:
                 sequences_before_quiet_eye.append(i_sequence)
             elif last_2s_timing_idx in i_sequence:
                 last_2s_idx_this_sequence = np.where(i_sequence == last_2s_timing_idx)[0][0]
-                sequences_before_quiet_eye.append(i_sequence[:last_2s_idx_this_sequence])
-                sequences_last_2s.append(i_sequence[last_2s_idx_this_sequence:])
+                sequences_before_quiet_eye.append(i_sequence[:last_2s_idx_this_sequence + 1])
+                sequences_last_2s.append(i_sequence[last_2s_idx_this_sequence + 1:])
             elif i_sequence[0] > last_2s_timing_idx:
                 sequences_last_2s.append(i_sequence)
+            else:
+                raise RuntimeError("The sequence is not properly classified.")
         return sequences_before_quiet_eye, sequences_last_2s
+
+    def split_durations_before_and_after_quiet_eye(sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0):
+        durations = []
+        durations_before_quiet_eye = []
+        durations_last_2s = []
+        for i in sequences:
+            if len(i) > 0:
+                duration = time_vector[i[-1]] - time_vector[i[0]] + dt
+                if duration > duration_threshold:
+                    durations.append(duration)
+                    if i[-1] < last_2s_timing_idx:
+                        durations_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
+                    elif last_2s_timing_idx in i:
+                        durations_before_quiet_eye.append(
+                            time_vector[last_2s_timing_idx + 1] - time_vector[i[0]])
+                        durations_last_2s.append(time_vector[i[-1]] - time_vector[last_2s_timing_idx + 1] + dt)
+                    elif i[0] > last_2s_timing_idx:
+                        durations_last_2s.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
+        return durations, durations_before_quiet_eye, durations_last_2s
 
     # Instant at which the "last 2s switch" is happening
     last_2s_timing_idx = np.where(time_vector > time_vector[-1] - quiet_eye_duration_threshold)[0][0]
-    time_vector_before_quiet_eye = time_vector[:last_2s_timing_idx]
-    time_vector_last_2s = time_vector[last_2s_timing_idx:]
-
     smooth_pursuite_sequences_before_quiet_eye, smooth_pursuite_sequences_last_2s = split_sequences_before_and_after_quiet_eye(last_2s_timing_idx, smooth_pursuite_sequences)
     fixation_sequences_before_quiet_eye, fixation_sequences_last_2s = split_sequences_before_and_after_quiet_eye(last_2s_timing_idx, fixation_sequences)
     blink_sequences_before_quiet_eye, blink_sequences_last_2s = split_sequences_before_and_after_quiet_eye(last_2s_timing_idx, blink_sequences)
@@ -809,100 +827,36 @@ def compute_intermediary_metrics(time_vector,
     smooth_pursuite_trajectories_last_2s = measure_smooth_pursuite_trajectory(time_vector, smooth_pursuite_sequences_last_2s,
                                                                       gaze_angular_velocity_rad, dt)
 
-    fixation_duration = []
-    fixation_duration_before_quiet_eye = []
-    fixation_duration_last_2s = []
-    for i in fixation_sequences:
-        if len(i) > 0:
-            duration = time_vector[i[-1]] - time_vector[i[0]] + dt
-            fixation_duration_threshold = 0.1  # minimum of 100 ms for a fixation
-            if duration > fixation_duration_threshold:
-                fixation_duration.append(duration)
-                if i[0] < last_2s_timing_idx:
-                    fixation_duration_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-                elif last_2s_timing_idx in i:
-                    fixation_duration_before_quiet_eye.append(last_2s_timing_idx - time_vector[i[0]])
-                    fixation_duration_last_2s.append(time_vector[i[-1]] - last_2s_timing_idx)
-                elif i[0] > last_2s_timing_idx:
-                    fixation_duration_last_2s.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-
     # Total time spent in fixations
+    fixation_duration, fixation_duration_before_quiet_eye, fixation_duration_last_2s = split_durations_before_and_after_quiet_eye(fixation_sequences, last_2s_timing_idx, dt, time_vector, duration_threshold=0.1)
     total_fixation_duration = np.sum(np.array(fixation_duration))
     total_fixation_duration_before_quiet_eye = np.sum(np.array(fixation_duration_before_quiet_eye))
     total_fixation_duration_last_2s = np.sum(np.array(fixation_duration_last_2s))
 
-    smooth_pursuite_duration = []
-    smooth_pursuite_duration_before_quiet_eye = []
-    smooth_pursuite_duration_last_2s = []
-    for i in smooth_pursuite_sequences:
-        if len(i) > 0:
-            smooth_pursuite_duration.append(time_vector[i[-1]] - time_vector[i[0]])
-            if i[0] < last_2s_timing_idx:
-                smooth_pursuite_duration_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]])
-            elif last_2s_timing_idx in i:
-                smooth_pursuite_duration_before_quiet_eye.append(last_2s_timing_idx - time_vector[i[0]])
-                smooth_pursuite_duration_last_2s.append(time_vector[i[-1]] - last_2s_timing_idx)
-            elif i[0] > last_2s_timing_idx:
-                smooth_pursuite_duration_last_2s.append(time_vector[i[-1]] - time_vector[i[0]])
-
     # Total time spent in smooth pursuite
+    smooth_pursuite_duration, smooth_pursuite_duration_before_quiet_eye, smooth_pursuite_duration_last_2s = split_durations_before_and_after_quiet_eye(
+        smooth_pursuite_sequences, last_2s_timing_idx, dt, time_vector)
     total_smooth_pursuite_duration = np.sum(np.array(smooth_pursuite_duration))
     total_smooth_pursuite_duration_before_quiet_eye = np.sum(np.array(smooth_pursuite_duration_before_quiet_eye))
     total_smooth_pursuite_duration_last_2s = np.sum(np.array(smooth_pursuite_duration_last_2s))
 
-    blink_duration = []
-    blink_duration_before_quiet_eye = []
-    blink_duration_last_2s = []
-    for i in blink_sequences:
-        if len(i) > 0:
-            blink_duration.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-            if i[0] < last_2s_timing_idx:
-                blink_duration_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-            elif last_2s_timing_idx in i:
-                blink_duration_before_quiet_eye.append(last_2s_timing_idx - time_vector[i[0]])
-                blink_duration_last_2s.append(time_vector[i[-1]] - last_2s_timing_idx)
-            elif i[0] > last_2s_timing_idx:
-                blink_duration_last_2s.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-
     # Total time spent in blinks
+    blink_duration, blink_duration_before_quiet_eye, blink_duration_last_2s = split_durations_before_and_after_quiet_eye(
+        blink_sequences, last_2s_timing_idx, dt, time_vector)
     total_blink_duration = np.sum(np.array(blink_duration))
     total_blink_duration_before_quiet_eye = np.sum(np.array(blink_duration_before_quiet_eye))
     total_blink_duration_last_2s = np.sum(np.array(blink_duration_last_2s))
 
-    saccade_duration = []
-    saccade_duration_before_quiet_eye = []
-    saccade_duration_last_2s = []
-    for i in saccade_sequences:
-        if len(i) > 0:
-            saccade_duration.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-            if i[0] < last_2s_timing_idx:
-                saccade_duration_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-            elif last_2s_timing_idx in i:
-                saccade_duration_before_quiet_eye.append(last_2s_timing_idx - time_vector[i[0]])
-                saccade_duration_last_2s.append(time_vector[i[-1]] - last_2s_timing_idx)
-            elif i[0] > last_2s_timing_idx:
-                saccade_duration_last_2s.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-
     # Total time spent in saccades
+    saccade_duration, saccade_duration_before_quiet_eye, saccade_duration_last_2s = split_durations_before_and_after_quiet_eye(
+        saccade_sequences, last_2s_timing_idx, dt, time_vector)
     total_saccade_duration = np.sum(np.array(saccade_duration))
     total_saccade_duration_before_quiet_eye = np.sum(np.array(saccade_duration_before_quiet_eye))
     total_saccade_duration_last_2s = np.sum(np.array(saccade_duration_last_2s))
 
-    visual_scanning_duration = []
-    visual_scanning_duration_before_quiet_eye = []
-    visual_scanning_duration_last_2s = []
-    for i in visual_scanning_sequences:
-        if len(i) > 0:
-            visual_scanning_duration.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-            if i[0] < last_2s_timing_idx:
-                visual_scanning_duration_before_quiet_eye.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-            elif last_2s_timing_idx in i:
-                visual_scanning_duration_before_quiet_eye.append(last_2s_timing_idx - time_vector[i[0]])
-                visual_scanning_duration_last_2s.append(time_vector[i[-1]] - last_2s_timing_idx)
-            elif i[0] > last_2s_timing_idx:
-                visual_scanning_duration_last_2s.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-
     # Total time spent in visual scanning
+    visual_scanning_duration, visual_scanning_duration_before_quiet_eye, visual_scanning_duration_last_2s = split_durations_before_and_after_quiet_eye(
+        visual_scanning_sequences, last_2s_timing_idx, dt, time_vector)
     total_visual_scanning_duration = np.sum(np.array(visual_scanning_duration))
     total_visual_scanning_duration_before_quiet_eye = np.sum(np.array(visual_scanning_duration_before_quiet_eye))
     total_visual_scanning_duration_last_2s = np.sum(np.array(visual_scanning_duration_last_2s))
@@ -1214,6 +1168,10 @@ for path, folders, files in os.walk(datapath):
             mean_smooth_pursuite_trajectory_before_quiet_eye = np.nanmean(np.array(smooth_pursuite_trajectories_before_quiet_eye)) if len(smooth_pursuite_trajectories_before_quiet_eye) > 0 else None
             mean_smooth_pursuite_trajectory_last_2s = np.nanmean(np.array(smooth_pursuite_trajectories_last_2s)) if len(smooth_pursuite_trajectories_last_2s) > 0 else None
 
+            nb_visual_scanning = len(visual_scanning_sequences)
+            nb_visual_scanning_before_quiet_eye = len(visual_scanning_sequences_before_quiet_eye)
+            nb_visual_scanning_last_2s = len(visual_scanning_sequences_last_2s)
+
             mean_visual_scanning_duration = np.nanmean(np.array(visual_scanning_duration)) if len(visual_scanning_duration) > 0 else None
             mean_visual_scanning_duration_before_quiet_eye = np.nanmean(np.array(visual_scanning_duration_before_quiet_eye)) if len(visual_scanning_duration_before_quiet_eye) > 0 else None
             mean_visual_scanning_duration_last_2s = np.nanmean(np.array(visual_scanning_duration_last_2s)) if len(visual_scanning_duration_last_2s) > 0 else None
@@ -1281,6 +1239,9 @@ for path, folders, files in os.walk(datapath):
                 'Mean smooth pursuite trajectory before quiet eye [deg]': [
                     mean_smooth_pursuite_trajectory_before_quiet_eye],
                 'Mean smooth pursuite trajectory last 2s [deg]': [mean_smooth_pursuite_trajectory_last_2s],
+                'Number of visual scanning': [nb_visual_scanning],
+                'Number of visual scanning before quiet eye': [nb_visual_scanning_before_quiet_eye],
+                'Number of visual scanning last 2s': [nb_visual_scanning_last_2s],
                 'Mean visual scanning duration [s]': [mean_visual_scanning_duration],
                 'Mean visual scanning duration before quiet eye [s]': [mean_visual_scanning_duration_before_quiet_eye],
                 'Mean visual scanning duration last 2s [s]': [mean_visual_scanning_duration_last_2s],
