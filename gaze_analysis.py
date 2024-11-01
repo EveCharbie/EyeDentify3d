@@ -272,10 +272,13 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
         / np.linalg.norm(gaze_direction[:, -1])
     ) / (time_vector[-1] - time_vector[-2])
 
+    # velocity_threshold = 100  # deg/s
+    velocity_threshold = np.nanmedian(gaze_angular_velocity_rad) * 3
+
     saccade_sequences_timing = (
         np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
     )
-    visual_scanning_candidates = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > 100)[0]
+    visual_scanning_candidates = np.where(np.abs(velocity_threshold * 180 / np.pi) > 100)[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
@@ -725,9 +728,11 @@ def plot_gaze_classification(
         np.array([time_vector[0], time_vector[-1]]),
         np.array([velocity_threshold, velocity_threshold]),
         "--r",
-        label="5 medians",
+        label="5 medians (not exactly)",
     )
-    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([100, 100]), ":r", label="100 deg/s")
+
+    velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
+    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":r", label="3 medians gaze velocity")
 
     acceleration_threshold = 4000  # deg/s²
     axs[2].plot(time_vector, np.abs(eye_angular_acceleration_rad * 180 / np.pi), "g", label="Eye acceleration norm")
