@@ -294,7 +294,8 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
         / np.linalg.norm(gaze_direction[:, -1])
     ) / (time_vector[-1] - time_vector[-2])
 
-    velocity_threshold = np.nanmedian(gaze_angular_velocity_rad) * 3
+    # velocity_threshold = np.nanmedian(gaze_angular_velocity_rad) * 3
+    velocity_threshold = 130 * np.pi / 180
 
     saccade_sequences_timing = (
         np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
@@ -307,13 +308,52 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
         visual_scanning_timing, np.flatnonzero(np.diff(visual_scanning_timing) > 1) + 1
     )
 
-    visual_scanning_sequences = []
-    for i_sequence in visual_scanning_sequences_tempo:
-        if len(i_sequence) <= 1:
-            continue
-        visual_scanning_sequences += [i_sequence]
+    # merge visual scanning events that are less than 5 frames appart and the gaze is moving in the same direction
+    if len(visual_scanning_sequences_tempo) == 0:
+        return [], eye_angular_velocity_rad, eye_angular_acceleration_rad, []
+    else:
+        visual_scanning_sequences_merged = [visual_scanning_sequences_tempo[0]]
+        current_merged_visual_scanning = 0
+        current_visual_scanning = 0
+        while current_visual_scanning < len(visual_scanning_sequences_tempo)-1:
+            for i in range(current_visual_scanning+1, len(visual_scanning_sequences_tempo)):
+                beginning_of_merged_visual_scanning = visual_scanning_sequences_merged[current_merged_visual_scanning][0]
+                end_of_merged_visual_scanning = visual_scanning_sequences_merged[current_merged_visual_scanning][-1]
+                beginning_of_new_visual_scanning = visual_scanning_sequences_tempo[i][0]
+                end_of_new_visual_scanning = visual_scanning_sequences_tempo[i][-1]
+                if beginning_of_new_visual_scanning - end_of_merged_visual_scanning < 5:
+                    beginning_of_merged_visual_scanning_direction = gaze_direction[:, beginning_of_merged_visual_scanning]
+                    end_of_merged_visual_scanning_direction = gaze_direction[:, end_of_merged_visual_scanning]
+                    merged_visual_scanning_direction = end_of_merged_visual_scanning_direction - beginning_of_merged_visual_scanning_direction
 
-    return visual_scanning_sequences, gaze_angular_velocity_rad
+                    beginning_of_new_visual_scanning_direction = gaze_direction[:, beginning_of_new_visual_scanning]
+                    end_of_new_visual_scanning_direction = gaze_direction[:, end_of_new_visual_scanning]
+                    new_visual_scanning_direction = end_of_new_visual_scanning_direction - beginning_of_new_visual_scanning_direction
+
+                    angle = np.arccos(
+                        np.dot(merged_visual_scanning_direction, new_visual_scanning_direction) / np.linalg.norm(merged_visual_scanning_direction) / np.linalg.norm(new_visual_scanning_direction)
+                    )
+                    candidate_interval = np.array(range(visual_scanning_sequences_merged[current_merged_visual_scanning][0], visual_scanning_sequences_tempo[i][-1] + 1))
+                    if angle < 30 * np.pi / 180 and candidate_interval.shape != (0,) and np.sum(np.isnan(gaze_direction[:, candidate_interval])) == 0:
+                        visual_scanning_sequences_merged[current_merged_visual_scanning] = candidate_interval
+                    else:
+                        visual_scanning_sequences_merged += [visual_scanning_sequences_tempo[i]]
+                        current_merged_visual_scanning += 1
+                    if i == len(visual_scanning_sequences_tempo) - 1:
+                        current_visual_scanning += 1
+                else:
+                    visual_scanning_sequences_merged += [visual_scanning_sequences_tempo[i]]
+                    current_merged_visual_scanning += 1
+                    current_visual_scanning = i
+                    break
+
+        visual_scanning_sequences = []
+        for i_sequence in visual_scanning_sequences_merged:
+            if len(i_sequence) < 5:
+                continue
+            visual_scanning_sequences += [i_sequence]
+
+        return visual_scanning_sequences, gaze_angular_velocity_rad
 
 
 def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
@@ -512,9 +552,9 @@ def detect_fixations_and_smooth_pursuite(
     eta_D = 0.45  #  is the threshold for dispersion (without units)
     eta_CD = 0.5  # is the threshold for consistency of direction (without units)
     eta_PD = 0.5  # is the threshold for position displacement (without units)
-    eta_maxFix = 1.9 * np.pi / 180  # is the threshold for spacial range (in degrees)
+    eta_maxFix = 3 * np.pi / 180  # is the threshold for spacial range (in degrees)
     phi = 45 * np.pi / 180  # is the threshold for similar angular range (in degrees)
-    eta_minSmp = 1.7 * np.pi / 180  # is the threshold for merged segments spacial range (in degrees)
+    eta_minSmp = 2 * np.pi / 180  # is the threshold for merged segments spacial range (in degrees)
 
     if PLOT_CRITERIA_FLAG:
         fig, axs = plt.subplots(4, 1, figsize=(15, 10))
@@ -760,8 +800,9 @@ def plot_gaze_classification(
         label="5 medians (not exactly)",
     )
 
-    velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
-    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":r", label="3 medians gaze velocity")
+    # velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
+    velocity_threshold_3 = 130
+    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":r", label="130 deg/s gaze velocity")
 
     acceleration_threshold = 4000  # deg/s²
     axs[2].plot(time_vector, np.abs(eye_angular_acceleration_rad * 180 / np.pi), "g", label="Eye acceleration norm")
