@@ -192,57 +192,21 @@ def detect_saccades(time_vector, eye_direction):
                 saccade_sequences += [i]
 
     # merge saccades events that are less than 5 frames appart and the gaze is moving in the same direction
-    if len(saccade_sequences) == 0:
-        return [], eye_angular_velocity_rad, eye_angular_acceleration_rad, []
-    else:
-        saccade_sequences_merged = [saccade_sequences[0]]
-        current_merged_saccade = 0
-        current_saccade = 0
-        while current_saccade < len(saccade_sequences)-1:
-            for i in range(current_saccade+1, len(saccade_sequences)):
-                beginning_of_merged_saccade = saccade_sequences_merged[current_merged_saccade][0]
-                end_of_merged_saccade = saccade_sequences_merged[current_merged_saccade][-1]
-                beginning_of_new_saccade = saccade_sequences[i][0]
-                end_of_new_saccade = saccade_sequences[i][-1]
-                if beginning_of_new_saccade - end_of_merged_saccade < 5:
-                    beginning_of_merged_saccade_direction = eye_direction[:, beginning_of_merged_saccade]
-                    end_of_merged_saccade_direction = eye_direction[:, end_of_merged_saccade]
-                    merged_saccade_direction = end_of_merged_saccade_direction - beginning_of_merged_saccade_direction
+    saccade_sequences_merged = merge_close_sequences(saccade_sequences, check_directionnality=True)
 
-                    beginning_of_new_saccade_direction = eye_direction[:, beginning_of_new_saccade]
-                    end_of_new_saccade_direction = eye_direction[:, end_of_new_saccade]
-                    new_saccade_direction = end_of_new_saccade_direction - beginning_of_new_saccade_direction
+    # Saccade amplitude
+    # Defined as the angle between the beginning and end of the saccade,
+    # note that there is no check made to detect if there is a larger amplitude reached during the saccade.
+    saccade_amplitudes = []
+    for sequence in saccade_sequences_merged:
+        vector_before = eye_direction[:, sequence[0]]
+        vector_after = eye_direction[:, sequence[-1]]
+        angle = np.arccos(
+            np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)
+        )
+        saccade_amplitudes += [angle * 180 / np.pi]
 
-                    angle = np.arccos(
-                        np.dot(merged_saccade_direction, new_saccade_direction) / np.linalg.norm(merged_saccade_direction) / np.linalg.norm(new_saccade_direction)
-                    )
-                    candidate_interval = np.array(range(saccade_sequences_merged[current_merged_saccade][0], saccade_sequences[i][-1] + 1))
-                    if angle < 30 * np.pi / 180 and candidate_interval.shape != (0,) and np.sum(np.isnan(eye_direction[:, candidate_interval])) == 0:
-                        saccade_sequences_merged[current_merged_saccade] = candidate_interval
-                    else:
-                        saccade_sequences_merged += [saccade_sequences[i]]
-                        current_merged_saccade += 1
-                    if i == len(saccade_sequences) - 1:
-                        current_saccade += 1
-                else:
-                    saccade_sequences_merged += [saccade_sequences[i]]
-                    current_merged_saccade += 1
-                    current_saccade = i
-                    break
-
-        # Saccade amplitude
-        # Defined as the angle between the beginning and end of the saccade,
-        # note that there is no check made to detect if there is a larger amplitude reached during the saccade.
-        saccade_amplitudes = []
-        for sequence in saccade_sequences_merged:
-            vector_before = eye_direction[:, sequence[0]]
-            vector_after = eye_direction[:, sequence[-1]]
-            angle = np.arccos(
-                np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)
-            )
-            saccade_amplitudes += [angle * 180 / np.pi]
-
-        return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold
+    return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold
 
 
 def get_gaze_direction(helmet_rotation_rad, eye_direction):
@@ -289,67 +253,31 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, helme
         / np.linalg.norm(gaze_direction[:, -1])
     ) / (time_vector[-1] - time_vector[-2])
 
-    # # Filter gaze angular velocity
+    # Filter gaze angular velocity
     # b, a = signal.butter(8, 0.5)
     # filtered_gaze_angular_velocity_rad = signal.filtfilt(b, a, gaze_angular_velocity_rad, padlen=150)
-    filtered_gaze_angular_velocity_rad = None
+    # filtered_gaze_angular_velocity_rad = None
+    filtered_gaze_angular_velocity_rad = gaze_angular_velocity_rad
 
     # velocity_threshold = np.nanmedian(gaze_angular_velocity_rad) * 3
     # velocity_threshold = 130 * np.pi / 180
-    velocity_threshold = 100
+    velocity_threshold = 100 * np.pi / 180
 
     saccade_sequences_timing = (
         np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
     )
-    # visual_scanning_candidates = np.where(np.abs(filtered_gaze_angular_velocity_rad) > velocity_threshold)[0]
-    visual_scanning_candidates = np.where(np.abs(helmet_rotation_unwrapped_deg) > velocity_threshold)[0]
+    visual_scanning_candidates = np.where(np.abs(filtered_gaze_angular_velocity_rad) > velocity_threshold)[0]
+    # visual_scanning_candidates = np.where(np.abs(helmet_rotation_unwrapped_deg) > velocity_threshold)[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
-    visual_scanning_sequences_tempo = np.array_split(
+    visual_scanning_sequences = np.array_split(
         visual_scanning_timing, np.flatnonzero(np.diff(visual_scanning_timing) > 1) + 1
     )
 
-    # merge visual scanning events that are less than 5 frames appart and the gaze is moving in the same direction
-    if len(visual_scanning_sequences_tempo) == 0:
-        return [], eye_angular_velocity_rad, eye_angular_acceleration_rad, []
-    else:
-        visual_scanning_sequences_merged = [visual_scanning_sequences_tempo[0]]
-        current_merged_visual_scanning = 0
-        current_visual_scanning = 0
-        while current_visual_scanning < len(visual_scanning_sequences_tempo)-1:
-            for i in range(current_visual_scanning+1, len(visual_scanning_sequences_tempo)):
-                beginning_of_merged_visual_scanning = visual_scanning_sequences_merged[current_merged_visual_scanning][0]
-                end_of_merged_visual_scanning = visual_scanning_sequences_merged[current_merged_visual_scanning][-1]
-                beginning_of_new_visual_scanning = visual_scanning_sequences_tempo[i][0]
-                end_of_new_visual_scanning = visual_scanning_sequences_tempo[i][-1]
-                if beginning_of_new_visual_scanning - end_of_merged_visual_scanning < 5:
-                    beginning_of_merged_visual_scanning_direction = gaze_direction[:, beginning_of_merged_visual_scanning]
-                    end_of_merged_visual_scanning_direction = gaze_direction[:, end_of_merged_visual_scanning]
-                    merged_visual_scanning_direction = end_of_merged_visual_scanning_direction - beginning_of_merged_visual_scanning_direction
+    visual_scanning_sequences = merge_close_sequences(visual_scanning_sequences, check_directionnality=True)
 
-                    beginning_of_new_visual_scanning_direction = gaze_direction[:, beginning_of_new_visual_scanning]
-                    end_of_new_visual_scanning_direction = gaze_direction[:, end_of_new_visual_scanning]
-                    new_visual_scanning_direction = end_of_new_visual_scanning_direction - beginning_of_new_visual_scanning_direction
-
-                    angle = np.arccos(
-                        np.dot(merged_visual_scanning_direction, new_visual_scanning_direction) / np.linalg.norm(merged_visual_scanning_direction) / np.linalg.norm(new_visual_scanning_direction)
-                    )
-                    candidate_interval = np.array(range(visual_scanning_sequences_merged[current_merged_visual_scanning][0], visual_scanning_sequences_tempo[i][-1] + 1))
-                    if angle < 30 * np.pi / 180 and candidate_interval.shape != (0,) and np.sum(np.isnan(gaze_direction[:, candidate_interval])) == 0:
-                        visual_scanning_sequences_merged[current_merged_visual_scanning] = candidate_interval
-                    else:
-                        visual_scanning_sequences_merged += [visual_scanning_sequences_tempo[i]]
-                        current_merged_visual_scanning += 1
-                    if i == len(visual_scanning_sequences_tempo) - 1:
-                        current_visual_scanning += 1
-                else:
-                    visual_scanning_sequences_merged += [visual_scanning_sequences_tempo[i]]
-                    current_merged_visual_scanning += 1
-                    current_visual_scanning = i
-                    break
-
-        return visual_scanning_sequences_merged, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad
+    return visual_scanning_sequences, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad
 
 def apply_minimal_duration(sequences_tempo, number_of_frames_min):
     sequences = []
@@ -543,6 +471,61 @@ def discriminate_fixations_and_smooth_pursuite(gaze_direction):
     return parameter_D, parameter_CD, parameter_PD, parameter_R
 
 
+def merge_close_sequences(sequences_candidates, check_directionnality=False):
+    """
+    Merge events that are less than 5 frames appart and the gaze is moving in the same direction
+    """
+
+    if len(sequences_candidates) == 0:
+        sequences_merged = []
+    else:
+        sequences_merged = [sequences_candidates[0]]
+        current_merged_sequence = 0
+        current_sequence = 0
+        while current_sequence < len(sequences_candidates)-1:
+            for i in range(current_sequence+1, len(sequences_candidates)):
+                beginning_of_merged_visual_scanning = sequences_merged[current_merged_sequence][0]
+                end_of_merged_visual_scanning = sequences_merged[current_merged_sequence][-1]
+                beginning_of_new_visual_scanning = sequences_candidates[i][0]
+                end_of_new_visual_scanning = sequences_candidates[i][-1]
+                if beginning_of_new_visual_scanning - end_of_merged_visual_scanning < 5:
+                    if check_directionnality:
+                        beginning_of_merged_visual_scanning_direction = gaze_direction[:, beginning_of_merged_visual_scanning]
+                        end_of_merged_visual_scanning_direction = gaze_direction[:, end_of_merged_visual_scanning]
+                        merged_visual_scanning_direction = end_of_merged_visual_scanning_direction - beginning_of_merged_visual_scanning_direction
+
+                        beginning_of_new_visual_scanning_direction = gaze_direction[:, beginning_of_new_visual_scanning]
+                        end_of_new_visual_scanning_direction = gaze_direction[:, end_of_new_visual_scanning]
+                        new_visual_scanning_direction = end_of_new_visual_scanning_direction - beginning_of_new_visual_scanning_direction
+
+                        angle = np.arccos(
+                            np.dot(merged_visual_scanning_direction, new_visual_scanning_direction) / np.linalg.norm(merged_visual_scanning_direction) / np.linalg.norm(new_visual_scanning_direction)
+                        )
+                        candidate_interval = np.array(range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1))
+
+                        if angle < 30 * np.pi / 180 and candidate_interval.shape != (0,) and np.sum(np.isnan(gaze_direction[:, candidate_interval])) == 0:
+                            criteria = True
+                        else:
+                            criteria = False
+                    else:
+                        criteria = True
+
+                    candidate_interval = np.array(range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1))
+                    if criteria:
+                        sequences_merged[current_merged_sequence] = candidate_interval
+                    else:
+                        sequences_merged += [sequences_candidates[i]]
+                        current_merged_sequence += 1
+                    if i == len(sequences_candidates) - 1:
+                        current_sequence += 1
+                else:
+                    sequences_merged += [sequences_candidates[i]]
+                    current_merged_sequence += 1
+                    current_sequence = i
+                    break
+    return sequences_merged
+
+
 def detect_fixations_and_smooth_pursuite(
     time_vector, gaze_direction, intersaccadic_gouped_sequences, fig_name, PLOT_CRITERIA_FLAG
 ):
@@ -718,14 +701,16 @@ def detect_fixations_and_smooth_pursuite(
 
     smooth_pursuite_timing = np.sort(smooth_pursuite_timing)
     fixation_timing = np.sort(fixation_timing)
-    fixation_sequences = np.array_split(
-        np.array(fixation_timing), np.flatnonzero(np.diff(np.array(fixation_timing)) > 1) + 1
-    )
-    smooth_pursuite_sequences = np.array_split(
+    fixation_sequences_candidates = np.array_split(
+        np.array(fixation_timing), np.flatnonzero(np.diff(np.array(fixation_timing)) > 1) + 1)
+    smooth_pursuite_sequences_cadidates = np.array_split(
         np.array(smooth_pursuite_timing), np.flatnonzero(np.diff(np.array(smooth_pursuite_timing)) > 1) + 1
     )
 
-    return fixation_sequences, smooth_pursuite_sequences, uncertain_sequences
+    fixation_sequences_merged = merge_close_sequences(fixation_sequences_candidates, check_directionnality=False)
+    smooth_pursuite_sequences_merged = merge_close_sequences(smooth_pursuite_sequences_cadidates, check_directionnality=True)
+
+    return fixation_sequences_merged, smooth_pursuite_sequences_merged, uncertain_sequences
 
 
 def measure_smooth_pursuite_trajectory(time_vector, smooth_pursuite_sequences, gaze_angular_velocity_rad, dt):
@@ -811,8 +796,8 @@ def plot_gaze_classification(
         label="5 medians (not exactly)",
     )
 
-    # axs[1].plot(time_vector, np.abs(filtered_gaze_angular_velocity_rad * 180 / np.pi), "b", label="Gaze velocity norm filtered")
-    axs[1].plot(time_vector, np.abs(helmet_rotation_unwrapped_deg), "b", label="Head velocity")
+    axs[1].plot(time_vector, np.abs(filtered_gaze_angular_velocity_rad * 180 / np.pi), "b", label="Gaze velocity norm")
+    # axs[1].plot(time_vector, np.abs(helmet_rotation_unwrapped_deg), "b", label="Head velocity")
     # velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
     velocity_threshold_3 = 100
     axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":b", label="100 deg/s gaze velocity")
@@ -1369,7 +1354,8 @@ for path, folders, files in os.walk(datapath):
                 i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
                 i_in_blinks = True if any(i in sequence for sequence in blink_sequences) else False
                 i_in_eyetracker_invalid = True if i in eyetracker_invalid_data_index else False
-                if i_in_saccades or i_in_visual_scanning or i_in_blinks or i_in_eyetracker_invalid:
+                gaze_velocity_criteria = True if gaze_angular_velocity_rad[i] * np.pi/180 > 100 else False
+                if i_in_saccades or i_in_visual_scanning or i_in_blinks or i_in_eyetracker_invalid or gaze_velocity_criteria:
                     continue
                 else:
                     intersaccadic_interval[i] = 1
@@ -1377,11 +1363,11 @@ for path, folders, files in os.walk(datapath):
             intersaccadic_sequences_temporary = np.array_split(
                 intersaccadic_timing, np.flatnonzero(np.diff(intersaccadic_timing) > 1) + 1
             )
-            intersaccadic_sequences = [
-                np.hstack((intersaccadic_sequences_temporary[i], intersaccadic_sequences_temporary[i][-1] + 1))
-                for i in range(len(intersaccadic_sequences_temporary))
-                if len(intersaccadic_sequences_temporary[i]) > 2
-            ]
+            intersaccadic_sequences = []
+            for i in range(len(intersaccadic_sequences_temporary)):
+                if len(intersaccadic_sequences_temporary[i]) > 2:
+                    intersaccadic_sequences += [intersaccadic_sequences_temporary[i]]
+
             intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = (
                 sliding_window(time_vector, intersaccadic_sequences, gaze_direction)
             )
