@@ -245,7 +245,7 @@ def detect_saccades(time_vector, eye_direction):
         return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold
 
 
-def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
+def get_gaze_direction(helmet_rotation_rad, eye_direction):
     helmet_rotation_in_rad = helmet_rotation_unwrapped_deg * np.pi / 180
 
     gaze_direction = np.zeros(eye_direction.shape)
@@ -256,7 +256,7 @@ def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
     return gaze_direction
 
 
-def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
+def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, helmet_rotation_unwrapped_deg):
     """
     Identify sequences where the gaze velocity is larger than 100 deg/s, but which are not saccades.
     """
@@ -289,17 +289,20 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
         / np.linalg.norm(gaze_direction[:, -1])
     ) / (time_vector[-1] - time_vector[-2])
 
-    # Filter gaze angular velocity
-    b, a = signal.butter(8, 0.5)
-    filtered_gaze_angular_velocity_rad = signal.filtfilt(b, a, gaze_angular_velocity_rad, padlen=150)
+    # # Filter gaze angular velocity
+    # b, a = signal.butter(8, 0.5)
+    # filtered_gaze_angular_velocity_rad = signal.filtfilt(b, a, gaze_angular_velocity_rad, padlen=150)
+    filtered_gaze_angular_velocity_rad = None
 
     # velocity_threshold = np.nanmedian(gaze_angular_velocity_rad) * 3
-    velocity_threshold = 130 * np.pi / 180
+    # velocity_threshold = 130 * np.pi / 180
+    velocity_threshold = 100
 
     saccade_sequences_timing = (
         np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
     )
-    visual_scanning_candidates = np.where(np.abs(filtered_gaze_angular_velocity_rad) > velocity_threshold)[0]
+    # visual_scanning_candidates = np.where(np.abs(filtered_gaze_angular_velocity_rad) > velocity_threshold)[0]
+    visual_scanning_candidates = np.where(np.abs(helmet_rotation_unwrapped_deg) > velocity_threshold)[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
@@ -783,6 +786,7 @@ def plot_gaze_classification(
     smooth_pursuite_duration_threshold,
     velocity_threshold,
     filtered_gaze_angular_velocity_rad,
+    helmet_rotation_unwrapped_deg,
 ):
     """
     Plot the final gaze classification
@@ -807,10 +811,11 @@ def plot_gaze_classification(
         label="5 medians (not exactly)",
     )
 
-    axs[1].plot(time_vector, np.abs(filtered_gaze_angular_velocity_rad * 180 / np.pi), "b", label="Gaze velocity norm filtered")
+    # axs[1].plot(time_vector, np.abs(filtered_gaze_angular_velocity_rad * 180 / np.pi), "b", label="Gaze velocity norm filtered")
+    axs[1].plot(time_vector, np.abs(helmet_rotation_unwrapped_deg), "b", label="Head velocity")
     # velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
-    velocity_threshold_3 = 130
-    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":b", label="130 deg/s gaze velocity")
+    velocity_threshold_3 = 100
+    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":b", label="100 deg/s gaze velocity")
 
     acceleration_threshold = 4000  # deg/s²
     axs[2].plot(time_vector, np.abs(eye_angular_acceleration_rad * 180 / np.pi), "g", label="Eye acceleration norm")
@@ -952,59 +957,8 @@ def plot_gaze_classification(
     axs[2].legend(bbox_to_anchor=(1.27, 0.7))
     plt.subplots_adjust(bottom=0.1, top=0.9, left=0.1, right=0.8)
     plt.savefig(f"figures/gaze_classification_{figname}.png")
-    # plt.show()
+    plt.show()
     plt.close()
-    return
-
-
-def plot_head_eye_rotation(
-    eye_direction,
-    helmet_rotation_unwrapped_deg,
-    head_angular_velocity_deg,
-    gaze_angular_velocity_rad,
-    time_vector,
-    figname,
-):
-
-    eye_angular_velocity_rad = np.zeros((eye_direction.shape[1],))
-    for i_frame in range(1, eye_direction.shape[1] - 1):  # Skipping the first and last frames
-        vector_before = eye_direction[:, i_frame - 1]
-        vector_after = eye_direction[:, i_frame + 1]
-        eye_angular_velocity_rad[i_frame] = np.arccos(
-            np.dot(vector_before, vector_after) / np.linalg.norm(vector_before) / np.linalg.norm(vector_after)
-        ) / (time_vector[i_frame + 1] - time_vector[i_frame - 1])
-        if np.isnan(eye_angular_velocity_rad[i_frame]) and not (
-            any(np.isnan(vector_before)) or any(np.isnan(vector_after))
-        ):
-            raise RuntimeError(
-                f" Please review these variable values : \n "
-                f"eye_angular_velocity_rad[i_frame] = {eye_angular_velocity_rad[i_frame]} \n"
-                f"vector_before = {vector_before} \n"
-                f"vector_after = {vector_after} \n"
-            )
-    eye_angular_velocity_rad[0] = np.arccos(
-        np.dot(eye_direction[:, 0], eye_direction[:, 1])
-        / np.linalg.norm(eye_direction[:, 0])
-        / np.linalg.norm(eye_direction[:, 1])
-    ) / (time_vector[1] - time_vector[0])
-    eye_angular_velocity_rad[-1] = np.arccos(
-        np.dot(eye_direction[:, -2], eye_direction[:, -1])
-        / np.linalg.norm(eye_direction[:, -2])
-        / np.linalg.norm(eye_direction[:, -1])
-    ) / (time_vector[-1] - time_vector[-2])
-
-    fig, axs = plt.subplots(2, 1)
-    axs[0].plot(time_vector, eye_angular_velocity_rad * 180 / np.pi, "r-", label="Eye velocity [deg/s]")
-    axs[0].plot(time_vector, head_angular_velocity_deg, "g-", label="Head velocity [deg/s]")
-    axs[0].plot(time_vector, gaze_angular_velocity_rad * 180 / np.pi, "b-", label="Gaze velocity [deg/s]")
-    axs[0].legend()
-    axs[1].plot(time_vector, helmet_rotation_unwrapped_deg[0], "k-", label="Head rotation x [deg]")
-    axs[1].plot(time_vector, helmet_rotation_unwrapped_deg[1], "k--", label="Head rotation y [deg]")
-    axs[1].plot(time_vector, helmet_rotation_unwrapped_deg[2], "k:", label="Head rotation z [deg]")
-    axs[1].legend()
-    plt.savefig(f"figures/head_eye_rotation_{figname}.png")
-    # plt.show()
-
     return
 
 
@@ -1043,20 +997,32 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
         head_3angular_velocity_deg[i_component, 1:-1] = (
             helmet_rotation_unwrapped_deg[i_component, 2:] - helmet_rotation_unwrapped_deg[i_component, :-2]
         ) / (time_vector[2:] - time_vector[:-2])
+
     head_angular_velocity_deg = np.linalg.norm(head_3angular_velocity_deg, axis=0)
+
+    # head_angular_velocity_deg_filtered = np.zeros((head_angular_velocity_deg.shape[0],))
+    # head_angular_velocity_deg_filtered[0] = head_angular_velocity_deg[0]
+    # for i_frame in range(1, head_angular_velocity_deg.shape[0] - 1):
+    #     head_angular_velocity_deg_filtered[i_frame] = np.nanmean(
+    #         head_angular_velocity_deg[i_frame-1 : i_frame+2]
+    #     )
+    # head_angular_velocity_deg_filtered[-1] = head_angular_velocity_deg[-1]
+
+    # Filter head angular velocity
+    b, a = signal.butter(8, 0.2)
+    head_angular_velocity_deg_filtered = signal.filtfilt(b, a, head_angular_velocity_deg, padlen=150)
+
 
     # plt.figure()
     # plt.plot(helmet_rotation[0, :])
     # plt.plot(helmet_rotation[1, :])
     # plt.plot(helmet_rotation[2, :])
-    # plt.plot(helmet_rotation_unwrapped_deg[0, :])
-    # plt.plot(helmet_rotation_unwrapped_deg[1, :])
-    # plt.plot(helmet_rotation_unwrapped_deg[2, :])
+    # plt.plot(head_angular_velocity_deg_filtered, '-r')
     # plt.plot(head_angular_velocity_deg, 'k-')
     # plt.savefig("figures/test.png")
     # plt.show()
 
-    return helmet_rotation_unwrapped_deg, head_angular_velocity_deg
+    return head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg
 
 
 def compute_intermediary_metrics(
@@ -1331,6 +1297,7 @@ for path, folders, files in os.walk(datapath):
                 continue
 
             time_vector = np.array((data["time(100ns)"] - data["time(100ns)"][0]) / 10000000)
+            # time_vector = np.arange(0, len(time_vector) / 120, 1 / 120)
             length_trial = time_vector[-1] if np.isnan(length_trial) else length_trial
 
             # cut the data after the black screen
@@ -1348,7 +1315,7 @@ for path, folders, files in os.walk(datapath):
 
             eye_direction = np.array([data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
             helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
-            helmet_rotation_unwrapped_deg, head_angular_velocity_deg = fix_helmet_rotation(time_vector, helmet_rotation)
+            head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg = fix_helmet_rotation(time_vector, helmet_rotation)
 
             eyetracker_invalid_data_index = np.array([])
             if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(data["eye_valid_R"]) != 31 * len(
@@ -1391,18 +1358,8 @@ for path, folders, files in os.walk(datapath):
 
             # Detect visual scanning
             visual_scanning_sequences, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad = detect_visual_scanning(
-                time_vector, gaze_direction, saccade_sequences
+                time_vector, gaze_direction, saccade_sequences, head_angular_velocity_deg_filtered
             )
-
-            if PLOT_ROTATION_VELOCITIES_FLAG:
-                plot_head_eye_rotation(
-                    eye_direction,
-                    helmet_rotation_unwrapped_deg,
-                    head_angular_velocity_deg,
-                    gaze_angular_velocity_rad,
-                    time_vector,
-                    figname,
-                )
 
             # Detect fixations
             intersaccadic_interval = np.zeros((len(time_vector),))
@@ -1461,6 +1418,7 @@ for path, folders, files in os.walk(datapath):
                     smooth_pursuite_duration_threshold,
                     velocity_threshold,
                     filtered_gaze_angular_velocity_rad,
+                    head_angular_velocity_deg_filtered,
                 )
 
             (
