@@ -12,6 +12,7 @@ import matplotlib.cm as cm
 import pandas as pd
 import biorbd
 import pingouin as pg
+from scipy import signal
 
 """
 -> 'time(100ns)' = time stamps of the recorded frames
@@ -162,24 +163,18 @@ def detect_saccades(time_vector, eye_direction):
         time_vector[1:] - time_vector[:-1]
     )
 
-    velocity_threshold = 5 * np.nanmedian(np.abs(eye_angular_velocity_rad) * 180 / np.pi)
     acceleration_threshold = 4000  # deg/s²
+    # velocity_threshold = 5 * np.nanmedian(np.abs(eye_angular_velocity_rad) * 180 / np.pi)
+    velocity_threshold = np.zeros((eye_angular_velocity_rad.shape[0], ))
+    velocity_threshold
+    window_size = 62  # Actually 61 frames
 
-    if PLOT_SACCADES_FLAG:
-        plt.figure()
-        plt.plot(time_vector, np.abs(eye_angular_velocity_rad * 180 / np.pi), label="Angular Velocity")
-        plt.plot(
-            np.array([time_vector[0], time_vector[-1]]), np.array([100, 100]), "k--", label=r"Threshold 100$\^circ/s$"
-        )
-        plt.plot(
-            np.array([time_vector[0], time_vector[-1]]),
-            np.array([velocity_threshold, velocity_threshold]),
-            "b--",
-            label=r"Threshold 5 medians",
-        )
-        plt.legend()
-        plt.savefig("figures/saccade_detection_test.png")
-        plt.show()
+    velocity_threshold[:int(window_size / 2)] = np.nanmedian(
+        np.abs(eye_angular_velocity_rad[:window_size]) * 180 / np.pi) * 5
+    for i_frame in range(eye_angular_velocity_rad.shape[0]-window_size):
+        velocity_threshold[int(i_frame+window_size/2)] = np.nanmedian(np.abs(eye_angular_velocity_rad[i_frame:i_frame+window_size]) * 180 / np.pi) * 5
+    velocity_threshold[int(-window_size / 2):] = np.nanmedian(
+        np.abs(eye_angular_velocity_rad[-window_size:]) * 180 / np.pi) * 5
 
     # Velocity + 1 frames acceleration classification
     saccade_timing = np.where(np.abs(eye_angular_velocity_rad * 180 / np.pi) > velocity_threshold)[0]
@@ -247,7 +242,7 @@ def detect_saccades(time_vector, eye_direction):
             )
             saccade_amplitudes += [angle * 180 / np.pi]
 
-        return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes
+        return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold
 
 
 def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
@@ -294,13 +289,17 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
         / np.linalg.norm(gaze_direction[:, -1])
     ) / (time_vector[-1] - time_vector[-2])
 
+    # Filter gaze angular velocity
+    b, a = signal.butter(8, 0.5)
+    filtered_gaze_angular_velocity_rad = signal.filtfilt(b, a, gaze_angular_velocity_rad, padlen=150)
+
     # velocity_threshold = np.nanmedian(gaze_angular_velocity_rad) * 3
     velocity_threshold = 130 * np.pi / 180
 
     saccade_sequences_timing = (
         np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
     )
-    visual_scanning_candidates = np.where(np.abs(gaze_angular_velocity_rad) > velocity_threshold)[0]
+    visual_scanning_candidates = np.where(np.abs(filtered_gaze_angular_velocity_rad) > velocity_threshold)[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
@@ -347,14 +346,15 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences):
                     current_visual_scanning = i
                     break
 
-        visual_scanning_sequences = []
-        for i_sequence in visual_scanning_sequences_merged:
-            if len(i_sequence) < 5:
-                continue
-            visual_scanning_sequences += [i_sequence]
+        return visual_scanning_sequences_merged, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad
 
-        return visual_scanning_sequences, gaze_angular_velocity_rad
-
+def apply_minimal_duration(sequences_tempo, number_of_frames_min):
+    sequences = []
+    for i_sequence in sequences_tempo:
+        if len(i_sequence) < number_of_frames_min:
+            continue
+        sequences += [i_sequence]
+    return sequences
 
 def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     """
@@ -781,6 +781,8 @@ def plot_gaze_classification(
     figname,
     fixation_duration_threshold,
     smooth_pursuite_duration_threshold,
+    velocity_threshold,
+    filtered_gaze_angular_velocity_rad,
 ):
     """
     Plot the final gaze classification
@@ -791,18 +793,24 @@ def plot_gaze_classification(
     axs[0].plot(time_vector, gaze_direction[1, :], "--k", label="Gaze y (head + eye)")
     axs[0].plot(time_vector, gaze_direction[2, :], ":k", label="Gaze z (head + eye)")
 
-    velocity_threshold = 5 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
     axs[1].plot(time_vector, np.abs(gaze_angular_velocity_rad * 180 / np.pi), "r", label="Gaze velocity norm")
+    # axs[1].plot(
+    #     np.array([time_vector[0], time_vector[-1]]),
+    #     np.array([velocity_threshold, velocity_threshold]),
+    #     "--r",
+    #     label="5 medians (not exactly)",
+    # )
     axs[1].plot(
-        np.array([time_vector[0], time_vector[-1]]),
-        np.array([velocity_threshold, velocity_threshold]),
+        time_vector,
+        velocity_threshold,
         "--r",
         label="5 medians (not exactly)",
     )
 
+    axs[1].plot(time_vector, np.abs(filtered_gaze_angular_velocity_rad * 180 / np.pi), "b", label="Gaze velocity norm filtered")
     # velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
     velocity_threshold_3 = 130
-    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":r", label="130 deg/s gaze velocity")
+    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":b", label="130 deg/s gaze velocity")
 
     acceleration_threshold = 4000  # deg/s²
     axs[2].plot(time_vector, np.abs(eye_angular_acceleration_rad * 180 / np.pi), "g", label="Eye acceleration norm")
@@ -1281,6 +1289,9 @@ for path, folders, files in os.walk(datapath):
                 if file in long_trials:
                     continue
 
+            if file != "20231030163023_eye_tracking_VideoListOne_TESTNA01_Experiment_Mode_360VR_Fist5_007.csv":
+                continue
+
             # Get the data from the file
             this_trial_name = file.split("_")[-2]
             if "Experiment" not in file:
@@ -1373,13 +1384,13 @@ for path, folders, files in os.walk(datapath):
                 eye_direction[:, eyetracker_invalid_data_index] = np.nan
 
             # Detect saccades
-            saccade_sequences, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes = (
+            saccade_sequences, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold = (
                 detect_saccades(time_vector, eye_direction)
             )
             gaze_direction = get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction)
 
             # Detect visual scanning
-            visual_scanning_sequences, gaze_angular_velocity_rad = detect_visual_scanning(
+            visual_scanning_sequences, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad = detect_visual_scanning(
                 time_vector, gaze_direction, saccade_sequences
             )
 
@@ -1425,6 +1436,7 @@ for path, folders, files in os.walk(datapath):
                 time_vector, gaze_direction, intersaccadic_gouped_sequences, figname, PLOT_CRITERIA_FLAG
             )
 
+            visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)
             check_if_there_is_sequence_overlap(fixation_sequences, smooth_pursuite_sequences, visual_scanning_sequences, blink_sequences, saccade_sequences, eyetracker_invalid_sequences)
 
             if PLOT_CLASSIFICATION_FLAG:
@@ -1447,6 +1459,8 @@ for path, folders, files in os.walk(datapath):
                     figname,
                     fixation_duration_threshold,
                     smooth_pursuite_duration_threshold,
+                    velocity_threshold,
+                    filtered_gaze_angular_velocity_rad,
                 )
 
             (
