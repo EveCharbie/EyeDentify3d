@@ -209,7 +209,7 @@ def detect_saccades(time_vector, eye_direction):
     return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold
 
 
-def get_gaze_direction(helmet_rotation_rad, eye_direction):
+def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
     helmet_rotation_in_rad = helmet_rotation_unwrapped_deg * np.pi / 180
 
     gaze_direction = np.zeros(eye_direction.shape)
@@ -797,7 +797,7 @@ def plot_gaze_classification(
     )
 
     axs[1].plot(time_vector, np.abs(filtered_gaze_angular_velocity_rad * 180 / np.pi), "b", label="Gaze velocity norm")
-    # axs[1].plot(time_vector, np.abs(helmet_rotation_unwrapped_deg), "b", label="Head velocity")
+    axs[1].plot(time_vector, np.abs(helmet_rotation_unwrapped_deg), "y", label="Head velocity")
     # velocity_threshold_3 = 3 * np.nanmedian(gaze_angular_velocity_rad * 180 / np.pi)
     velocity_threshold_3 = 100
     axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_3, velocity_threshold_3]), ":b", label="100 deg/s gaze velocity")
