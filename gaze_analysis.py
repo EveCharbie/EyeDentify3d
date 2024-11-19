@@ -115,7 +115,7 @@ def detect_blinks(time_vector, data):
     return blink_sequences
 
 
-def detect_saccades(time_vector, eye_direction):
+def detect_saccades(time_vector, eye_direction, gaze_direction):
     """
     Detecting sequences where the :
     - eye angular velocity is larger than 5 times the median of the trial
@@ -192,7 +192,7 @@ def detect_saccades(time_vector, eye_direction):
                 saccade_sequences += [i]
 
     # merge saccades events that are less than 5 frames appart and the gaze is moving in the same direction
-    saccade_sequences_merged = merge_close_sequences(saccade_sequences, check_directionnality=True)
+    saccade_sequences_merged = merge_close_sequences(saccade_sequences, gaze_direction, check_directionnality=True)
 
     # Saccade amplitude
     # Defined as the angle between the beginning and end of the saccade,
@@ -275,7 +275,7 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, helme
         visual_scanning_timing, np.flatnonzero(np.diff(visual_scanning_timing) > 1) + 1
     )
 
-    visual_scanning_sequences = merge_close_sequences(visual_scanning_sequences, check_directionnality=True)
+    visual_scanning_sequences = merge_close_sequences(visual_scanning_sequences, gaze_direction, check_directionnality=True)
 
     return visual_scanning_sequences, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad
 
@@ -471,7 +471,7 @@ def discriminate_fixations_and_smooth_pursuite(gaze_direction):
     return parameter_D, parameter_CD, parameter_PD, parameter_R
 
 
-def merge_close_sequences(sequences_candidates, check_directionnality=False):
+def merge_close_sequences(sequences_candidates, gaze_direction, check_directionnality=False):
     """
     Merge events that are less than 5 frames appart and the gaze is moving in the same direction
     """
@@ -484,22 +484,23 @@ def merge_close_sequences(sequences_candidates, check_directionnality=False):
         current_sequence = 0
         while current_sequence < len(sequences_candidates)-1:
             for i in range(current_sequence+1, len(sequences_candidates)):
-                beginning_of_merged_visual_scanning = sequences_merged[current_merged_sequence][0]
-                end_of_merged_visual_scanning = sequences_merged[current_merged_sequence][-1]
-                beginning_of_new_visual_scanning = sequences_candidates[i][0]
-                end_of_new_visual_scanning = sequences_candidates[i][-1]
-                if beginning_of_new_visual_scanning - end_of_merged_visual_scanning < 5:
+                beginning_of_merged_sequence = sequences_merged[current_merged_sequence][0]
+                end_of_merged_sequence = sequences_merged[current_merged_sequence][-1]
+                beginning_of_new_sequence = sequences_candidates[i][0]
+                end_of_new_sequence = sequences_candidates[i][-1]
+                not_invalid = np.sum(np.isnan(gaze_direction[:, range(end_of_merged_sequence, beginning_of_new_sequence+1)])) == 0
+                if beginning_of_new_sequence - end_of_merged_sequence < 5 and not_invalid:
                     if check_directionnality:
-                        beginning_of_merged_visual_scanning_direction = gaze_direction[:, beginning_of_merged_visual_scanning]
-                        end_of_merged_visual_scanning_direction = gaze_direction[:, end_of_merged_visual_scanning]
-                        merged_visual_scanning_direction = end_of_merged_visual_scanning_direction - beginning_of_merged_visual_scanning_direction
+                        beginning_of_merged_sequence_direction = gaze_direction[:, beginning_of_merged_sequence]
+                        end_of_merged_sequence_direction = gaze_direction[:, end_of_merged_sequence]
+                        merged_sequence_direction = end_of_merged_sequence_direction - beginning_of_merged_sequence_direction
 
-                        beginning_of_new_visual_scanning_direction = gaze_direction[:, beginning_of_new_visual_scanning]
-                        end_of_new_visual_scanning_direction = gaze_direction[:, end_of_new_visual_scanning]
-                        new_visual_scanning_direction = end_of_new_visual_scanning_direction - beginning_of_new_visual_scanning_direction
+                        beginning_of_new_sequence_direction = gaze_direction[:, beginning_of_new_sequence]
+                        end_of_new_sequence_direction = gaze_direction[:, end_of_new_sequence]
+                        new_sequence_direction = end_of_new_sequence_direction - beginning_of_new_sequence_direction
 
                         angle = np.arccos(
-                            np.dot(merged_visual_scanning_direction, new_visual_scanning_direction) / np.linalg.norm(merged_visual_scanning_direction) / np.linalg.norm(new_visual_scanning_direction)
+                            np.dot(merged_sequence_direction, new_sequence_direction) / np.linalg.norm(merged_sequence_direction) / np.linalg.norm(new_sequence_direction)
                         )
                         candidate_interval = np.array(range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1))
 
@@ -707,8 +708,8 @@ def detect_fixations_and_smooth_pursuite(
         np.array(smooth_pursuite_timing), np.flatnonzero(np.diff(np.array(smooth_pursuite_timing)) > 1) + 1
     )
 
-    fixation_sequences_merged = merge_close_sequences(fixation_sequences_candidates, check_directionnality=False)
-    smooth_pursuite_sequences_merged = merge_close_sequences(smooth_pursuite_sequences_cadidates, check_directionnality=True)
+    fixation_sequences_merged = merge_close_sequences(fixation_sequences_candidates, gaze_direction, check_directionnality=False)
+    smooth_pursuite_sequences_merged = merge_close_sequences(smooth_pursuite_sequences_cadidates, gaze_direction, check_directionnality=True)
 
     return fixation_sequences_merged, smooth_pursuite_sequences_merged, uncertain_sequences
 
@@ -942,7 +943,7 @@ def plot_gaze_classification(
     axs[2].legend(bbox_to_anchor=(1.27, 0.7))
     plt.subplots_adjust(bottom=0.1, top=0.9, left=0.1, right=0.8)
     plt.savefig(f"figures/gaze_classification_{figname}.png")
-    plt.show()
+    # plt.show()
     plt.close()
     return
 
@@ -985,14 +986,6 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
 
     head_angular_velocity_deg = np.linalg.norm(head_3angular_velocity_deg, axis=0)
 
-    # head_angular_velocity_deg_filtered = np.zeros((head_angular_velocity_deg.shape[0],))
-    # head_angular_velocity_deg_filtered[0] = head_angular_velocity_deg[0]
-    # for i_frame in range(1, head_angular_velocity_deg.shape[0] - 1):
-    #     head_angular_velocity_deg_filtered[i_frame] = np.nanmean(
-    #         head_angular_velocity_deg[i_frame-1 : i_frame+2]
-    #     )
-    # head_angular_velocity_deg_filtered[-1] = head_angular_velocity_deg[-1]
-
     # Filter head angular velocity
     b, a = signal.butter(8, 0.2)
     head_angular_velocity_deg_filtered = signal.filtfilt(b, a, head_angular_velocity_deg, padlen=150)
@@ -1007,7 +1000,7 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
     # plt.savefig("figures/test.png")
     # plt.show()
 
-    return head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg
+    return head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg
 
 
 def compute_intermediary_metrics(
@@ -1023,6 +1016,7 @@ def compute_intermediary_metrics(
     cut_file,
     fixation_duration_threshold,
     smooth_pursuite_duration_threshold,
+    head_angular_velocity_deg,
 ):
 
     def split_sequences_before_and_after_quiet_eye(last_2s_timing_idx, sequences):
@@ -1136,6 +1130,11 @@ def compute_intermediary_metrics(
     total_visual_scanning_duration_before_quiet_eye = np.sum(np.array(visual_scanning_duration_before_quiet_eye))
     total_visual_scanning_duration_last_2s = np.sum(np.array(visual_scanning_duration_last_2s))
 
+    # Head velocity
+    mean_head_angular_velocity_deg = np.mean(head_angular_velocity_deg)
+    mean_head_angular_velocity_deg_before_quiet_eye = np.mean(head_angular_velocity_deg[:last_2s_timing_idx])
+    mean_head_angular_velocity_deg_last_2s = np.mean(head_angular_velocity_deg[last_2s_timing_idx:])
+
     return (
         smooth_pursuite_sequences_before_quiet_eye,
         smooth_pursuite_sequences_last_2s,
@@ -1180,6 +1179,9 @@ def compute_intermediary_metrics(
         total_visual_scanning_duration,
         total_visual_scanning_duration_before_quiet_eye,
         total_visual_scanning_duration_last_2s,
+        mean_head_angular_velocity_deg,
+        mean_head_angular_velocity_deg_before_quiet_eye,
+        mean_head_angular_velocity_deg_last_2s,
         last_2s_timing_idx,
     )
 
@@ -1240,8 +1242,8 @@ for path, folders, files in os.walk(datapath):
                 if file in long_trials:
                     continue
 
-            if file != "20231030163023_eye_tracking_VideoListOne_TESTNA01_Experiment_Mode_360VR_Fist5_007.csv":
-                continue
+            # if file != "20240124172920_eye_tracking_VideoListOne_TESTNA15_Experiment_Mode_360VR_Spread1_009.csv":
+            #     continue
 
             # Get the data from the file
             this_trial_name = file.split("_")[-2]
@@ -1300,7 +1302,7 @@ for path, folders, files in os.walk(datapath):
 
             eye_direction = np.array([data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
             helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
-            head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg = fix_helmet_rotation(time_vector, helmet_rotation)
+            head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg = fix_helmet_rotation(time_vector, helmet_rotation)
 
             eyetracker_invalid_data_index = np.array([])
             if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(data["eye_valid_R"]) != 31 * len(
@@ -1336,10 +1338,10 @@ for path, folders, files in os.walk(datapath):
                 eye_direction[:, eyetracker_invalid_data_index] = np.nan
 
             # Detect saccades
-            saccade_sequences, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold = (
-                detect_saccades(time_vector, eye_direction)
-            )
             gaze_direction = get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction)
+            saccade_sequences, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold = (
+                detect_saccades(time_vector, eye_direction, gaze_direction)
+            )
 
             # Detect visual scanning
             visual_scanning_sequences, gaze_angular_velocity_rad, filtered_gaze_angular_velocity_rad = detect_visual_scanning(
@@ -1451,6 +1453,9 @@ for path, folders, files in os.walk(datapath):
                 total_visual_scanning_duration,
                 total_visual_scanning_duration_before_quiet_eye,
                 total_visual_scanning_duration_last_2s,
+                mean_head_angular_velocity_deg,
+                mean_head_angular_velocity_deg_before_quiet_eye,
+                mean_head_angular_velocity_deg_last_2s,
                 last_2s_timing_idx,
             ) = compute_intermediary_metrics(
                 time_vector,
@@ -1465,6 +1470,7 @@ for path, folders, files in os.walk(datapath):
                 cut_file,
                 fixation_duration_threshold,
                 smooth_pursuite_duration_threshold,
+                head_angular_velocity_deg,
             )
 
             # Metrics
@@ -1692,6 +1698,9 @@ for path, folders, files in os.walk(datapath):
                     "Visual scanning ratio last 2s": [visual_scanning_ratio_last_2s],
                     "Not classified ratio": [not_classified_ratio],
                     "Invalid ratio": [invalid_ratio],
+                    "Mean head angular velocity": [mean_head_angular_velocity_deg],
+                    "Mean head angular velocity before quiet eye": [mean_head_angular_velocity_deg_before_quiet_eye],
+                    "Mean head angular velocity last 2s": [mean_head_angular_velocity_deg_last_2s],
                     "Length of the trial [s]": [time_vector[-1]],
                 }
             )
