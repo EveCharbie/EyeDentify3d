@@ -164,15 +164,19 @@ def detect_saccades(time_vector, eye_direction, gaze_direction):
     )
 
     acceleration_threshold = 4000  # deg/s²
-    velocity_threshold = np.zeros((eye_angular_velocity_rad.shape[0], ))
+    velocity_threshold = np.zeros((eye_angular_velocity_rad.shape[0],))
     window_size = 62  # Actually 61 frames
 
-    velocity_threshold[:int(window_size / 2)] = np.nanmedian(
-        np.abs(eye_angular_velocity_rad[:window_size]) * 180 / np.pi) * 5
-    for i_frame in range(eye_angular_velocity_rad.shape[0]-window_size):
-        velocity_threshold[int(i_frame+window_size/2)] = np.nanmedian(np.abs(eye_angular_velocity_rad[i_frame:i_frame+window_size]) * 180 / np.pi) * 5
-    velocity_threshold[int(-window_size / 2):] = np.nanmedian(
-        np.abs(eye_angular_velocity_rad[-window_size:]) * 180 / np.pi) * 5
+    velocity_threshold[: int(window_size / 2)] = (
+        np.nanmedian(np.abs(eye_angular_velocity_rad[:window_size]) * 180 / np.pi) * 5
+    )
+    for i_frame in range(eye_angular_velocity_rad.shape[0] - window_size):
+        velocity_threshold[int(i_frame + window_size / 2)] = (
+            np.nanmedian(np.abs(eye_angular_velocity_rad[i_frame : i_frame + window_size]) * 180 / np.pi) * 5
+        )
+    velocity_threshold[int(-window_size / 2) :] = (
+        np.nanmedian(np.abs(eye_angular_velocity_rad[-window_size:]) * 180 / np.pi) * 5
+    )
 
     # Velocity + 1 frames acceleration classification
     saccade_timing = np.where(np.abs(eye_angular_velocity_rad * 180 / np.pi) > velocity_threshold)[0]
@@ -204,7 +208,14 @@ def detect_saccades(time_vector, eye_direction, gaze_direction):
         )
         saccade_amplitudes += [angle * 180 / np.pi]
 
-    return saccade_sequences_merged, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold, acceleration_threshold
+    return (
+        saccade_sequences_merged,
+        eye_angular_velocity_rad,
+        eye_angular_acceleration_rad,
+        saccade_amplitudes,
+        velocity_threshold,
+        acceleration_threshold,
+    )
 
 
 def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
@@ -256,7 +267,9 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, helme
     saccade_sequences_timing = (
         np.hstack(saccade_sequences) if len(saccade_sequences) > 1 else np.array(saccade_sequences)
     )
-    visual_scanning_candidates = np.where(np.abs(gaze_angular_velocity_rad * 180 / np.pi) > velocity_threshold_visual_scanning)[0]
+    visual_scanning_candidates = np.where(
+        np.abs(gaze_angular_velocity_rad * 180 / np.pi) > velocity_threshold_visual_scanning
+    )[0]
     visual_scanning_timing = np.array([i for i in visual_scanning_candidates if i not in saccade_sequences_timing])
 
     # Group the indices into sequences
@@ -264,9 +277,12 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, helme
         visual_scanning_timing, np.flatnonzero(np.diff(visual_scanning_timing) > 1) + 1
     )
 
-    visual_scanning_sequences = merge_close_sequences(visual_scanning_sequences, gaze_direction, check_directionnality=True)
+    visual_scanning_sequences = merge_close_sequences(
+        visual_scanning_sequences, gaze_direction, check_directionnality=True
+    )
 
     return visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning
+
 
 def apply_minimal_duration(sequences_tempo, number_of_frames_min):
     sequences = []
@@ -275,6 +291,7 @@ def apply_minimal_duration(sequences_tempo, number_of_frames_min):
             continue
         sequences += [i_sequence]
     return sequences
+
 
 def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     """
@@ -472,36 +489,51 @@ def merge_close_sequences(sequences_candidates, gaze_direction, check_directionn
         sequences_merged = [sequences_candidates[0]]
         current_merged_sequence = 0
         current_sequence = 0
-        while current_sequence < len(sequences_candidates)-1:
-            for i in range(current_sequence+1, len(sequences_candidates)):
+        while current_sequence < len(sequences_candidates) - 1:
+            for i in range(current_sequence + 1, len(sequences_candidates)):
                 beginning_of_merged_sequence = sequences_merged[current_merged_sequence][0]
                 end_of_merged_sequence = sequences_merged[current_merged_sequence][-1]
                 beginning_of_new_sequence = sequences_candidates[i][0]
                 end_of_new_sequence = sequences_candidates[i][-1]
-                not_invalid = np.sum(np.isnan(gaze_direction[:, range(end_of_merged_sequence, beginning_of_new_sequence+1)])) == 0
+                not_invalid = (
+                    np.sum(np.isnan(gaze_direction[:, range(end_of_merged_sequence, beginning_of_new_sequence + 1)]))
+                    == 0
+                )
                 if beginning_of_new_sequence - end_of_merged_sequence < 5 and not_invalid:
                     if check_directionnality:
                         beginning_of_merged_sequence_direction = gaze_direction[:, beginning_of_merged_sequence]
                         end_of_merged_sequence_direction = gaze_direction[:, end_of_merged_sequence]
-                        merged_sequence_direction = end_of_merged_sequence_direction - beginning_of_merged_sequence_direction
+                        merged_sequence_direction = (
+                            end_of_merged_sequence_direction - beginning_of_merged_sequence_direction
+                        )
 
                         beginning_of_new_sequence_direction = gaze_direction[:, beginning_of_new_sequence]
                         end_of_new_sequence_direction = gaze_direction[:, end_of_new_sequence]
                         new_sequence_direction = end_of_new_sequence_direction - beginning_of_new_sequence_direction
 
                         angle = np.arccos(
-                            np.dot(merged_sequence_direction, new_sequence_direction) / np.linalg.norm(merged_sequence_direction) / np.linalg.norm(new_sequence_direction)
+                            np.dot(merged_sequence_direction, new_sequence_direction)
+                            / np.linalg.norm(merged_sequence_direction)
+                            / np.linalg.norm(new_sequence_direction)
                         )
-                        candidate_interval = np.array(range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1))
+                        candidate_interval = np.array(
+                            range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1)
+                        )
 
-                        if angle < 30 * np.pi / 180 and candidate_interval.shape != (0,) and np.sum(np.isnan(gaze_direction[:, candidate_interval])) == 0:
+                        if (
+                            angle < 30 * np.pi / 180
+                            and candidate_interval.shape != (0,)
+                            and np.sum(np.isnan(gaze_direction[:, candidate_interval])) == 0
+                        ):
                             criteria = True
                         else:
                             criteria = False
                     else:
                         criteria = True
 
-                    candidate_interval = np.array(range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1))
+                    candidate_interval = np.array(
+                        range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1)
+                    )
                     if criteria:
                         sequences_merged[current_merged_sequence] = candidate_interval
                     else:
@@ -693,13 +725,18 @@ def detect_fixations_and_smooth_pursuit(
     smooth_pursuit_timing = np.sort(smooth_pursuit_timing)
     fixation_timing = np.sort(fixation_timing)
     fixation_sequences_candidates = np.array_split(
-        np.array(fixation_timing), np.flatnonzero(np.diff(np.array(fixation_timing)) > 1) + 1)
+        np.array(fixation_timing), np.flatnonzero(np.diff(np.array(fixation_timing)) > 1) + 1
+    )
     smooth_pursuit_sequences_cadidates = np.array_split(
         np.array(smooth_pursuit_timing), np.flatnonzero(np.diff(np.array(smooth_pursuit_timing)) > 1) + 1
     )
 
-    fixation_sequences_merged = merge_close_sequences(fixation_sequences_candidates, gaze_direction, check_directionnality=False)
-    smooth_pursuit_sequences_merged = merge_close_sequences(smooth_pursuit_sequences_cadidates, gaze_direction, check_directionnality=True)
+    fixation_sequences_merged = merge_close_sequences(
+        fixation_sequences_candidates, gaze_direction, check_directionnality=False
+    )
+    smooth_pursuit_sequences_merged = merge_close_sequences(
+        smooth_pursuit_sequences_cadidates, gaze_direction, check_directionnality=True
+    )
 
     return fixation_sequences_merged, smooth_pursuit_sequences_merged, uncertain_sequences
 
@@ -776,10 +813,18 @@ def plot_gaze_classification(
     axs[0].plot(time_vector, gaze_direction[2, :], ":k", label="Gaze z (head + eye)")
 
     axs[1].plot(time_vector, np.abs(eye_angular_velocity_rad * 180 / np.pi), color="tab:red", label="Eye velocity norm")
-    axs[1].plot(time_vector, np.abs(gaze_angular_velocity_rad * 180 / np.pi), color="tab:purple", label="Gaze velocity norm")
+    axs[1].plot(
+        time_vector, np.abs(gaze_angular_velocity_rad * 180 / np.pi), color="tab:purple", label="Gaze velocity norm"
+    )
 
     axs[1].plot(time_vector, np.abs(helmet_rotation_unwrapped_deg), color="b", label="Head velocity norm")
-    axs[1].plot(np.array([time_vector[0], time_vector[-1]]), np.array([velocity_threshold_visual_scanning, velocity_threshold_visual_scanning]), ":", color="tab:purple", label=r"100 $^\circ/s$ gaze velocity")
+    axs[1].plot(
+        np.array([time_vector[0], time_vector[-1]]),
+        np.array([velocity_threshold_visual_scanning, velocity_threshold_visual_scanning]),
+        ":",
+        color="tab:purple",
+        label=r"100 $^\circ/s$ gaze velocity",
+    )
     axs[1].plot(
         time_vector,
         velocity_threshold_saccades,
@@ -788,7 +833,9 @@ def plot_gaze_classification(
         label="5 medians (sliding window)",
     )
 
-    axs[2].plot(time_vector, np.abs(eye_angular_acceleration_rad * 180 / np.pi), color="tab:red", label="Eye acceleration norm")
+    axs[2].plot(
+        time_vector, np.abs(eye_angular_acceleration_rad * 180 / np.pi), color="tab:red", label="Eye acceleration norm"
+    )
     axs[2].plot(
         np.array([time_vector[0], time_vector[-1]]),
         np.array([acceleration_threshold_saccades, acceleration_threshold_saccades]),
@@ -985,7 +1032,6 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
     b, a = signal.butter(8, 0.2)
     head_angular_velocity_deg_filtered = signal.filtfilt(b, a, head_angular_velocity_deg, padlen=150)
 
-
     # plt.figure()
     # plt.plot(helmet_rotation[0, :])
     # plt.plot(helmet_rotation[1, :])
@@ -1056,8 +1102,8 @@ def compute_intermediary_metrics(
 
     # Instant at which the "post cue switch" is happening
     post_cue_timing_idx = np.where(time_vector > time_vector[-1] - quiet_eye_duration_threshold)[0][0]
-    smooth_pursuit_sequences_pre_cue, smooth_pursuit_sequences_post_cue = (
-        split_sequences_before_and_after_quiet_eye(post_cue_timing_idx, smooth_pursuit_sequences)
+    smooth_pursuit_sequences_pre_cue, smooth_pursuit_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, smooth_pursuit_sequences
     )
     fixation_sequences_pre_cue, fixation_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
         post_cue_timing_idx, fixation_sequences
@@ -1068,8 +1114,8 @@ def compute_intermediary_metrics(
     saccade_sequences_pre_cue, saccade_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
         post_cue_timing_idx, saccade_sequences
     )
-    visual_scanning_sequences_pre_cue, visual_scanning_sequences_post_cue = (
-        split_sequences_before_and_after_quiet_eye(post_cue_timing_idx, visual_scanning_sequences)
+    visual_scanning_sequences_pre_cue, visual_scanning_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, visual_scanning_sequences
     )
 
     # Intermediary metrics
@@ -1086,7 +1132,13 @@ def compute_intermediary_metrics(
     # Total time spent in fixations
     fixation_duration, fixation_duration_pre_cue, fixation_duration_post_cue = (
         split_durations_before_and_after_quiet_eye(
-            "Fixation", cut_file, fixation_sequences, post_cue_timing_idx, dt, time_vector, duration_threshold=fixation_duration_threshold
+            "Fixation",
+            cut_file,
+            fixation_sequences,
+            post_cue_timing_idx,
+            dt,
+            time_vector,
+            duration_threshold=fixation_duration_threshold,
         )
     )
     total_fixation_duration = np.sum(np.array(fixation_duration))
@@ -1095,23 +1147,31 @@ def compute_intermediary_metrics(
 
     # Total time spent in smooth pursuit
     smooth_pursuit_duration, smooth_pursuit_duration_pre_cue, smooth_pursuit_duration_post_cue = (
-        split_durations_before_and_after_quiet_eye("Smooth pursuit", cut_file, smooth_pursuit_sequences, post_cue_timing_idx, dt, time_vector, duration_threshold=smooth_pursuit_duration_threshold)
+        split_durations_before_and_after_quiet_eye(
+            "Smooth pursuit",
+            cut_file,
+            smooth_pursuit_sequences,
+            post_cue_timing_idx,
+            dt,
+            time_vector,
+            duration_threshold=smooth_pursuit_duration_threshold,
+        )
     )
     total_smooth_pursuit_duration = np.sum(np.array(smooth_pursuit_duration))
     total_smooth_pursuit_duration_pre_cue = np.sum(np.array(smooth_pursuit_duration_pre_cue))
     total_smooth_pursuit_duration_post_cue = np.sum(np.array(smooth_pursuit_duration_post_cue))
 
     # Total time spent in blinks
-    blink_duration, blink_duration_pre_cue, blink_duration_post_cue = (
-        split_durations_before_and_after_quiet_eye("Blink", cut_file, blink_sequences, post_cue_timing_idx, dt, time_vector)
+    blink_duration, blink_duration_pre_cue, blink_duration_post_cue = split_durations_before_and_after_quiet_eye(
+        "Blink", cut_file, blink_sequences, post_cue_timing_idx, dt, time_vector
     )
     total_blink_duration = np.sum(np.array(blink_duration))
     total_blink_duration_pre_cue = np.sum(np.array(blink_duration_pre_cue))
     total_blink_duration_post_cue = np.sum(np.array(blink_duration_post_cue))
 
     # Total time spent in saccades
-    saccade_duration, saccade_duration_pre_cue, saccade_duration_post_cue = (
-        split_durations_before_and_after_quiet_eye("Saccade", cut_file, saccade_sequences, post_cue_timing_idx, dt, time_vector)
+    saccade_duration, saccade_duration_pre_cue, saccade_duration_post_cue = split_durations_before_and_after_quiet_eye(
+        "Saccade", cut_file, saccade_sequences, post_cue_timing_idx, dt, time_vector
     )
     total_saccade_duration = np.sum(np.array(saccade_duration))
     total_saccade_duration_pre_cue = np.sum(np.array(saccade_duration_pre_cue))
@@ -1119,7 +1179,9 @@ def compute_intermediary_metrics(
 
     # Total time spent in visual scanning
     visual_scanning_duration, visual_scanning_duration_pre_cue, visual_scanning_duration_post_cue = (
-        split_durations_before_and_after_quiet_eye("Visual scanning", cut_file, visual_scanning_sequences, post_cue_timing_idx, dt, time_vector)
+        split_durations_before_and_after_quiet_eye(
+            "Visual scanning", cut_file, visual_scanning_sequences, post_cue_timing_idx, dt, time_vector
+        )
     )
     total_visual_scanning_duration = np.sum(np.array(visual_scanning_duration))
     total_visual_scanning_duration_pre_cue = np.sum(np.array(visual_scanning_duration_pre_cue))
@@ -1180,7 +1242,15 @@ def compute_intermediary_metrics(
         post_cue_timing_idx,
     )
 
-def check_if_there_is_sequence_overlap(fixation_sequences, smooth_pursuit_sequences, visual_scanning_sequences, blink_sequences, saccade_sequences, eyetracker_invalid_sequences):
+
+def check_if_there_is_sequence_overlap(
+    fixation_sequences,
+    smooth_pursuit_sequences,
+    visual_scanning_sequences,
+    blink_sequences,
+    saccade_sequences,
+    eyetracker_invalid_sequences,
+):
 
     # Blinks and invalid data must not overlap with any other sequences
     for i_blink in blink_sequences + eyetracker_invalid_sequences:
@@ -1197,7 +1267,6 @@ def check_if_there_is_sequence_overlap(fixation_sequences, smooth_pursuit_sequen
         for i_sequence in visual_scanning_sequences:
             if any(item in i_smooth_pursuit for item in i_sequence):
                 raise ValueError("Problem: Smooth pursuit sequences overlap with Visual scanning sequences")
-
 
 
 if "figures" not in os.listdir():
@@ -1221,9 +1290,7 @@ bad_data_file.write(
 # ----------------------------------------------------------------
 # Create a file with the length of the event happening at the 2s cut
 cut_file = open("event_excluded_at_cut_off.txt", "w")
-cut_file.write(
-    "The following events were excluded because they happened at the moment of the 2s cut : \n\n"
-)
+cut_file.write("The following events were excluded because they happened at the moment of the 2s cut : \n\n")
 
 # ----------------------------------------------------------------
 long_trials = ["20240222172036_eye_tracking_VideoListOne_TESTVA13_Experiment_Mode_360VR_Pen28_012.csv"]
@@ -1297,7 +1364,9 @@ for path, folders, files in os.walk(datapath):
 
             eye_direction = np.array([data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
             helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
-            head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg = fix_helmet_rotation(time_vector, helmet_rotation)
+            head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg = (
+                fix_helmet_rotation(time_vector, helmet_rotation)
+            )
 
             eyetracker_invalid_data_index = np.array([])
             if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(data["eye_valid_R"]) != 31 * len(
@@ -1334,13 +1403,20 @@ for path, folders, files in os.walk(datapath):
 
             # Detect saccades
             gaze_direction = get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction)
-            saccade_sequences, eye_angular_velocity_rad, eye_angular_acceleration_rad, saccade_amplitudes, velocity_threshold_saccades, acceleration_threshold_saccades = (
-                detect_saccades(time_vector, eye_direction, gaze_direction)
-            )
+            (
+                saccade_sequences,
+                eye_angular_velocity_rad,
+                eye_angular_acceleration_rad,
+                saccade_amplitudes,
+                velocity_threshold_saccades,
+                acceleration_threshold_saccades,
+            ) = detect_saccades(time_vector, eye_direction, gaze_direction)
 
             # Detect visual scanning
-            visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = detect_visual_scanning(
-                time_vector, gaze_direction, saccade_sequences, head_angular_velocity_deg_filtered
+            visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = (
+                detect_visual_scanning(
+                    time_vector, gaze_direction, saccade_sequences, head_angular_velocity_deg_filtered
+                )
             )
 
             # Detect fixations
@@ -1351,8 +1427,14 @@ for path, folders, files in os.walk(datapath):
                 i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
                 i_in_blinks = True if any(i in sequence for sequence in blink_sequences) else False
                 i_in_eyetracker_invalid = True if i in eyetracker_invalid_data_index else False
-                gaze_velocity_criteria = True if gaze_angular_velocity_rad[i] * np.pi/180 > 100 else False
-                if i_in_saccades or i_in_visual_scanning or i_in_blinks or i_in_eyetracker_invalid or gaze_velocity_criteria:
+                gaze_velocity_criteria = True if gaze_angular_velocity_rad[i] * np.pi / 180 > 100 else False
+                if (
+                    i_in_saccades
+                    or i_in_visual_scanning
+                    or i_in_blinks
+                    or i_in_eyetracker_invalid
+                    or gaze_velocity_criteria
+                ):
                     continue
                 else:
                     intersaccadic_interval[i] = 1
@@ -1377,7 +1459,14 @@ for path, folders, files in os.walk(datapath):
             )
 
             visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)
-            check_if_there_is_sequence_overlap(fixation_sequences, smooth_pursuit_sequences, visual_scanning_sequences, blink_sequences, saccade_sequences, eyetracker_invalid_sequences)
+            check_if_there_is_sequence_overlap(
+                fixation_sequences,
+                smooth_pursuit_sequences,
+                visual_scanning_sequences,
+                blink_sequences,
+                saccade_sequences,
+                eyetracker_invalid_sequences,
+            )
 
             if PLOT_CLASSIFICATION_FLAG:
                 # The mean duration of a frame because we only have data at the frame and the duration of the events
@@ -1477,9 +1566,7 @@ for path, folders, files in os.walk(datapath):
 
             mean_fixation_duration = np.nanmean(np.array(fixation_duration)) if len(fixation_duration) > 0 else None
             mean_fixation_duration_pre_cue = (
-                np.nanmean(np.array(fixation_duration_pre_cue))
-                if len(fixation_duration_pre_cue) > 0
-                else None
+                np.nanmean(np.array(fixation_duration_pre_cue)) if len(fixation_duration_pre_cue) > 0 else None
             )
             mean_fixation_duration_post_cue = (
                 np.nanmean(np.array(fixation_duration_post_cue)) if len(fixation_duration_post_cue) > 0 else None
@@ -1507,9 +1594,7 @@ for path, folders, files in os.walk(datapath):
 
             mean_saccade_duration = np.nanmean(np.array(saccade_duration)) if len(saccade_duration) > 0 else None
             mean_saccade_duration_pre_cue = (
-                np.nanmean(np.array(saccade_duration_pre_cue))
-                if len(saccade_duration_pre_cue) > 0
-                else None
+                np.nanmean(np.array(saccade_duration_pre_cue)) if len(saccade_duration_pre_cue) > 0 else None
             )
             mean_saccade_duration_post_cue = (
                 np.nanmean(np.array(saccade_duration_post_cue)) if len(saccade_duration_post_cue) > 0 else None
@@ -1527,9 +1612,7 @@ for path, folders, files in os.walk(datapath):
                 elif i_sequence[0] > post_cue_timing_idx:
                     saccade_amplitudes_post_cue.append(saccade_amplitudes[i])
             mean_saccade_amplitude_pre_cue = (
-                np.nanmean(np.array(saccade_amplitudes_pre_cue))
-                if len(saccade_amplitudes_pre_cue) > 0
-                else None
+                np.nanmean(np.array(saccade_amplitudes_pre_cue)) if len(saccade_amplitudes_pre_cue) > 0 else None
             )
             mean_saccade_amplitude_post_cue = (
                 np.nanmean(np.array(saccade_amplitudes_post_cue)) if len(saccade_amplitudes_post_cue) > 0 else None
@@ -1590,9 +1673,7 @@ for path, folders, files in os.walk(datapath):
             )
 
             fixation_ratio = total_fixation_duration / time_vector[-1]
-            fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (
-                time_vector[-1] - quiet_eye_duration_threshold
-            )
+            fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (time_vector[-1] - quiet_eye_duration_threshold)
             fixation_ratio_post_cue = total_fixation_duration_post_cue / quiet_eye_duration_threshold
 
             smooth_pursuit_ratio = total_smooth_pursuit_duration / time_vector[-1]
@@ -1602,15 +1683,11 @@ for path, folders, files in os.walk(datapath):
             smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / quiet_eye_duration_threshold
 
             blinking_ratio = total_blink_duration / time_vector[-1]
-            blinking_ratio_pre_cue = total_blink_duration_pre_cue / (
-                time_vector[-1] - quiet_eye_duration_threshold
-            )
+            blinking_ratio_pre_cue = total_blink_duration_pre_cue / (time_vector[-1] - quiet_eye_duration_threshold)
             blinking_ratio_post_cue = total_blink_duration_post_cue / quiet_eye_duration_threshold
 
             saccade_ratio = total_saccade_duration / time_vector[-1]
-            saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (
-                time_vector[-1] - quiet_eye_duration_threshold
-            )
+            saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (time_vector[-1] - quiet_eye_duration_threshold)
             saccade_ratio_post_cue = total_saccade_duration_post_cue / quiet_eye_duration_threshold
 
             visual_scanning_ratio = total_visual_scanning_duration / time_vector[-1]
@@ -1660,23 +1737,17 @@ for path, folders, files in os.walk(datapath):
                     "Number of smooth pursuit pre cue": [nb_smooth_pursuit_pre_cue],
                     "Number of smooth pursuit post cue": [nb_smooth_pursuit_post_cue],
                     "Mean smooth pursuit duration full trial [s]": [mean_smooth_pursuit_duration],
-                    "Mean smooth pursuit duration pre cue [s]": [
-                        mean_smooth_pursuit_duration_pre_cue
-                    ],
+                    "Mean smooth pursuit duration pre cue [s]": [mean_smooth_pursuit_duration_pre_cue],
                     "Mean smooth pursuit duration post cue [s]": [mean_smooth_pursuit_duration_post_cue],
                     "Max smooth pursuit trajectory full trial [deg]": [max_smooth_pursuit_trajectory],
                     "Mean smooth pursuit trajectory full trial [deg]": [mean_smooth_pursuit_trajectory],
-                    "Mean smooth pursuit trajectory pre cue [deg]": [
-                        mean_smooth_pursuit_trajectory_pre_cue
-                    ],
+                    "Mean smooth pursuit trajectory pre cue [deg]": [mean_smooth_pursuit_trajectory_pre_cue],
                     "Mean smooth pursuit trajectory post cue [deg]": [mean_smooth_pursuit_trajectory_post_cue],
                     "Number of visual scanning full trial": [nb_visual_scanning],
                     "Number of visual scanning pre cue": [nb_visual_scanning_pre_cue],
                     "Number of visual scanning post cue": [nb_visual_scanning_post_cue],
                     "Mean visual scanning duration full trial [s]": [mean_visual_scanning_duration],
-                    "Mean visual scanning duration pre cue [s]": [
-                        mean_visual_scanning_duration_pre_cue
-                    ],
+                    "Mean visual scanning duration pre cue [s]": [mean_visual_scanning_duration_pre_cue],
                     "Mean visual scanning duration post cue [s]": [mean_visual_scanning_duration_post_cue],
                     "Fixation ratio full trial": [fixation_ratio],
                     "Fixation ratio pre cue": [fixation_ratio_pre_cue],
@@ -1716,7 +1787,9 @@ with open("output_log.txt", "w") as f:
     for key in output_metrics_dataframe.keys():
         if key in ["File name", "Figure name", "Participant ID", "Mode", "Trial name", "Trial number"]:
             continue
-        f.write(f"{key}: {output_metrics_dataframe[key].mean()} [{output_metrics_dataframe[key].min()} ; {output_metrics_dataframe[key].max()}] \n")
+        f.write(
+            f"{key}: {output_metrics_dataframe[key].mean()} [{output_metrics_dataframe[key].min()} ; {output_metrics_dataframe[key].max()}] \n"
+        )
 
 # Write a csv file that can be sed for statistical analysis later
 output_metrics_dataframe.to_csv("output_metrics.csv", index=False)
