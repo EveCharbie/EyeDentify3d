@@ -529,16 +529,17 @@ def merge_close_sequences(sequences_candidates, gaze_direction, check_directionn
                         else:
                             criteria = False
                     else:
+                        candidate_interval = np.array(
+                            range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1)
+                        )
                         criteria = True
 
-                    candidate_interval = np.array(
-                        range(sequences_merged[current_merged_sequence][0], sequences_candidates[i][-1] + 1)
-                    )
                     if criteria:
                         sequences_merged[current_merged_sequence] = candidate_interval
                     else:
                         sequences_merged += [sequences_candidates[i]]
                         current_merged_sequence += 1
+                        current_sequence = i
                     if i == len(sequences_candidates) - 1:
                         current_sequence += 1
                 else:
@@ -1304,7 +1305,7 @@ for path, folders, files in os.walk(datapath):
                 if file in long_trials:
                     continue
 
-            # if file != "20240209115919_eye_tracking_VideoListOne_TESTVA06_Experiment_Mode_2D_Fist3_000.csv":
+            # if file != "20240223155813_eye_tracking_VideoListOne_TESTVA10_Experiment_Mode_2D_Spread7_017.csv":
             #     continue
 
             # Get the data from the file
@@ -1699,6 +1700,9 @@ for path, folders, files in os.walk(datapath):
             not_classified_ratio = 1 - (
                 fixation_ratio + smooth_pursuit_ratio + blinking_ratio + saccade_ratio + visual_scanning_ratio
             )
+            if not_classified_ratio < - dt:
+                raise ValueError("Problem: The sum of the ratios is greater than 1")
+
             invalid_ratio = np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) / len(
                 data["eye_valid_L"]
             )
