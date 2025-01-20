@@ -1,5 +1,5 @@
 """
-This code aims to identify visual behavior sequences, namely fixation, saccades, blink, and smooth pursuit.
+This code aims to identify visual behavior sequences, namely blink, fixations, saccades, smooth pursuit, and visual scanning.
 We consider that when the head rotates, the image in the VR helmet (eye-tracker) rotates by the same amount, making it
 as if the head was rotating around the subjects eyes instead of the neck joint center.
 """
@@ -15,56 +15,19 @@ import pingouin as pg
 from scipy import signal
 
 """
--> 'time(100ns)' = time stamps of the recorded frames
-'time_stamp(ms)' = time stamps of the recorded frames in milliseconds
-'time(UnityVideoPlayer)' = time stamps of the recorded frames in UnityVideoPlayer
-'frame' = frame number
+Variables extracted from the raw data and used for the current analysis.
+'time(100ns)' = time stamps of the recorded frames
 'eye_valid_L' = if the data is valid for the left eye
 'eye_valid_R' = if the data is valid for the right eye
--> 'openness_L' = openness of the left eye [0, 1]
--> 'openness_R' = openness of the right eye [0, 1]
-'pupil_diameter_L(mm)' = pupil diameter of the left eye in mm
-'pupil_diameter_R(mm)' = pupil diameter of the right eye in mm
-'pos_sensor_L.x' = gaze position in the lentil reference frame for the left eye [0, 1]
-'pos_sensor_L.y' = gaze position in the lentil reference frame for the left eye [0, 1]
-'pos_sensor_R.x' = gaze position in the lentil reference frame for the right eye [0, 1]
-'pos_sensor_R.y' = gaze position in the lentil reference frame for the right eye [0, 1]
-'gaze_origin_L.x(mm)' = mean position of the eyes in the helmet reference frame for the left eye in mm
-'gaze_origin_L.y(mm)' = mean position of the eyes in the helmet reference frame for the left eye in mm
-'gaze_origin_L.z(mm)' = mean position of the eyes in the helmet reference frame for the left eye in mm
-'gaze_origin_R.x(mm)' = mean position of the eyes in the helmet reference frame for the right eye in mm
-'gaze_origin_R.y(mm)' = mean position of the eyes in the helmet reference frame for the right eye in mm
-'gaze_origin_R.z(mm)' = mean position of the eyes in the helmet reference frame for the right eye in mm
 'gaze_direct_L.x' = gaze direction vector in the helmet reference frame for the left eye
 'gaze_direct_L.y' = gaze direction vector in the helmet reference frame for the left eye
 'gaze_direct_L.z' = gaze direction vector in the helmet reference frame for the left eye
 'gaze_direct_R.x' = gaze direction vector in the helmet reference frame for the right eye
 'gaze_direct_R.y' = gaze direction vector in the helmet reference frame for the right eye
 'gaze_direct_R.z' = gaze direction vector in the helmet reference frame for the right eye
-'gaze_sensitive' = ?
-'frown_L' = ?
-'frown_R' = ?
-'squeeze_L' = ? 
-'squeeze_R' = ?
-'wide_L' = ? 
-'wide_R' = ?
-'distance_valid_C' = if the gaze focus point distance is valid
-'distance_C(mm)' = distance of the gaze focus point in mm
-'track_imp_cnt' = ?
-'helmet_pos_x' = position of the helmet in which reference frame ?
-'helmet_pos_y' = position of the helmet in which reference frame ?
-'helmet_pos_z' = position of the helmet in which reference frame ?
 'helmet_rot_x' = rotation of the helmet in degrees (downward rotation is positive)
 'helmet_rot_y' = rotation of the helmet in degrees (leftward rotation is positive)
 'helmet_rot_z' = rotation of the helmet in degrees (right tilt rotation is positive)
-"""
-
-# Define variables od interest
-"""
-time_vector in seconds
-gaze_origin in meters
-eye_direction is a unit vector
-gaze_distance in meters
 """
 
 # Plot flags ---------------------------------------
@@ -73,35 +36,12 @@ PLOT_SACCADES_FLAG = False
 PLOT_CLASSIFICATION_FLAG = True  # Only one that should be True not when debugging
 PLOT_INTERSACCADIC_FLAG = False
 PLOT_CRITERIA_FLAG = False
-SKIP_LONG_TRIALS = False
 PLOT_ROTATION_VELOCITIES_FLAG = False
-quiet_eye_duration_threshold = 2  # Seconds
+duration_after_cue = 2  # Seconds  # This is the length of the time period between the auditory cue and the black screen
 # ------------------------------------------------------------
 
 
-def detect_invalid_data(time_vector, eye_direction):
-    """
-    Identify as invalid data sequences where the eye-tracker did not detect any eye movements.
-    """
-
-    # Find where the data does not change
-    zero_diffs_x = np.where(np.abs(eye_direction[0, 1:] - eye_direction[0, :-1]) < 1e-8)[0]
-    zero_diffs_y = np.where(np.abs(eye_direction[1, 1:] - eye_direction[1, :-1]) < 1e-8)[0]
-    zero_diffs_z = np.where(np.abs(eye_direction[2, 1:] - eye_direction[2, :-1]) < 1e-8)[0]
-
-    # Find the common indices
-    zero_diffs = np.intersect1d(np.intersect1d(zero_diffs_x, zero_diffs_y), zero_diffs_z)
-
-    # Add 1 to zero_diffs to get the actual positions in the original array
-    zero_diffs += 1
-
-    # Group the indices into sequences
-    invalid_sequences = np.array_split(zero_diffs, np.flatnonzero(np.diff(zero_diffs) > 1) + 1)
-
-    return invalid_sequences
-
-
-def detect_blinks(time_vector, data):
+def detect_blinks(data):
     """
     Blinks are detected when both eye openness drops bellow 0.5 il line with
     https://ieeexplore.ieee.org/abstract/document/9483841
@@ -118,9 +58,8 @@ def detect_blinks(time_vector, data):
 def detect_saccades(time_vector, eye_direction, gaze_direction):
     """
     Detecting sequences where the :
-    - eye angular velocity is larger than 5 times the median of the trial
+    - eye angular velocity is larger than 5 times the median of the trial (over a 61 frames/500ms window)
     - eye angular acceleration is larger than 4000 deg/s² for at least one frame
-    - the saccade duration is larger than 20 ms
     Only the eye movements were used to identify saccades.
     """
 
@@ -219,6 +158,9 @@ def detect_saccades(time_vector, eye_direction, gaze_direction):
 
 
 def get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction):
+    """
+    Gaze direction is the sum of the head + eye rotation.
+    """
     helmet_rotation_in_rad = helmet_rotation_unwrapped_deg * np.pi / 180
 
     gaze_direction = np.zeros(eye_direction.shape)
@@ -285,6 +227,9 @@ def detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, helme
 
 
 def apply_minimal_duration(sequences_tempo, number_of_frames_min):
+    """
+    Consider only sequences that are longer than a certain number of frames
+    """
     sequences = []
     for i_sequence in sequences_tempo:
         if len(i_sequence) < number_of_frames_min:
@@ -298,7 +243,6 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     Parameters t_wind (22000 micros), t_overlap (6000 micros) and eta_p (0.1) taken from the original paper
     https://doi.org/10.1016/j.bspc.2014.12.008
     """
-    # @thomasromeas : These parameter values are still to be adjusted
     t_wind = 0.022 * 5  # Window size in ms 0.022
     t_overlap = 0.006 * 5  # Window overlap in ms 0.006
     eta_p = 0.001  # Threshold for the p-value of the Rayleigh test
@@ -338,12 +282,6 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     mean_p_values = np.array([np.nanmean(np.array(p)) for p in p_values])
     incoherent_windows = np.where(mean_p_values <= eta_p)[0]
     coherent_windows = np.where(mean_p_values > eta_p)[0]
-
-    # plt.figure()
-    # plt.plot(time_vector, mean_p_values)
-    # plt.plot(np.array([0, 10]), np.array([eta_p, eta_p]), '--k')
-    # plt.xlim(0, 10)
-    # plt.show()
 
     intersaccadic_coherent_sequences = np.array_split(
         coherent_windows, np.flatnonzero(np.diff(coherent_windows) > 1) + 1
@@ -479,7 +417,7 @@ def discriminate_fixations_and_smooth_pursuit(gaze_direction):
 
 def merge_close_sequences(sequences_candidates, gaze_direction, check_directionnality=False):
     """
-    Merge events that are less than 5 frames appart and the gaze is moving in the same direction
+    Merge events that are less than 5 frames appart and the gaze is moving in the same direction (if check_directionnality=True)
     """
 
     sequences_candidates = apply_minimal_duration(sequences_candidates, 2)
@@ -558,7 +496,6 @@ def detect_fixations_and_smooth_pursuit(
     https://doi.org/10.1016/j.bspc.2014.12.008
     """
     # Parameters to define ---------------------------------------
-    # @thomasromeas : These parameter values are still to be adjusted
     eta_D = 0.45  #  is the threshold for dispersion (without units)
     eta_CD = 0.5  # is the threshold for consistency of direction (without units)
     eta_PD = 0.5  # is the threshold for position displacement (without units)
@@ -791,7 +728,7 @@ def plot_gaze_classification(
     smooth_pursuit_sequences,
     eyetracker_invalid_sequences,
     visual_scanning_sequences,
-    quiet_eye_duration_threshold,
+    duration_after_cue,
     gaze_angular_velocity_rad,
     eye_angular_velocity_rad,
     eye_angular_acceleration_rad,
@@ -951,12 +888,12 @@ def plot_gaze_classification(
             axs[0].axvspan(time_vector[i[0]], time_vector_step[i[-1] + 1], edgecolor=None, color="tab:pink", alpha=0.5)
 
     axs[0].plot(
-        np.array([time_vector[-1] - quiet_eye_duration_threshold, time_vector[-1]]),
+        np.array([time_vector[-1] - duration_after_cue, time_vector[-1]]),
         np.array([np.nanmax(gaze_direction) + 0.1, np.nanmax(gaze_direction) + 0.1]),
         "k",
     )
     axs[0].plot(
-        np.array([time_vector[-1] - quiet_eye_duration_threshold, time_vector[-1] - quiet_eye_duration_threshold]),
+        np.array([time_vector[-1] - duration_after_cue, time_vector[-1] - duration_after_cue]),
         np.array([np.nanmax(gaze_direction) + 0.09, np.nanmax(gaze_direction) + 0.1]),
         "k",
     )
@@ -966,9 +903,9 @@ def plot_gaze_classification(
         "k",
     )
     axs[0].text(
-        time_vector[-1] - quiet_eye_duration_threshold / 2,
+        time_vector[-1] - duration_after_cue / 2,
         np.nanmax(gaze_direction) + 0.11,
-        f"last {quiet_eye_duration_threshold} sec",
+        f"last {duration_after_cue} sec",
     )
 
     axs[0].fill_between(np.array([0, 0]), np.array([0, 0]), color="w", label="Unclassified events")
@@ -992,7 +929,9 @@ def plot_gaze_classification(
 
 
 def fix_helmet_rotation(time_vector, helmet_rotation):
-
+    """
+    Thi function allows to unwrap the helmet rotation to avoid 360 jumps and get appropriate head rotation velocity
+    """
     # Unwrap the helmet rotation to avoid 360 jumps
     helmet_rotation_unwrapped_deg = np.unwrap(helmet_rotation, period=360, axis=1)
 
@@ -1054,7 +993,7 @@ def compute_intermediary_metrics(
     visual_scanning_sequences,
     gaze_angular_velocity_rad,
     dt,
-    quiet_eye_duration_threshold,
+    duration_after_cue,
     cut_file,
     fixation_duration_threshold,
     smooth_pursuit_duration_threshold,
@@ -1062,6 +1001,10 @@ def compute_intermediary_metrics(
 ):
 
     def split_sequences_before_and_after_quiet_eye(post_cue_timing_idx, sequences):
+        """
+        Get the sequences before and after the cue.
+        Note that the event occurring during the cue is removed.
+        """
         sequences_pre_cue = []
         sequences_post_cue = []
         if len(sequences) == 0 or sequences[0].shape == (0,) or sequences[0].shape == (1, 0):
@@ -1071,12 +1014,6 @@ def compute_intermediary_metrics(
                 sequences_pre_cue.append(i_sequence)
             elif i_sequence[0] > post_cue_timing_idx:
                 sequences_post_cue.append(i_sequence)
-            # elif post_cue_timing_idx in i_sequence:
-            #     post_cue_idx_this_sequence = np.where(i_sequence == post_cue_timing_idx)[0][0]
-            #     sequences_pre_cue.append(i_sequence[: post_cue_idx_this_sequence + 1])
-            #     sequences_post_cue.append(i_sequence[post_cue_idx_this_sequence + 1:])
-            # else:
-            #     raise ValueError("The sequence is not split correctly.")
 
         return sequences_pre_cue, sequences_post_cue
 
@@ -1094,15 +1031,14 @@ def compute_intermediary_metrics(
                     if i[-1] < post_cue_timing_idx:
                         durations_pre_cue.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
                     elif post_cue_timing_idx in i:
-                        # durations_pre_cue.append(time_vector[post_cue_timing_idx + 1] - time_vector[i[0]])
-                        # durations_post_cue.append(time_vector[i[-1]] - time_vector[post_cue_timing_idx + 1] + dt)
+                        # Remove this event but write it in a file so that we know what was removed
                         cut_file.write(f"{sequence_type} : {time_vector[i[-1]] - time_vector[i[0]] + dt} s \n")
                     elif i[0] > post_cue_timing_idx:
                         durations_post_cue.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
         return durations, durations_pre_cue, durations_post_cue
 
     # Instant at which the "post cue switch" is happening
-    post_cue_timing_idx = np.where(time_vector > time_vector[-1] - quiet_eye_duration_threshold)[0][0]
+    post_cue_timing_idx = np.where(time_vector > time_vector[-1] - duration_after_cue)[0][0]
     smooth_pursuit_sequences_pre_cue, smooth_pursuit_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
         post_cue_timing_idx, smooth_pursuit_sequences
     )
@@ -1252,6 +1188,9 @@ def check_if_there_is_sequence_overlap(
     saccade_sequences,
     eyetracker_invalid_sequences,
 ):
+    """
+    This function just check if there was problems in the classification algorithm
+    """
 
     # Blinks and invalid data must not overlap with any other sequences
     for i_blink in blink_sequences + eyetracker_invalid_sequences:
@@ -1294,19 +1233,10 @@ cut_file = open("event_excluded_at_cut_off.txt", "w")
 cut_file.write("The following events were excluded because they happened at the moment of the 2s cut : \n\n")
 
 # ----------------------------------------------------------------
-long_trials = ["20240222172036_eye_tracking_VideoListOne_TESTVA13_Experiment_Mode_360VR_Pen28_012.csv"]
 output_metrics_dataframe = None
 for path, folders, files in os.walk(datapath):
     for file in files:
         if file.endswith(".csv"):
-
-            if SKIP_LONG_TRIALS:
-                # skip trials that take too long to compute, useful for debugging only
-                if file in long_trials:
-                    continue
-
-            # if file != "20240223155813_eye_tracking_VideoListOne_TESTVA10_Experiment_Mode_2D_Spread7_017.csv":
-            #     continue
 
             # Get the data from the file
             this_trial_name = file.split("_")[-2]
@@ -1390,7 +1320,7 @@ for path, folders, files in os.walk(datapath):
             )
 
             # Remove blinks
-            blink_sequences = detect_blinks(time_vector, data)
+            blink_sequences = detect_blinks(data)
 
             if PLOT_BAD_DATA_FLAG:
                 plot_bad_data_timing(time_vector, eye_direction, figname)
@@ -1482,7 +1412,7 @@ for path, folders, files in os.walk(datapath):
                     smooth_pursuit_sequences,
                     eyetracker_invalid_sequences,
                     visual_scanning_sequences,
-                    quiet_eye_duration_threshold,
+                    duration_after_cue,
                     gaze_angular_velocity_rad,
                     eye_angular_velocity_rad,
                     eye_angular_acceleration_rad,
@@ -1553,7 +1483,7 @@ for path, folders, files in os.walk(datapath):
                 visual_scanning_sequences,
                 gaze_angular_velocity_rad,
                 dt,
-                quiet_eye_duration_threshold,
+                duration_after_cue,
                 cut_file,
                 fixation_duration_threshold,
                 smooth_pursuit_duration_threshold,
@@ -1674,28 +1604,28 @@ for path, folders, files in os.walk(datapath):
             )
 
             fixation_ratio = total_fixation_duration / time_vector[-1]
-            fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (time_vector[-1] - quiet_eye_duration_threshold)
-            fixation_ratio_post_cue = total_fixation_duration_post_cue / quiet_eye_duration_threshold
+            fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (time_vector[-1] - duration_after_cue)
+            fixation_ratio_post_cue = total_fixation_duration_post_cue / duration_after_cue
 
             smooth_pursuit_ratio = total_smooth_pursuit_duration / time_vector[-1]
             smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (
-                time_vector[-1] - quiet_eye_duration_threshold
+                time_vector[-1] - duration_after_cue
             )
-            smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / quiet_eye_duration_threshold
+            smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / duration_after_cue
 
             blinking_ratio = total_blink_duration / time_vector[-1]
-            blinking_ratio_pre_cue = total_blink_duration_pre_cue / (time_vector[-1] - quiet_eye_duration_threshold)
-            blinking_ratio_post_cue = total_blink_duration_post_cue / quiet_eye_duration_threshold
+            blinking_ratio_pre_cue = total_blink_duration_pre_cue / (time_vector[-1] - duration_after_cue)
+            blinking_ratio_post_cue = total_blink_duration_post_cue / duration_after_cue
 
             saccade_ratio = total_saccade_duration / time_vector[-1]
-            saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (time_vector[-1] - quiet_eye_duration_threshold)
-            saccade_ratio_post_cue = total_saccade_duration_post_cue / quiet_eye_duration_threshold
+            saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (time_vector[-1] - duration_after_cue)
+            saccade_ratio_post_cue = total_saccade_duration_post_cue / duration_after_cue
 
             visual_scanning_ratio = total_visual_scanning_duration / time_vector[-1]
             visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (
-                time_vector[-1] - quiet_eye_duration_threshold
+                time_vector[-1] - duration_after_cue
             )
-            visual_scanning_ratio_post_cue = total_visual_scanning_duration_post_cue / quiet_eye_duration_threshold
+            visual_scanning_ratio_post_cue = total_visual_scanning_duration_post_cue / duration_after_cue
 
             not_classified_ratio = 1 - (
                 fixation_ratio + smooth_pursuit_ratio + blinking_ratio + saccade_ratio + visual_scanning_ratio
