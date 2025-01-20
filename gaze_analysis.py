@@ -1630,7 +1630,7 @@ for path, folders, files in os.walk(datapath):
             not_classified_ratio = 1 - (
                 fixation_ratio + smooth_pursuit_ratio + blinking_ratio + saccade_ratio + visual_scanning_ratio
             )
-            if not_classified_ratio < - dt:
+            if not_classified_ratio < -dt:
                 raise ValueError("Problem: The sum of the ratios is greater than 1")
 
             invalid_ratio = np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) / len(
