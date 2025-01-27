@@ -1,5 +1,7 @@
 # Gaze classification algorithm
 
+[![DOI](https://zenodo.org/badge/567807579.svg)](https://doi.org/10.5281/zenodo.8013882)
+
 This repo is a modified implementation of the gaze classification algorithm presented in [Larsson et al., 2015](https://doi.org/10.1016/j.bspc.2014.12.008).
 It allows to classify the 3D gaze behavior (head + eye movements) into blinks, fixations, saccades, smooth pursuit, and visual scanning events.
 
