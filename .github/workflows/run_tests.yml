@@ -1,0 +1,88 @@
+name: Run the tests
+
+on: [pull_request]
+
+env:
+  EXAMPLES_FOLDER: examples
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/eyedentify3d
+          - os: macos-latest
+            label: osx-arm64
+            prefix: /Users/runner/miniconda3/envs/eyedentify3d
+          - os: macos-13
+            label: osx-intel
+            prefix: /Users/runner/miniconda3/envs/eyedentify3d
+          - os: windows-latest
+            label: win-64
+            prefix: C:\Miniconda3\envs\eyedentify3d
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout code with submodule
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+
+      - name: Set up Python
+        run: |
+          conda install -cconda-forge python pip 
+
+      - name: Install dependencies
+        run: | 
+          pip install . && pip uninstall -y eyedentify3d
+          pip install numpy scipy matplotlib pandas pingouin
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-cov codecov black
+          conda install -c conda-forge biorbd=1.11.2
+
+      - name: Run tests with code coverage
+        run: pytest -v --color=yes --cov-report=xml --cov=eyedentify3d tests
+
+      - name: Send Codecov report
+        id: archive
+        uses: codecov/codecov-action@v5
+        with:
+          path: .covergage
+          if-no-files-found: error
+          fail_ci_if_error: true
+          verbose: true
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
+
+      - uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
+
+      - name: Test installed version of python
+        run: | 
+          BASE_FOLDER=`pwd`
+          pip install .
+          cd
+          python -c "import eyedentify3d"
+          cd $BASE_FOLDER
