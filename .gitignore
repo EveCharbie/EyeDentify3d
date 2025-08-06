@@ -162,22 +162,5 @@ cython_debug/
 #.idea/
 
 .idea/
-*.png
 .DS_Store
-AllData/
-figures/
-Videos/
-*.mov
-AI-Basketball-Referee-main/
-BasketballPlayerDetectection-BABPD-master/
-*.csv
-
-*.pkl
-
-*.csv#
-
-*.txt
-
-*.csv
-
-videos/
+hide_and_seek/
