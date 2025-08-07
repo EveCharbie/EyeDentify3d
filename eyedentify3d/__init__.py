@@ -3,7 +3,8 @@ from .time_range import TimeRange
 from .error_type import ErrorType
 
 # TODO: Remove
-from .gaze_analysis import (detect_blinks,
+from .gaze_analysis import (
+    detect_blinks,
     detect_saccades,
     get_gaze_direction,
     detect_visual_scanning,
