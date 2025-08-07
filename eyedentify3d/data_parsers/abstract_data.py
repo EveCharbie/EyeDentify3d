@@ -59,9 +59,7 @@ class Data(ABC):
             raise ValueError(f"The error type must be an ErrorType, got {value}.")
         if value == ErrorType.FILE:
             with open("bad_data_files.txt", "w") as bad_data_file:
-                bad_data_file.write(
-                    f"Bad data file created on {bad_data_file.write(f"Bad data file created on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n")} \n"
-                )
+                bad_data_file.write(f"Bad data file created on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n")
 
         self._error_type = value
 
