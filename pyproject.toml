@@ -1,0 +1,55 @@
+[build-system]
+requires = [
+    "setuptools", 
+    "setuptools-scm",
+    "biorbd",
+    "scipy",
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "pingouin",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name =  "eyedentify3d"
+description = "A package to identify gaze behavior from 3D eye-tracking data."
+dynamic = ["version"]
+authors = [
+    {name = "EveCharbie", email = "eve.charbie@gmail.com"},
+]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python"
+]
+requires-python = ">=3.11"
+dependencies = [
+    "biorbd",
+    "scipy",
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "pingouin",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "black",
+]
+
+[project.urls]
+Documentation = "https://github.com/EveCharbie/EyeDentify3d/tree/main#readme"
+Source = "https://github.com/EveCharbie/EyeDentify3d"
+Tracker = "https://github.com/EveCharbie/EyeDentify3d/issues"
+
+[tool.setuptools]
+packages = ["eyedentify3d"]
+
+[tool.setuptools.dynamic]
+version = {attr = "eyedentify3d.__version__"}
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = "tests"
