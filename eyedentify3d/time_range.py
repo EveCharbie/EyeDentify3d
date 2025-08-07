@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class TimeRange:
     """A class to represent a time range for data processing in trials."""
 

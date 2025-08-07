@@ -1,7 +1,9 @@
 from enum import Enum
 
+
 class ErrorType(Enum):
     """This enum defines the way errors are handled"""
+
     SKIP = "continues silently on errors"
     PRINT = "prints the error message to the console"
     FILE = "print the error message to a file"

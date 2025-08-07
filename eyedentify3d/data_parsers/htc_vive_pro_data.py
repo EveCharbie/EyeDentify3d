@@ -7,17 +7,19 @@ from ..time_range import TimeRange
 from ..utils.rotation_utils import unwrap_rotation
 from ..utils.signal_utils import filter_data, centered_finite_difference
 
+
 class HtcViveProData(Data):
     """
     Load the data from a HTC Vive Pro file.
 
     For the reference frame definition, see image https://www.researchgate.net/figure/Left-Coordinate-system-of-HTC-Vive-Pro-Eye-and-right-a-diagram-showing-gaze-origin_fig4_373699457
     """
+
     def __init__(
-            self,
-            data_file_path: str,
-            error_type: ErrorType = ErrorType.PRINT,
-            time_range: TimeRange = TimeRange(),
+        self,
+        data_file_path: str,
+        error_type: ErrorType = ErrorType.PRINT,
+        time_range: TimeRange = TimeRange(),
     ):
         """
         Parameters
@@ -40,7 +42,6 @@ class HtcViveProData(Data):
         self._get_head_angular_velocity()
         self._set_data_validity()
 
-
     @property
     def data_file_path(self):
         return self._data_file_path
@@ -60,11 +61,13 @@ class HtcViveProData(Data):
         """
         time_vector = self.csv_data["time(100ns)"]
         if len(time_vector) == 0:
-            raise RuntimeError(f"The file {self.data_file_path} is empty. There is no element in the field 'time(100ns)'. Please check the file.")
+            raise RuntimeError(
+                f"The file {self.data_file_path} is empty. There is no element in the field 'time(100ns)'. Please check the file."
+            )
 
         if (
-                np.sum(np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31))
-                > len(self.csv_data["eye_valid_L"]) / 2
+            np.sum(np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31))
+            > len(self.csv_data["eye_valid_L"]) / 2
         ):
             self._validity_flag = False
             error_str = f"More than 50% of the data from file {self.data_file_path} is declared invalid by the eye-tracker, skipping this file."
@@ -73,7 +76,9 @@ class HtcViveProData(Data):
 
         if np.any((time_vector[1:] - time_vector[:-1]) > 0):
             self._validity_flag = False
-            error_str = f"The time vector in file {self.data_file_path} is not strictly increasing. Please check the file."
+            error_str = (
+                f"The time vector in file {self.data_file_path} is not strictly increasing. Please check the file."
+            )
             self.error_type(error_str)
             return
 
@@ -111,7 +116,9 @@ class HtcViveProData(Data):
         """
         Get the eye direction from the csv data. It is a unit vector in the same direction as the eyes.
         """
-        eye_direction = np.array([self.csv_data["gaze_direct_L.x"], self.csv_data["gaze_direct_L.y"], self.csv_data["gaze_direct_L.z"]])
+        eye_direction = np.array(
+            [self.csv_data["gaze_direct_L.x"], self.csv_data["gaze_direct_L.y"], self.csv_data["gaze_direct_L.z"]]
+        )
 
         eye_direction_norm = np.linalg.norm(eye_direction, axis=0)
         if np.any(np.logical_or(eye_direction_norm > 1.2, eye_direction_norm < 0.8)):
@@ -147,10 +154,7 @@ class HtcViveProData(Data):
             return data_to_interpolate
 
         # Find where frames are different from the previous frame
-        frame_diffs = np.linalg.norm(
-            data_to_interpolate[:, 1:] - data_to_interpolate[:, :-1],
-            axis=0
-        )
+        frame_diffs = np.linalg.norm(data_to_interpolate[:, 1:] - data_to_interpolate[:, :-1], axis=0)
         unique_frame_mask = np.concatenate([[True], frame_diffs > 1e-10])
         unique_indices = np.where(unique_frame_mask)[0]
 
@@ -165,7 +169,7 @@ class HtcViveProData(Data):
                     result[component, start_idx:end_idx] = np.linspace(
                         data_to_interpolate[component, start_idx],
                         data_to_interpolate[component, end_idx],
-                        end_idx - start_idx + 1
+                        end_idx - start_idx + 1,
                     )[:-1]
 
         return result
@@ -175,7 +179,9 @@ class HtcViveProData(Data):
         """
         Get the head orientation from the csv data. It is expressed as Euler angles in degrees and is measured by the VR helmet.
         """
-        head_angles = np.array([self.csv_data["helmet_rot_x"], self.csv_data["helmet_rot_y"], self.csv_data["helmet_rot_z"]])
+        head_angles = np.array(
+            [self.csv_data["helmet_rot_x"], self.csv_data["helmet_rot_y"], self.csv_data["helmet_rot_z"]]
+        )
         self.head_angles = unwrap_rotation(head_angles)
 
     @destroy_on_fail
@@ -196,7 +202,6 @@ class HtcViveProData(Data):
         Get a numpy array of bool indicating if the eye-tracker declared this data frame as valid.
         """
         self.data_validity = np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31)
-
 
 
 # eyetracker_invalid_data_index = np.array([])

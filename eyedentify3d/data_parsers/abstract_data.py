@@ -9,6 +9,7 @@ from ..time_range import TimeRange
 
 def destroy_on_fail(method):
     """Decorator to exit initialization automatically"""
+
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         if self._validity_flag:
@@ -26,9 +27,8 @@ class Data(ABC):
     """
     Load the data from a HTC Vive Pro file.
     """
-    def __init__(self,
-                 error_type: ErrorType = ErrorType.PRINT,
-                 time_range: TimeRange = TimeRange()):
+
+    def __init__(self, error_type: ErrorType = ErrorType.PRINT, time_range: TimeRange = TimeRange()):
         """
         Parameters
         ----------
@@ -59,7 +59,9 @@ class Data(ABC):
             raise ValueError(f"The error type must be an ErrorType, got {value}.")
         if value == ErrorType.FILE:
             with open("bad_data_files.txt", "w") as bad_data_file:
-                bad_data_file.write(f"Bad data file created on {bad_data_file.write(f"Bad data file created on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n")} \n")
+                bad_data_file.write(
+                    f"Bad data file created on {bad_data_file.write(f"Bad data file created on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} \n")} \n"
+                )
 
         self._error_type = value
 
@@ -76,8 +78,10 @@ class Data(ABC):
     @property
     def trial_duration(self):
         if self.time_vector is None:
-            raise RuntimeError("The trial_duration property can only be called after the time_vector has been set "
-                               "(i.e., after the data objects has been instantiated).")
+            raise RuntimeError(
+                "The trial_duration property can only be called after the time_vector has been set "
+                "(i.e., after the data objects has been instantiated)."
+            )
         return self.time_vector[-1] - self.time_vector[0]
 
     @abstractmethod

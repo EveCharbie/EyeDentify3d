@@ -15,9 +15,14 @@ def centered_finite_difference(time_vector: np.ndarray, data: np.ndarray) -> np.
     velocity = np.zeros((3, data.shape[1]))
     for i_component in range(3):
         velocity[i_component, 0] = (data[i_component, 1] - data[i_component, 0]) / (time_vector[1] - time_vector[0])
-        velocity[i_component, -1] = (data[i_component, -1] - data[i_component, -2]) / (time_vector[-1] - time_vector[-2])
-        velocity[i_component, 1:-1] = (data[i_component, 2:] - data[i_component, :-2]) / (time_vector[2:] - time_vector[:-2])
+        velocity[i_component, -1] = (data[i_component, -1] - data[i_component, -2]) / (
+            time_vector[-1] - time_vector[-2]
+        )
+        velocity[i_component, 1:-1] = (data[i_component, 2:] - data[i_component, :-2]) / (
+            time_vector[2:] - time_vector[:-2]
+        )
     return velocity
+
 
 def filter_data(data: np.ndarray, cutoff_freq: float = 0.2, order: int = 8, padlen: int = 150) -> np.ndarray:
     """
