@@ -53,7 +53,6 @@ def perform_one_file(
     # data_file_path = "data/HTC_Vive_Pro/TESTNA01_2D_Fist3.csv"
     # data = HtcViveProData(data_file_path, error_type=ErrorType.FILE, time_range=time_range)
 
-
     time_vector = np.array((data["time(100ns)"] - data["time(100ns)"][0]) / 10000000)
     length_trial = length_before_black_screen[file_name]
     dt = np.mean(time_vector[1:] - time_vector[:-1])
@@ -464,9 +463,15 @@ def test_original_code():
         elif file_name == "TESTNA15_360VR_Pen3":
             assert captured_output.getvalue() == "Smooth pursuit : 0.15893174263848384 s ----"
         elif file_name == "TESTVA03_2D_Spread9":
-            assert captured_output.getvalue() == "\n\n ****************************************************************************** \n\nData from file TESTVA03_2D_Spread9 is empty\n\n ****************************************************************************** \n\n\n"
+            assert (
+                captured_output.getvalue()
+                == "\n\n ****************************************************************************** \n\nData from file TESTVA03_2D_Spread9 is empty\n\n ****************************************************************************** \n\n\n"
+            )
         elif file_name == "TESTNA10_360VR_Fist3":
-            assert captured_output.getvalue() == "\n\n ****************************************************************************** \n\nMore than 50% of the data from file TESTNA10_360VR_Fist3 is declared invalid by the eye-tracker\n\n ****************************************************************************** \n\n\n"
+            assert (
+                captured_output.getvalue()
+                == "\n\n ****************************************************************************** \n\nMore than 50% of the data from file TESTNA10_360VR_Fist3 is declared invalid by the eye-tracker\n\n ****************************************************************************** \n\n\n"
+            )
 
         # # Generate the data
         # with open(data_path + "/../../results/HTC_Vive_Pro/" + file_name + ".pkl", "wb") as result_file:
