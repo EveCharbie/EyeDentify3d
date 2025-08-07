@@ -37,11 +37,22 @@ def perform_one_file(
         print("\n\n ****************************************************************************** \n")
         print(f"Data from file {file_name} is empty")
         print("\n ****************************************************************************** \n\n")
+        return
 
     if np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) > len(data["eye_valid_L"]) / 2:
         print("\n\n ****************************************************************************** \n")
         print(f"More than 50% of the data from file {file_name} is declared invalid by the eye-tracker")
         print("\n ****************************************************************************** \n\n")
+        return
+
+    # # Cut the data after the end of the trial (black screen)
+    # black_screen_time = 7.180  # seconds
+    # time_range = TimeRange(min_time=0, max_time=black_screen_time)
+    #
+    # # Load the data from the HTC Vive Pro
+    # data_file_path = "data/HTC_Vive_Pro/TESTNA01_2D_Fist3.csv"
+    # data = HtcViveProData(data_file_path, error_type=ErrorType.FILE, time_range=time_range)
+
 
     time_vector = np.array((data["time(100ns)"] - data["time(100ns)"][0]) / 10000000)
     length_trial = length_before_black_screen[file_name]
@@ -417,6 +428,8 @@ def test_original_code():
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
         "TESTNA15_360VR_Pen3": 4.230,
+        "TESTVA03_2D_Spread9": 6.150,  # Bad data (no data)
+        "TESTNA10_360VR_Fist3": 7.180,  # Bad data (more than 50% of the data is invalid)
     }
 
     # Define some constants
@@ -450,6 +463,10 @@ def test_original_code():
             assert captured_output.getvalue() == "Fixation : 0.21577979005397038 s ----"
         elif file_name == "TESTNA15_360VR_Pen3":
             assert captured_output.getvalue() == "Smooth pursuit : 0.15893174263848384 s ----"
+        elif file_name == "TESTVA03_2D_Spread9":
+            assert captured_output.getvalue() == "\n\n ****************************************************************************** \n\nData from file TESTVA03_2D_Spread9 is empty\n\n ****************************************************************************** \n\n\n"
+        elif file_name == "TESTNA10_360VR_Fist3":
+            assert captured_output.getvalue() == "\n\n ****************************************************************************** \n\nMore than 50% of the data from file TESTNA10_360VR_Fist3 is declared invalid by the eye-tracker\n\n ****************************************************************************** \n\n\n"
 
         # # Generate the data
         # with open(data_path + "/../../results/HTC_Vive_Pro/" + file_name + ".pkl", "wb") as result_file:
