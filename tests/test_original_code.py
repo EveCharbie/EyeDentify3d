@@ -8,7 +8,7 @@ import sys
 import io
 import pytest
 
-from gaze_analysis import (
+from eyedentify3d import (
     detect_blinks,
     detect_saccades,
     get_gaze_direction,
