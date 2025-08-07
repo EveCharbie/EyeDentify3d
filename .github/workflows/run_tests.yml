@@ -42,7 +42,7 @@ jobs:
 
       - name: Set up Python
         run: |
-          conda install -cconda-forge python pip 
+          conda install -cconda-forge python=3.11 pip 
 
       - name: Install dependencies
         run: | 
