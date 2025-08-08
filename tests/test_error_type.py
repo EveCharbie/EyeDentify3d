@@ -1,7 +1,7 @@
 import unittest
 import os
 import io
-import sys
+import pytest
 from unittest.mock import patch, mock_open
 from eyedentify3d.error_type import ErrorType
 
@@ -12,13 +12,6 @@ def test_error_type_values():
     assert ErrorType.PRINT.value == "prints the error message to the console"
     assert ErrorType.FILE.value == "print the error message to a file"
     assert ErrorType.RAISE.value == "raises an exception on errors"
-
-
-def test_error_type_raise():
-    """Test that ErrorType.RAISE raises a RuntimeError."""
-    error_handler = ErrorType.RAISE
-    with unittest.TestCase().assertRaises(RuntimeError):
-        error_handler("Test error message")
 
 
 def test_error_type_skip():
@@ -49,22 +42,17 @@ def test_error_type_file(mock_file):
     mock_file().write.assert_called_once_with("Test error message\n")
 
 
+def test_error_type_raise():
+    """Test that ErrorType.RAISE raises a RuntimeError."""
+    error_handler = ErrorType.RAISE
+    with pytest.raises(RuntimeError, match="Test error message"):
+        error_handler("Test error message")
+
+
 def test_error_type_unknown():
     """Test that an unknown error type raises a ValueError."""
-    # This is a bit of a hack to create an invalid enum value
-    # We're testing the else clause in the __call__ method
-    try:
-        # Create a temporary attribute that's not a valid enum value
-        ErrorType._value2member_map_["invalid"] = "invalid"
+    with pytest.raises(ValueError, match="'invalid' is not a valid ErrorType"):
         error_handler = ErrorType("invalid")
-        
-        # This should raise a ValueError
-        with unittest.TestCase().assertRaises(ValueError):
-            error_handler("Test error message")
-    finally:
-        # Clean up our hack
-        if "invalid" in ErrorType._value2member_map_:
-            del ErrorType._value2member_map_["invalid"]
 
 
 def test_error_type_integration():
