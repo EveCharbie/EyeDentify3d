@@ -46,9 +46,9 @@ jobs:
 
       - name: Install dependencies
         run: | 
-          pip install . && pip uninstall -y eyedentify3d
-          pip install numpy scipy matplotlib pandas pingouin
           conda install -c conda-forge biorbd=1.11.2
+          pip install numpy scipy matplotlib pandas pingouin
+          pip install . && pip uninstall -y eyedentify3d
 
       - name: Install test dependencies
         run: |
