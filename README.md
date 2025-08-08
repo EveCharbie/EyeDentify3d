@@ -1,5 +1,9 @@
 # Gaze classification algorithm
 
+
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a>
+[![Build status](https://github.com/EveCharbie/EyeDentify3d/actions/workflows/run_tests.yml/badge.svg)](https://github.com/EveCharbie/EyeDentify3d/actions)
+[![codecov](https://codecov.io/gh/EveCharbie/EyeDentify3d/graph/badge.svg?token=BP4B2TCZXI)](https://codecov.io/gh/EveCharbie/EyeDentify3d)
 [![DOI](https://zenodo.org/badge/821504006.svg)](https://doi.org/10.5281/zenodo.14718072)
 
 This repo is a modified implementation of the gaze classification algorithm presented in [Larsson et al., 2015](https://doi.org/10.1016/j.bspc.2014.12.008).
