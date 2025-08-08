@@ -11,6 +11,14 @@ def test_error_type_values():
     assert ErrorType.SKIP.value == "continues silently on errors"
     assert ErrorType.PRINT.value == "prints the error message to the console"
     assert ErrorType.FILE.value == "print the error message to a file"
+    assert ErrorType.RAISE.value == "raises an exception on errors"
+
+
+def test_error_type_raise():
+    """Test that ErrorType.RAISE raises a RuntimeError."""
+    error_handler = ErrorType.RAISE
+    with unittest.TestCase().assertRaises(RuntimeError):
+        error_handler("Test error message")
 
 
 def test_error_type_skip():
