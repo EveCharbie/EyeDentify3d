@@ -50,7 +50,9 @@ class GazeBehaviorIdentifier:
         This method should be called each time an event is identified, so that the data object is updated accordingly.
         """
         if not hasattr(event_identifier, "frame_indices"):
-            raise RuntimeError("The event identifier must have a 'frame_indices' attribute. This should not happen, please contact the developer.")
+            raise RuntimeError(
+                "The event identifier must have a 'frame_indices' attribute. This should not happen, please contact the developer."
+            )
 
         self.data_object.time_vector[event_identifier.frame_indices] = np.nan
         self.data_object.eye_direction[:, event_identifier.frame_indices] = np.nan

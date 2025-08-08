@@ -303,7 +303,9 @@ def perform_one_file(
         raise ValueError("Problem: The sum of the ratios is greater than 1")
 
     invalid_ratio = np.sum(
-        np.logical_or(original_data_object.csv_data["eye_valid_L"] != 31, original_data_object.csv_data["eye_valid_R"] != 31)
+        np.logical_or(
+            original_data_object.csv_data["eye_valid_L"] != 31, original_data_object.csv_data["eye_valid_R"] != 31
+        )
     ) / len(original_data_object.csv_data["eye_valid_L"])
 
     output = pd.DataFrame(

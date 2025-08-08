@@ -10,6 +10,7 @@ class BlinkEvent:
     A blink event is detected when both eye openness drop bellow the threshold (default 0.5).
     ref: https://ieeexplore.ieee.org/abstract/document/9483841
     """
+
     def __init__(self, data_object: DataObject, eye_openness_threshold: float = 0.5):
         """
         Parameters:
@@ -31,8 +32,12 @@ class BlinkEvent:
         """
         Detect the frames declared as invalid by the eye-tracker.
         """
-        self.frame_indices = np.where(np.logical_and(data_object.right_eye_openness < self.eye_openness_threshold,
-                                                     data_object.left_eye_openness < self.eye_openness_threshold))[0]
+        self.frame_indices = np.where(
+            np.logical_and(
+                data_object.right_eye_openness < self.eye_openness_threshold,
+                data_object.left_eye_openness < self.eye_openness_threshold,
+            )
+        )[0]
 
     def detect_blink_sequences(self):
         """

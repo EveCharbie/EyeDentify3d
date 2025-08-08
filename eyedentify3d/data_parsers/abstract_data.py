@@ -93,7 +93,9 @@ class Data(ABC):
                 "(i.e., after the data objects has been instantiated)."
             )
         if self.dt is not None:
-            raise RuntimeError("dt can only be set once at the very beginning of the data processing, because the time vector will be modified later.")
+            raise RuntimeError(
+                "dt can only be set once at the very beginning of the data processing, because the time vector will be modified later."
+            )
         self.dt = np.nanmean(self.time_vector[1:] - self.time_vector[:-1])
 
     @property

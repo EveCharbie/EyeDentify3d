@@ -214,4 +214,3 @@ class HtcViveProData(Data):
         Get a numpy array of bool indicating if the eye-tracker declared this data frame as valid.
         """
         self.data_validity = np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31)
-

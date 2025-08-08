@@ -9,6 +9,7 @@ class InvalidEvent:
     Class to detect invalid sequences.
     An invalid event is detected when the eye-tracker declares the frame as invalid.
     """
+
     def __init__(self, data_object: DataObject):
         """
         Parameters:
