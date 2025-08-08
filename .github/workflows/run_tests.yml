@@ -42,7 +42,7 @@ jobs:
 
       - name: Set up Python
         run: |
-          conda install -cconda-forge python pip 
+          conda install -cconda-forge python=3.11 pip 
 
       - name: Install dependencies
         run: | 
@@ -65,6 +65,8 @@ jobs:
           if-no-files-found: error
           fail_ci_if_error: true
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: EveCharbie/EyeDentify3d
         if: matrix.os == 'ubuntu-latest'
 
       - name: Generate XML report
