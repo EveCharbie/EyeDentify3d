@@ -1,12 +1,16 @@
 name: eyedentify3d
 channels:
   - conda-forge
-  - defaults
 dependencies:
-  - numpy
+  - python=3.11
   - biorbd=1.11.2
+  - numpy
+  - scipy
   - matplotlib
   - pandas
-  - scipy
   - pingouin
+  - pytest
+  - pytest-cov
+  - codecov
+  - black
 
