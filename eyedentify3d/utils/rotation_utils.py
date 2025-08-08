@@ -1,5 +1,4 @@
 import numpy as np
-import biorbd
 
 
 def unwrap_rotation(angles: np.ndarray) -> np.ndarray:
