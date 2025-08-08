@@ -12,8 +12,8 @@ def centered_finite_difference(time_vector: np.ndarray, data: np.ndarray) -> np.
     time_vector: A numpy array of shape (n_frames,) containing the time vector.
     data: A numpy array of shape (n_components, n_frames) containing the data to differentiate.
     """
-    velocity = np.zeros((3, data.shape[1]))
-    for i_component in range(3):
+    velocity = np.zeros(data.shape)
+    for i_component in range(data.shape[0]):
         velocity[i_component, 0] = (data[i_component, 1] - data[i_component, 0]) / (time_vector[1] - time_vector[0])
         velocity[i_component, -1] = (data[i_component, -1] - data[i_component, -2]) / (
             time_vector[-1] - time_vector[-2]
