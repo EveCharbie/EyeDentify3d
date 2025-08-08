@@ -1,5 +1,6 @@
 import numpy as np
-import pytest
+import numpy.testing as npt
+
 from eyedentify3d.utils.signal_utils import centered_finite_difference, filter_data
 
 
@@ -74,3 +75,22 @@ def test_filter_data_parameters():
     
     # Both should have the same shape
     assert filtered_data_low_order.shape == filtered_data_high_order.shape
+
+
+def test_filter_data_values():
+    """Test that filter_data does not introduce NaN or Inf values."""
+    np.random.seed(42)  # For reproducibility
+    data = np.random.rand(3, 1000) * 0.01
+    # Introduce extreme values
+    data[0, 300] = 1000
+    data[1, 500] = -1000
+    filtered_data = filter_data(data)
+
+    assert not np.any(np.isnan(filtered_data))
+    assert not np.any(np.isinf(filtered_data))
+    npt.assert_almost_equal(filtered_data[0, 3], 0.004136164900475943)   # Small (unaffected)
+    npt.assert_almost_equal(filtered_data[0, 288], 18.718377476834707)   # Larger (affected)
+    npt.assert_almost_equal(filtered_data[0, 300],  200.9716428631263)   # Way smaller (filtered)
+    npt.assert_almost_equal(filtered_data[0, 900],  0.0016703885371167062)   # Small (unaffected)
+    npt.assert_almost_equal(filtered_data[1, 300],  0.004086508092317416)  # Other components unaffected
+
