@@ -44,11 +44,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          pip install pytest pytest-cov codecov black
-
-      - name: Install package in development mode
-        run: |
-          pip install -e . --no-deps  # --no-deps to avoid reinstalling dependencies
+          conda install -c conda-forge pytest pytest-cov codecov black
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=eyedentify3d tests
@@ -65,11 +61,3 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: EveCharbie/EyeDentify3d
         if: matrix.os == 'ubuntu-latest'
-
-      - name: Test installed version of python
-        run: | 
-          BASE_FOLDER=`pwd`
-          pip install .
-          cd
-          python -c "import eyedentify3d"
-          cd $BASE_FOLDER

@@ -4,15 +4,13 @@ channels:
 dependencies:
   - python=3.11
   - biorbd=1.11.2
-  - pip
-  - pip:
-    - numpy
-    - scipy
-    - matplotlib
-    - pandas
-    - pingouin
-    - pytest
-    - pytest-cov
-    - codecov
-    - black
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - pingouin
+  - pytest
+  - pytest-cov
+  - codecov
+  - black
 
