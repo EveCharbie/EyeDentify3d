@@ -35,8 +35,8 @@ class HtcViveProData(Data):
         self.csv_data: pd.DataFrame = pd.read_csv(self.data_file_path, sep=";")
         self._check_validity()
         self._set_time_vector()
-        self._remove_duplicates()  # This method is specific to HTC Vive Pro data, as it has duplicated frames
         self._discard_data_out_of_range()
+        self._remove_duplicates()  # This method is specific to HTC Vive Pro data, as it has duplicated frames
         self._get_eye_direction()
         self._get_head_angles()
         self._get_head_angular_velocity()
@@ -61,9 +61,9 @@ class HtcViveProData(Data):
         """
         time_vector = self.csv_data["time(100ns)"]
         if len(time_vector) == 0:
-            raise RuntimeError(
-                f"The file {self.data_file_path} is empty. There is no element in the field 'time(100ns)'. Please check the file."
-            )
+            self._validity_flag = False
+            error_str = f"The file {self.data_file_path} is empty. There is no element in the field 'time(100ns)'. Please check the file."
+            self.error_type(error_str)
 
         if (
             np.sum(np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31))
@@ -85,15 +85,6 @@ class HtcViveProData(Data):
         # If we reach this point, the data is valid
         return
 
-    def _remove_duplicates(self):
-        """
-        A few frames are duplicated in the HTC Vive Pro data, which can cause issues later.
-        So we completely remove the duplicated frames.
-        """
-        good_timestamps_indices = np.where(np.abs(self.time_vector[1:] - self.time_vector[:-1]) > 1e-10)[0]
-        self.time_vector = self.time_vector[good_timestamps_indices]
-        self.csv_data = self.csv_data.iloc[good_timestamps_indices, :]
-
     @destroy_on_fail
     def _set_time_vector(self):
         """
@@ -101,6 +92,16 @@ class HtcViveProData(Data):
         """
         factor = 10000000  # 100 ns to seconds
         self.time_vector = np.array((self.csv_data["time(100ns)"] - self.csv_data["time(100ns)"][0]) / factor)
+
+    def _remove_duplicates(self):
+        """
+        A few frames are duplicated in the HTC Vive Pro data, which can cause issues later.
+        So we completely remove the duplicated frames.
+        """
+        good_timestamps_indices = np.where(np.abs(self.time_vector[1:] - self.time_vector[:-1]) > 1e-10)[0] + 1
+        good_timestamps_indices = np.insert(good_timestamps_indices, 0, 0)  # Include the first frame
+        self.time_vector = self.time_vector[good_timestamps_indices]
+        self.csv_data = self.csv_data.iloc[good_timestamps_indices, :]
 
     @destroy_on_fail
     def _discard_data_out_of_range(self):
@@ -121,6 +122,8 @@ class HtcViveProData(Data):
         )
 
         eye_direction_norm = np.linalg.norm(eye_direction, axis=0)
+        # Replace zeros, which are due to bad data
+        eye_direction_norm[eye_direction_norm == 0] = np.nan
         if np.any(np.logical_or(eye_direction_norm > 1.2, eye_direction_norm < 0.8)):
             self._validity_flag = False
             error_str = f"The eye direction in file {self.data_file_path} is not normalized (min = {np.min(eye_direction_norm)}, max = {np.max(eye_direction_norm)}). Please check the file."
@@ -165,10 +168,10 @@ class HtcViveProData(Data):
             end_idx = unique_indices[i + 1]
             if end_idx - start_idx > 1:
                 # There are repeated frames to interpolate
-                for component in range(3):
-                    result[component, start_idx:end_idx] = np.linspace(
-                        data_to_interpolate[component, start_idx],
-                        data_to_interpolate[component, end_idx],
+                for i_component in range(3):
+                    result[i_component, start_idx:end_idx] = np.linspace(
+                        data_to_interpolate[i_component, start_idx],
+                        data_to_interpolate[i_component, end_idx],
                         end_idx - start_idx + 1,
                     )[:-1]
 
@@ -182,7 +185,9 @@ class HtcViveProData(Data):
         head_angles = np.array(
             [self.csv_data["helmet_rot_x"], self.csv_data["helmet_rot_y"], self.csv_data["helmet_rot_z"]]
         )
-        self.head_angles = unwrap_rotation(head_angles)
+        unwrapped_head_angles = unwrap_rotation(head_angles)
+        # We interpolate to avoid duplicated frames, which would affect the finite difference computation
+        self.head_angles = self.interpolate_repeated_frames(unwrapped_head_angles)
 
     @destroy_on_fail
     def _get_head_angular_velocity(self):
@@ -190,9 +195,7 @@ class HtcViveProData(Data):
         Get the head angular velocity from the csv data.
         We keep both the Euler angles derivative in degrees/s and the filtered angular velocity norm.
         """
-        # First we interpolate to avoid duplicated frames, which would affect the finite difference computation
-        head_angles_interpolated = self.interpolate_repeated_frames(self.head_angles)
-        self.head_angular_velocity = centered_finite_difference(self.time_vector, head_angles_interpolated)
+        self.head_angular_velocity = centered_finite_difference(self.time_vector, self.head_angles)
         head_velocity_norm = np.linalg.norm(self.head_angular_velocity, axis=0)
         self.head_velocity_norm = filter_data(head_velocity_norm[np.newaxis, :])[0, :]
 

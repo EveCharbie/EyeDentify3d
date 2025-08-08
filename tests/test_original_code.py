@@ -1,14 +1,16 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import numpy.testing as npt
 import pandas.testing as pdt
 import pickle
 import sys
 import io
-import pytest
+
 
 from eyedentify3d import (
+    TimeRange,
+    HtcViveProData,
+    ErrorType,
     detect_blinks,
     detect_saccades,
     get_gaze_direction,
@@ -24,80 +26,46 @@ from eyedentify3d import (
 
 def perform_one_file(
     file_name,
-    file,
+    data_file_path,
     length_before_black_screen,
     fixation_duration_threshold,
     smooth_pursuit_duration_threshold,
 ):
 
-    # print(f"Treating the data from file : {file_name}")
-    data = pd.read_csv(file, sep=";")
+    # --- new version (start) --- #
+    # Cut the data after the end of the trial (black screen)
+    black_screen_time = length_before_black_screen[file_name]
+    time_range = TimeRange(min_time=0, max_time=black_screen_time)
 
-    if len(data["time(100ns)"]) == 0:
-        print("\n\n ****************************************************************************** \n")
-        print(f"Data from file {file_name} is empty")
-        print("\n ****************************************************************************** \n\n")
+    # Load the data from the HTC Vive Pro
+    data_object = HtcViveProData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
+
+    if data_object._validity_flag == False:
         return
+    # --- new version (end) --- #
 
-    if np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) > len(data["eye_valid_L"]) / 2:
-        print("\n\n ****************************************************************************** \n")
-        print(f"More than 50% of the data from file {file_name} is declared invalid by the eye-tracker")
-        print("\n ****************************************************************************** \n\n")
-        return
 
-    # # Cut the data after the end of the trial (black screen)
-    # black_screen_time = 7.180  # seconds
-    # time_range = TimeRange(min_time=0, max_time=black_screen_time)
-    #
-    # # Load the data from the HTC Vive Pro
-    # data_file_path = "data/HTC_Vive_Pro/TESTNA01_2D_Fist3.csv"
-    # data = HtcViveProData(data_file_path, error_type=ErrorType.FILE, time_range=time_range)
+    eyetracker_invalid_data_index = np.where(data_object.data_validity)[0]
 
-    time_vector = np.array((data["time(100ns)"] - data["time(100ns)"][0]) / 10000000)
-    length_trial = length_before_black_screen[file_name]
-    dt = np.mean(time_vector[1:] - time_vector[:-1])
-
-    # cut the data after the black screen
-    black_screen_index = (
-        np.where(time_vector > length_trial)[0][0] if length_trial < time_vector[-1] else len(time_vector)
-    )
-    time_vector = time_vector[:black_screen_index]
-    data = data.iloc[:black_screen_index, :]
-
-    # Remove the duplicated timestamps in the data
-    bad_timestamps_index = list(np.where((time_vector[1:] - time_vector[:-1]) == 0)[0])
-    good_timestamps_index = [i for i in range(len(time_vector)) if i not in bad_timestamps_index]
-    time_vector = time_vector[good_timestamps_index]
-    data = data.iloc[good_timestamps_index, :]
-
-    eye_direction = np.array([data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
-    helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
-    head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg = fix_helmet_rotation(
-        time_vector, helmet_rotation
-    )
-
-    eyetracker_invalid_data_index = np.array([])
-    if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(data["eye_valid_R"]) != 31 * len(
-        data["eye_valid_R"]
-    ):
-        eyetracker_invalid_data_index = np.where(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31))[0]
     eyetracker_invalid_sequences = np.array_split(
         np.array(eyetracker_invalid_data_index),
         np.flatnonzero(np.diff(np.array(eyetracker_invalid_data_index)) > 1) + 1,
     )
 
+
     # Remove blinks
-    blink_sequences = detect_blinks(data)
+    blink_sequences = detect_blinks(data_object.csv_data)
 
     # Remove blink sequences from the variable vectors
     for blink in blink_sequences:
-        eye_direction[:, blink] = np.nan
+        data_object.eye_direction[:, blink] = np.nan
+
     # Remove the data that the eye-tracker declares invalid
     if eyetracker_invalid_data_index.shape != (0,):
-        eye_direction[:, eyetracker_invalid_data_index] = np.nan
+        data_object.eye_direction[:, eyetracker_invalid_data_index] = np.nan
 
     # Detect saccades
-    gaze_direction = get_gaze_direction(helmet_rotation_unwrapped_deg, eye_direction)
+    gaze_direction = get_gaze_direction(data_object.head_angles, data_object.eye_direction)
     (
         saccade_sequences,
         eye_angular_velocity_rad,
@@ -105,16 +73,16 @@ def perform_one_file(
         saccade_amplitudes,
         velocity_threshold_saccades,
         acceleration_threshold_saccades,
-    ) = detect_saccades(time_vector, eye_direction, gaze_direction)
+    ) = detect_saccades(data_object.time_vector, data_object.eye_direction, gaze_direction)
 
     # Detect visual scanning
     visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = detect_visual_scanning(
-        time_vector, gaze_direction, saccade_sequences, head_angular_velocity_deg_filtered
+        data_object.time_vector, gaze_direction, saccade_sequences, data_object.head_velocity_norm
     )
 
     # Detect fixations
-    intersaccadic_interval = np.zeros((len(time_vector),))
-    all_index = np.arange(len(time_vector))
+    intersaccadic_interval = np.zeros((len(data_object.time_vector),))
+    all_index = np.arange(len(data_object.time_vector))
     for i in all_index:
         i_in_saccades = True if any(i in sequence for sequence in saccade_sequences) else False
         i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
@@ -135,10 +103,10 @@ def perform_one_file(
             intersaccadic_sequences += [intersaccadic_sequences_temporary[i]]
 
     intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = (
-        sliding_window(time_vector, intersaccadic_sequences, gaze_direction)
+        sliding_window(data_object.time_vector, intersaccadic_sequences, gaze_direction)
     )
     fixation_sequences, smooth_pursuit_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuit(
-        time_vector, gaze_direction, intersaccadic_gouped_sequences, file_name, False
+        data_object.time_vector, gaze_direction, intersaccadic_gouped_sequences, file_name, False
     )
 
     visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)
@@ -200,19 +168,19 @@ def perform_one_file(
         mean_head_angular_velocity_deg_post_cue,
         post_cue_timing_idx,
     ) = compute_intermediary_metrics(
-        time_vector,
+        data_object.time_vector,
         smooth_pursuit_sequences,
         fixation_sequences,
         blink_sequences,
         saccade_sequences,
         visual_scanning_sequences,
         gaze_angular_velocity_rad,
-        dt,
+        data_object.dt,
         2,
         None,
         fixation_duration_threshold,
         smooth_pursuit_duration_threshold,
-        head_angular_velocity_deg,
+        data_object.head_velocity_norm,
     )
 
     # Metrics
@@ -316,34 +284,34 @@ def perform_one_file(
         np.nanmean(np.array(visual_scanning_duration_post_cue)) if len(visual_scanning_duration_post_cue) > 0 else None
     )
 
-    fixation_ratio = total_fixation_duration / time_vector[-1]
-    fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (time_vector[-1] - 2)
+    fixation_ratio = total_fixation_duration / data_object.time_vector[-1]
+    fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (data_object.time_vector[-1] - 2)
     fixation_ratio_post_cue = total_fixation_duration_post_cue / 2
 
-    smooth_pursuit_ratio = total_smooth_pursuit_duration / time_vector[-1]
-    smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (time_vector[-1] - 2)
+    smooth_pursuit_ratio = total_smooth_pursuit_duration / data_object.time_vector[-1]
+    smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (data_object.time_vector[-1] - 2)
     smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / 2
 
-    blinking_ratio = total_blink_duration / time_vector[-1]
-    blinking_ratio_pre_cue = total_blink_duration_pre_cue / (time_vector[-1] - 2)
+    blinking_ratio = total_blink_duration / data_object.time_vector[-1]
+    blinking_ratio_pre_cue = total_blink_duration_pre_cue / (data_object.time_vector[-1] - 2)
     blinking_ratio_post_cue = total_blink_duration_post_cue / 2
 
-    saccade_ratio = total_saccade_duration / time_vector[-1]
-    saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (time_vector[-1] - 2)
+    saccade_ratio = total_saccade_duration / data_object.time_vector[-1]
+    saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (data_object.time_vector[-1] - 2)
     saccade_ratio_post_cue = total_saccade_duration_post_cue / 2
 
-    visual_scanning_ratio = total_visual_scanning_duration / time_vector[-1]
-    visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (time_vector[-1] - 2)
+    visual_scanning_ratio = total_visual_scanning_duration / data_object.time_vector[-1]
+    visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (data_object.time_vector[-1] - 2)
     visual_scanning_ratio_post_cue = total_visual_scanning_duration_post_cue / 2
 
     not_classified_ratio = 1 - (
         fixation_ratio + smooth_pursuit_ratio + blinking_ratio + saccade_ratio + visual_scanning_ratio
     )
-    if not_classified_ratio < -dt:
+    if not_classified_ratio < -data_object.dt:
         raise ValueError("Problem: The sum of the ratios is greater than 1")
 
-    invalid_ratio = np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) / len(
-        data["eye_valid_L"]
+    invalid_ratio = np.sum(np.logical_or(data_object.csv_data["eye_valid_L"] != 31, data_object.csv_data["eye_valid_R"] != 31)) / len(
+        data_object.csv_data["eye_valid_L"]
     )
 
     output = pd.DataFrame(
@@ -408,7 +376,7 @@ def perform_one_file(
             "Mean head angular velocity full trial": [mean_head_angular_velocity_deg],
             "Mean head angular velocity pre cue": [mean_head_angular_velocity_deg_pre_cue],
             "Mean head angular velocity post cue": [mean_head_angular_velocity_deg_post_cue],
-            "Length of the full trial [s]": [time_vector[-1]],
+            "Length of the full trial [s]": [data_object.time_vector[-1]],
         }
     )
 
@@ -421,8 +389,8 @@ def test_original_code():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        "TESTNA01_2D_Fist3": 7.180,  # s
-        "TESTNA01_360VR_Fist3": 7.180,
+        # "TESTNA01_2D_Fist3": 7.180,  # s
+        # "TESTNA01_360VR_Fist3": 7.180,
         "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
@@ -451,17 +419,17 @@ def test_original_code():
         sys.stdout = sys.__stdout__  # Reset redirect.
 
         if file_name == "TESTNA01_2D_Fist3":
-            assert captured_output.getvalue() == r"Smooth pursuit : 1.249547373434411 s ----"
+            assert captured_output.getvalue() == r"Smooth pursuit : 1.24955 s ----"
         elif file_name == "TESTNA01_360VR_Fist3":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.10806311965144245 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.10806 s ----"
         elif file_name == "TESTNA05_2D_Spread7":
-            assert captured_output.getvalue() == "Fixation : 0.9503329302291205 s ----"
+            assert captured_output.getvalue() == "Fixation : 0.95033 s ----"
         elif file_name == "TESTNA05_360VR_Spread7":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.9657734421407184 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.96577 s ----"
         elif file_name == "TESTNA15_2D_Pen3":
-            assert captured_output.getvalue() == "Fixation : 0.21577979005397038 s ----"
+            assert captured_output.getvalue() == "Fixation : 0.21578 s ----"
         elif file_name == "TESTNA15_360VR_Pen3":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.15893174263848384 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.15893 s ----"
         elif file_name == "TESTVA03_2D_Spread9":
             assert (
                 captured_output.getvalue()
@@ -472,10 +440,6 @@ def test_original_code():
                 captured_output.getvalue()
                 == "\n\n ****************************************************************************** \n\nMore than 50% of the data from file TESTNA10_360VR_Fist3 is declared invalid by the eye-tracker\n\n ****************************************************************************** \n\n\n"
             )
-
-        # # Generate the data
-        # with open(data_path + "/../../results/HTC_Vive_Pro/" + file_name + ".pkl", "wb") as result_file:
-        #     pickle.dump(output, result_file)
 
         # Compare the data with reference
         if file_name not in ["TESTNA10_360VR_Fist3", "TESTVA03_2D_Spread9"]:

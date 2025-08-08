@@ -937,11 +937,11 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
 
     # Interpolate to avoid frames being repeated, which will mess up with the velocities thresholds
     i = 0
-    while i < len(time_vector) - 2:
+    while i < len(time_vector) - 1:
         j = i + 1
-        if helmet_rotation_unwrapped_deg[0, j] == helmet_rotation_unwrapped_deg[0, i]:
-            while helmet_rotation_unwrapped_deg[0, j] == helmet_rotation_unwrapped_deg[0, i]:
-                if j + 1 < len(time_vector) - 2:
+        if np.abs(np.linalg.norm(helmet_rotation_unwrapped_deg[:, j]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, i])) < 1e-10:
+            while np.abs(np.linalg.norm(helmet_rotation_unwrapped_deg[:, j]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, i])) < 1e-10:
+                if j + 1 < len(time_vector) - 1:
                     j += 1
                 else:
                     break
@@ -953,7 +953,16 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
                 )[:-1]
         i = j
 
-    # Head angular velecity
+    # Deal with the before last frame
+    if np.abs(np.linalg.norm(helmet_rotation_unwrapped_deg[:, -3]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, -2])) < 1e-10:
+        for i_component in range(3):
+            helmet_rotation_unwrapped_deg[i_component, -2] = np.linspace(
+                helmet_rotation_unwrapped_deg[i_component, -3],
+                helmet_rotation_unwrapped_deg[i_component, -1],
+                3,
+            )[1:-1][0]
+
+    # Head angular velocity
     head_3angular_velocity_deg = np.zeros((3, helmet_rotation.shape[1]))
     for i_component in range(3):
         head_3angular_velocity_deg[i_component, 0] = (
@@ -981,7 +990,7 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
     # plt.savefig("figures/test.png")
     # plt.show()
 
-    return head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg
+    return head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg
 
 
 def compute_intermediary_metrics(
@@ -997,7 +1006,7 @@ def compute_intermediary_metrics(
     cut_file,
     fixation_duration_threshold,
     smooth_pursuit_duration_threshold,
-    head_angular_velocity_deg,
+    head_angular_velocity_deg_filtered,
 ):
 
     def split_sequences_before_and_after_quiet_eye(post_cue_timing_idx, sequences):
@@ -1128,9 +1137,9 @@ def compute_intermediary_metrics(
     total_visual_scanning_duration_post_cue = np.sum(np.array(visual_scanning_duration_post_cue))
 
     # Head velocity
-    mean_head_angular_velocity_deg = np.mean(head_angular_velocity_deg)
-    mean_head_angular_velocity_deg_pre_cue = np.mean(head_angular_velocity_deg[:post_cue_timing_idx])
-    mean_head_angular_velocity_deg_post_cue = np.mean(head_angular_velocity_deg[post_cue_timing_idx:])
+    mean_head_angular_velocity_deg = np.mean(head_angular_velocity_deg_filtered)
+    mean_head_angular_velocity_deg_pre_cue = np.mean(head_angular_velocity_deg_filtered[:post_cue_timing_idx])
+    mean_head_angular_velocity_deg_post_cue = np.mean(head_angular_velocity_deg_filtered[post_cue_timing_idx:])
 
     return (
         smooth_pursuit_sequences_pre_cue,
@@ -1250,8 +1259,8 @@ def main():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        "TESTNA01_2D_Fist3": 7.180,  # s
-        "TESTNA01_360VR_Fist3": 7.180,
+        # "TESTNA01_2D_Fist3": 7.180,  # s
+        # "TESTNA01_360VR_Fist3": 7.180,
         "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
@@ -1299,8 +1308,10 @@ def main():
         data = data.iloc[good_timestamps_index, :]
 
         eye_direction = np.array([data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
+        eye_norm = np.linalg.norm(eye_direction, axis=0)
+        eye_direction = eye_direction / eye_norm
         helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
-        head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg, head_angular_velocity_deg = (
+        head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg = (
             fix_helmet_rotation(time_vector, helmet_rotation)
         )
 
@@ -1494,7 +1505,7 @@ def main():
             cut_file,
             fixation_duration_threshold,
             smooth_pursuit_duration_threshold,
-            head_angular_velocity_deg,
+            head_angular_velocity_deg_filtered,
         )
 
         # Metrics
@@ -1648,8 +1659,8 @@ def main():
 
         output = pd.DataFrame(
             {
-                "File name": [file],
-                "Figure name": [figname],
+                "File name": [file_name],
+                "Figure name": [file_name],
                 # "Participant ID": [file.split("_")[4]],
                 # "Mode": [file.split("_")[7]],
                 # "Trial name": [file.split("_")[8]],

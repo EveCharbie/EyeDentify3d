@@ -82,6 +82,15 @@ class Data(ABC):
             )
         return self.time_vector[-1] - self.time_vector[0]
 
+    @property
+    def dt(self):
+        if self.time_vector is None:
+            raise RuntimeError(
+                "The dt property can only be called after the time_vector has been set "
+                "(i.e., after the data objects has been instantiated)."
+            )
+        return np.nanmean(self.time_vector[1:] - self.time_vector[:-1])
+
     @abstractmethod
     def _check_validity(self):
         """
