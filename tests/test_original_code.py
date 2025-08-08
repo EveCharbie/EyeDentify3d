@@ -5,6 +5,7 @@ import pandas.testing as pdt
 import pickle
 import sys
 import io
+from copy import deepcopy
 
 
 from eyedentify3d import (
@@ -18,9 +19,9 @@ from eyedentify3d import (
     apply_minimal_duration,
     sliding_window,
     detect_fixations_and_smooth_pursuit,
-    fix_helmet_rotation,
     compute_intermediary_metrics,
     check_if_there_is_sequence_overlap,
+    GazeBehaviorIdentifier,
 )
 
 
@@ -38,29 +39,22 @@ def perform_one_file(
     time_range = TimeRange(min_time=0, max_time=black_screen_time)
 
     # Load the data from the HTC Vive Pro
-    data_object = HtcViveProData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
+    original_data_object = HtcViveProData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
 
-    if data_object._validity_flag == False:
+    if original_data_object.time_vector is None:
+        # This trial was problematic and an error was raised
         return
+
+    # Create a GazeBehaviorIdentifier object
+    gaze_behavior_identifier = GazeBehaviorIdentifier(deepcopy(original_data_object))
+    gaze_behavior_identifier.detect_blink_sequences()
+    gaze_behavior_identifier.detect_invalid_sequences()
+    data_object = gaze_behavior_identifier.data_object
     # --- new version (end) --- #
 
-    eyetracker_invalid_data_index = np.where(data_object.data_validity)[0]
-
-    eyetracker_invalid_sequences = np.array_split(
-        np.array(eyetracker_invalid_data_index),
-        np.flatnonzero(np.diff(np.array(eyetracker_invalid_data_index)) > 1) + 1,
-    )
-
-    # Remove blinks
-    blink_sequences = detect_blinks(data_object.csv_data)
-
-    # Remove blink sequences from the variable vectors
-    for blink in blink_sequences:
-        data_object.eye_direction[:, blink] = np.nan
-
-    # Remove the data that the eye-tracker declares invalid
-    if eyetracker_invalid_data_index.shape != (0,):
-        data_object.eye_direction[:, eyetracker_invalid_data_index] = np.nan
+    blink_sequences = gaze_behavior_identifier.blink.sequences
+    eyetracker_invalid_data_index = gaze_behavior_identifier.invalid.frame_indices
+    eyetracker_invalid_sequences = gaze_behavior_identifier.invalid.sequences
 
     # Detect saccades
     gaze_direction = get_gaze_direction(data_object.head_angles, data_object.eye_direction)
@@ -101,7 +95,7 @@ def perform_one_file(
             intersaccadic_sequences += [intersaccadic_sequences_temporary[i]]
 
     intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = (
-        sliding_window(data_object.time_vector, intersaccadic_sequences, gaze_direction)
+        sliding_window(original_data_object.time_vector, intersaccadic_sequences, gaze_direction)
     )
     fixation_sequences, smooth_pursuit_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuit(
         data_object.time_vector, gaze_direction, intersaccadic_gouped_sequences, file_name, False
@@ -166,19 +160,19 @@ def perform_one_file(
         mean_head_angular_velocity_deg_post_cue,
         post_cue_timing_idx,
     ) = compute_intermediary_metrics(
-        data_object.time_vector,
+        original_data_object.time_vector,
         smooth_pursuit_sequences,
         fixation_sequences,
         blink_sequences,
         saccade_sequences,
         visual_scanning_sequences,
         gaze_angular_velocity_rad,
-        data_object.dt,
+        original_data_object.dt,
         2,
         None,
         fixation_duration_threshold,
         smooth_pursuit_duration_threshold,
-        data_object.head_velocity_norm,
+        original_data_object.head_velocity_norm,
     )
 
     # Metrics
@@ -282,35 +276,35 @@ def perform_one_file(
         np.nanmean(np.array(visual_scanning_duration_post_cue)) if len(visual_scanning_duration_post_cue) > 0 else None
     )
 
-    fixation_ratio = total_fixation_duration / data_object.time_vector[-1]
-    fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (data_object.time_vector[-1] - 2)
+    fixation_ratio = total_fixation_duration / original_data_object.time_vector[-1]
+    fixation_ratio_pre_cue = total_fixation_duration_pre_cue / (original_data_object.time_vector[-1] - 2)
     fixation_ratio_post_cue = total_fixation_duration_post_cue / 2
 
-    smooth_pursuit_ratio = total_smooth_pursuit_duration / data_object.time_vector[-1]
-    smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (data_object.time_vector[-1] - 2)
+    smooth_pursuit_ratio = total_smooth_pursuit_duration / original_data_object.time_vector[-1]
+    smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (original_data_object.time_vector[-1] - 2)
     smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / 2
 
-    blinking_ratio = total_blink_duration / data_object.time_vector[-1]
-    blinking_ratio_pre_cue = total_blink_duration_pre_cue / (data_object.time_vector[-1] - 2)
+    blinking_ratio = total_blink_duration / original_data_object.time_vector[-1]
+    blinking_ratio_pre_cue = total_blink_duration_pre_cue / (original_data_object.time_vector[-1] - 2)
     blinking_ratio_post_cue = total_blink_duration_post_cue / 2
 
-    saccade_ratio = total_saccade_duration / data_object.time_vector[-1]
-    saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (data_object.time_vector[-1] - 2)
+    saccade_ratio = total_saccade_duration / original_data_object.time_vector[-1]
+    saccade_ratio_pre_cue = total_saccade_duration_pre_cue / (original_data_object.time_vector[-1] - 2)
     saccade_ratio_post_cue = total_saccade_duration_post_cue / 2
 
-    visual_scanning_ratio = total_visual_scanning_duration / data_object.time_vector[-1]
-    visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (data_object.time_vector[-1] - 2)
+    visual_scanning_ratio = total_visual_scanning_duration / original_data_object.time_vector[-1]
+    visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (original_data_object.time_vector[-1] - 2)
     visual_scanning_ratio_post_cue = total_visual_scanning_duration_post_cue / 2
 
     not_classified_ratio = 1 - (
         fixation_ratio + smooth_pursuit_ratio + blinking_ratio + saccade_ratio + visual_scanning_ratio
     )
-    if not_classified_ratio < -data_object.dt:
+    if not_classified_ratio < -original_data_object.dt:
         raise ValueError("Problem: The sum of the ratios is greater than 1")
 
     invalid_ratio = np.sum(
-        np.logical_or(data_object.csv_data["eye_valid_L"] != 31, data_object.csv_data["eye_valid_R"] != 31)
-    ) / len(data_object.csv_data["eye_valid_L"])
+        np.logical_or(original_data_object.csv_data["eye_valid_L"] != 31, original_data_object.csv_data["eye_valid_R"] != 31)
+    ) / len(original_data_object.csv_data["eye_valid_L"])
 
     output = pd.DataFrame(
         {
@@ -374,7 +368,7 @@ def perform_one_file(
             "Mean head angular velocity full trial": [mean_head_angular_velocity_deg],
             "Mean head angular velocity pre cue": [mean_head_angular_velocity_deg_pre_cue],
             "Mean head angular velocity post cue": [mean_head_angular_velocity_deg_post_cue],
-            "Length of the full trial [s]": [data_object.time_vector[-1]],
+            "Length of the full trial [s]": [original_data_object.time_vector[-1]],
         }
     )
 
@@ -387,8 +381,8 @@ def test_original_code():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        # "TESTNA01_2D_Fist3": 7.180,  # s
-        # "TESTNA01_360VR_Fist3": 7.180,
+        "TESTNA01_2D_Fist3": 7.180,  # s
+        "TESTNA01_360VR_Fist3": 7.180,
         "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
@@ -415,6 +409,7 @@ def test_original_code():
 
         # Reset print output
         sys.stdout = sys.__stdout__  # Reset redirect.
+        print(file_name)
 
         if file_name == "TESTNA01_2D_Fist3":
             assert captured_output.getvalue() == r"Smooth pursuit : 1.24955 s ----"
