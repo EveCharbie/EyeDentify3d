@@ -44,14 +44,12 @@ def perform_one_file(
         return
     # --- new version (end) --- #
 
-
     eyetracker_invalid_data_index = np.where(data_object.data_validity)[0]
 
     eyetracker_invalid_sequences = np.array_split(
         np.array(eyetracker_invalid_data_index),
         np.flatnonzero(np.diff(np.array(eyetracker_invalid_data_index)) > 1) + 1,
     )
-
 
     # Remove blinks
     blink_sequences = detect_blinks(data_object.csv_data)
@@ -310,9 +308,9 @@ def perform_one_file(
     if not_classified_ratio < -data_object.dt:
         raise ValueError("Problem: The sum of the ratios is greater than 1")
 
-    invalid_ratio = np.sum(np.logical_or(data_object.csv_data["eye_valid_L"] != 31, data_object.csv_data["eye_valid_R"] != 31)) / len(
-        data_object.csv_data["eye_valid_L"]
-    )
+    invalid_ratio = np.sum(
+        np.logical_or(data_object.csv_data["eye_valid_L"] != 31, data_object.csv_data["eye_valid_R"] != 31)
+    ) / len(data_object.csv_data["eye_valid_L"])
 
     output = pd.DataFrame(
         {

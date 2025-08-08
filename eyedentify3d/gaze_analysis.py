@@ -939,8 +939,20 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
     i = 0
     while i < len(time_vector) - 1:
         j = i + 1
-        if np.abs(np.linalg.norm(helmet_rotation_unwrapped_deg[:, j]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, i])) < 1e-10:
-            while np.abs(np.linalg.norm(helmet_rotation_unwrapped_deg[:, j]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, i])) < 1e-10:
+        if (
+            np.abs(
+                np.linalg.norm(helmet_rotation_unwrapped_deg[:, j])
+                - np.linalg.norm(helmet_rotation_unwrapped_deg[:, i])
+            )
+            < 1e-10
+        ):
+            while (
+                np.abs(
+                    np.linalg.norm(helmet_rotation_unwrapped_deg[:, j])
+                    - np.linalg.norm(helmet_rotation_unwrapped_deg[:, i])
+                )
+                < 1e-10
+            ):
                 if j + 1 < len(time_vector) - 1:
                     j += 1
                 else:
@@ -954,7 +966,12 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
         i = j
 
     # Deal with the before last frame
-    if np.abs(np.linalg.norm(helmet_rotation_unwrapped_deg[:, -3]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, -2])) < 1e-10:
+    if (
+        np.abs(
+            np.linalg.norm(helmet_rotation_unwrapped_deg[:, -3]) - np.linalg.norm(helmet_rotation_unwrapped_deg[:, -2])
+        )
+        < 1e-10
+    ):
         for i_component in range(3):
             helmet_rotation_unwrapped_deg[i_component, -2] = np.linspace(
                 helmet_rotation_unwrapped_deg[i_component, -3],
@@ -1042,7 +1059,10 @@ def compute_intermediary_metrics(
                     elif post_cue_timing_idx in i:
                         # Remove this event but write it in a file so that we know what was removed
                         if cut_file is None:
-                            print(f"{sequence_type} : {np.round(time_vector[i[-1]] - time_vector[i[0]] + dt, decimals=5)} s ----", end="")
+                            print(
+                                f"{sequence_type} : {np.round(time_vector[i[-1]] - time_vector[i[0]] + dt, decimals=5)} s ----",
+                                end="",
+                            )
                         else:
                             cut_file.write(f"{sequence_type} : {time_vector[i[-1]] - time_vector[i[0]] + dt} s \n")
                     elif i[0] > post_cue_timing_idx:
@@ -1282,10 +1302,7 @@ def main():
             bad_data_file.write(f"{file} \n")
             continue
 
-        if (
-            np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31))
-            > len(data["eye_valid_L"]) / 2
-        ):
+        if np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) > len(data["eye_valid_L"]) / 2:
             print("\n\n ****************************************************************************** \n")
             print(f"More than 50% of the data from file {file} is declared invalid by the eye-tracker")
             print("\n ****************************************************************************** \n\n")
@@ -1311,14 +1328,14 @@ def main():
         eye_norm = np.linalg.norm(eye_direction, axis=0)
         eye_direction = eye_direction / eye_norm
         helmet_rotation = np.array([data["helmet_rot_x"], data["helmet_rot_y"], data["helmet_rot_z"]])
-        head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg = (
-            fix_helmet_rotation(time_vector, helmet_rotation)
+        head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg = fix_helmet_rotation(
+            time_vector, helmet_rotation
         )
 
         eyetracker_invalid_data_index = np.array([])
-        if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(
+        if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(data["eye_valid_R"]) != 31 * len(
             data["eye_valid_R"]
-        ) != 31 * len(data["eye_valid_R"]):
+        ):
             if PLOT_BAD_DATA_FLAG:
                 plt.figure()
                 plt.plot(data["eye_valid_L"] / 31, label="eye_valid_L")
@@ -1361,9 +1378,7 @@ def main():
 
         # Detect visual scanning
         visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = (
-            detect_visual_scanning(
-                time_vector, gaze_direction, saccade_sequences, head_angular_velocity_deg_filtered
-            )
+            detect_visual_scanning(time_vector, gaze_direction, saccade_sequences, head_angular_velocity_deg_filtered)
         )
 
         # Detect fixations
@@ -1371,9 +1386,7 @@ def main():
         all_index = np.arange(len(time_vector))
         for i in all_index:
             i_in_saccades = True if any(i in sequence for sequence in saccade_sequences) else False
-            i_in_visual_scanning = (
-                True if any(i in sequence for sequence in visual_scanning_sequences) else False
-            )
+            i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
             i_in_blinks = True if any(i in sequence for sequence in blink_sequences) else False
             i_in_eyetracker_invalid = True if i in eyetracker_invalid_data_index else False
             gaze_velocity_criteria = True if gaze_angular_velocity_rad[i] * np.pi / 180 > 100 else False
@@ -1551,9 +1564,7 @@ def main():
 
         max_saccade_amplitude = np.nanmax(np.array(saccade_amplitudes)) if len(saccade_amplitudes) > 0 else None
 
-        mean_saccade_amplitude = (
-            np.nanmean(np.array(saccade_amplitudes)) if len(saccade_amplitudes) > 0 else None
-        )
+        mean_saccade_amplitude = np.nanmean(np.array(saccade_amplitudes)) if len(saccade_amplitudes) > 0 else None
         saccade_amplitudes_pre_cue = []
         saccade_amplitudes_post_cue = []
         for i, i_sequence in enumerate(saccade_sequences):
@@ -1577,9 +1588,7 @@ def main():
             np.nanmean(np.array(smooth_pursuit_duration)) if len(smooth_pursuit_duration) > 0 else None
         )
         mean_smooth_pursuit_duration_pre_cue = (
-            np.nanmean(np.array(smooth_pursuit_duration_pre_cue))
-            if len(smooth_pursuit_duration_pre_cue) > 0
-            else None
+            np.nanmean(np.array(smooth_pursuit_duration_pre_cue)) if len(smooth_pursuit_duration_pre_cue) > 0 else None
         )
         mean_smooth_pursuit_duration_post_cue = (
             np.nanmean(np.array(smooth_pursuit_duration_post_cue))
@@ -1628,9 +1637,7 @@ def main():
         fixation_ratio_post_cue = total_fixation_duration_post_cue / duration_after_cue
 
         smooth_pursuit_ratio = total_smooth_pursuit_duration / time_vector[-1]
-        smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (
-            time_vector[-1] - duration_after_cue
-        )
+        smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / (time_vector[-1] - duration_after_cue)
         smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / duration_after_cue
 
         blinking_ratio = total_blink_duration / time_vector[-1]
@@ -1642,9 +1649,7 @@ def main():
         saccade_ratio_post_cue = total_saccade_duration_post_cue / duration_after_cue
 
         visual_scanning_ratio = total_visual_scanning_duration / time_vector[-1]
-        visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (
-            time_vector[-1] - duration_after_cue
-        )
+        visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / (time_vector[-1] - duration_after_cue)
         visual_scanning_ratio_post_cue = total_visual_scanning_duration_post_cue / duration_after_cue
 
         not_classified_ratio = 1 - (
@@ -1730,7 +1735,6 @@ def main():
         # Generate the data for tests
         with open(data_path + "/../../results/HTC_Vive_Pro/" + file_name + ".pkl", "wb") as result_file:
             pickle.dump(output, result_file)
-
 
         output_metrics_dataframe = (
             output
