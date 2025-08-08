@@ -91,6 +91,16 @@ class Data(ABC):
             )
         return np.nanmean(self.time_vector[1:] - self.time_vector[:-1])
 
+    @property
+    def file_name(self):
+        """
+        Get the name of the data file.
+        """
+        if hasattr(self, "data_file_path"):
+            return self.data_file_path.split("/")[-1]
+        else:
+            raise AttributeError("The data file path is not set.")
+
     @abstractmethod
     def _check_validity(self):
         """

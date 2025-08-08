@@ -431,12 +431,12 @@ def test_original_code():
         elif file_name == "TESTVA03_2D_Spread9":
             assert (
                 captured_output.getvalue()
-                == "\n\n ****************************************************************************** \n\nData from file TESTVA03_2D_Spread9 is empty\n\n ****************************************************************************** \n\n\n"
+                == "The file TESTVA03_2D_Spread9.csv is empty. There is no element in the field 'time(100ns)'. Please check the file.\n"
             )
         elif file_name == "TESTNA10_360VR_Fist3":
             assert (
                 captured_output.getvalue()
-                == "\n\n ****************************************************************************** \n\nMore than 50% of the data from file TESTNA10_360VR_Fist3 is declared invalid by the eye-tracker\n\n ****************************************************************************** \n\n\n"
+                == "More than 50% of the data from file TESTNA10_360VR_Fist3.csv is declared invalid by the eye-tracker, skipping this file.\n"
             )
 
         # Compare the data with reference

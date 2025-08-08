@@ -62,7 +62,7 @@ class HtcViveProData(Data):
         time_vector = self.csv_data["time(100ns)"]
         if len(time_vector) == 0:
             self._validity_flag = False
-            error_str = f"The file {self.data_file_path} is empty. There is no element in the field 'time(100ns)'. Please check the file."
+            error_str = f"The file {self.file_name} is empty. There is no element in the field 'time(100ns)'. Please check the file."
             self.error_type(error_str)
 
         if (
@@ -70,14 +70,14 @@ class HtcViveProData(Data):
             > len(self.csv_data["eye_valid_L"]) / 2
         ):
             self._validity_flag = False
-            error_str = f"More than 50% of the data from file {self.data_file_path} is declared invalid by the eye-tracker, skipping this file."
+            error_str = f"More than 50% of the data from file {self.file_name} is declared invalid by the eye-tracker, skipping this file."
             self.error_type(error_str)
             return
 
         if np.any((time_vector[1:] - time_vector[:-1]) > 0):
             self._validity_flag = False
             error_str = (
-                f"The time vector in file {self.data_file_path} is not strictly increasing. Please check the file."
+                f"The time vector in file {self.file_name} is not strictly increasing. Please check the file."
             )
             self.error_type(error_str)
             return
@@ -93,6 +93,7 @@ class HtcViveProData(Data):
         factor = 10000000  # 100 ns to seconds
         self.time_vector = np.array((self.csv_data["time(100ns)"] - self.csv_data["time(100ns)"][0]) / factor)
 
+    @destroy_on_fail
     def _remove_duplicates(self):
         """
         A few frames are duplicated in the HTC Vive Pro data, which can cause issues later.
@@ -126,7 +127,7 @@ class HtcViveProData(Data):
         eye_direction_norm[eye_direction_norm == 0] = np.nan
         if np.any(np.logical_or(eye_direction_norm > 1.2, eye_direction_norm < 0.8)):
             self._validity_flag = False
-            error_str = f"The eye direction in file {self.data_file_path} is not normalized (min = {np.min(eye_direction_norm)}, max = {np.max(eye_direction_norm)}). Please check the file."
+            error_str = f"The eye direction in file {self.file_name} is not normalized (min = {np.min(eye_direction_norm)}, max = {np.max(eye_direction_norm)}). Please check the file."
             self.error_type(error_str)
             return
 
