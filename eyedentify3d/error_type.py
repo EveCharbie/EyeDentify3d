@@ -7,6 +7,7 @@ class ErrorType(Enum):
     SKIP = "continues silently on errors"
     PRINT = "prints the error message to the console"
     FILE = "print the error message to a file"
+    RAISE = "raises an exception on errors"
 
     def __call__(self, error_str: str) -> None:
         """
@@ -23,5 +24,7 @@ class ErrorType(Enum):
             print(error_str)
         elif self == ErrorType.SKIP:
             pass
+        elif self == ErrorType.RAISE:
+            raise RuntimeError(error_str)
         else:
             raise ValueError(f"Unknown error type: {self}")
