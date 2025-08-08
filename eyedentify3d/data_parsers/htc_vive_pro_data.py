@@ -76,9 +76,7 @@ class HtcViveProData(Data):
 
         if np.any((time_vector[1:] - time_vector[:-1]) > 0):
             self._validity_flag = False
-            error_str = (
-                f"The time vector in file {self.file_name} is not strictly increasing. Please check the file."
-            )
+            error_str = f"The time vector in file {self.file_name} is not strictly increasing. Please check the file."
             self.error_type(error_str)
             return
 
