@@ -1279,8 +1279,8 @@ def main():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        # "TESTNA01_2D_Fist3": 7.180,  # s
-        # "TESTNA01_360VR_Fist3": 7.180,
+        "TESTNA01_2D_Fist3": 7.180,  # s
+        "TESTNA01_360VR_Fist3": 7.180,
         "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,

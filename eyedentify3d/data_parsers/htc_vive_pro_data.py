@@ -36,10 +36,12 @@ class HtcViveProData(Data):
         self._check_validity()
         self._set_time_vector()
         self._discard_data_out_of_range()
+        self._set_dt()
         self._remove_duplicates()  # This method is specific to HTC Vive Pro data, as it has duplicated frames
-        self._get_eye_direction()
-        self._get_head_angles()
-        self._get_head_angular_velocity()
+        self._set_eye_openness()
+        self._set_eye_direction()
+        self._set_head_angles()
+        self._set_head_angular_velocity()
         self._set_data_validity()
 
     @property
@@ -112,7 +114,15 @@ class HtcViveProData(Data):
         self.csv_data = self.csv_data.iloc[indices_to_keep, :]
 
     @destroy_on_fail
-    def _get_eye_direction(self):
+    def _set_eye_openness(self) -> None:
+        """
+        Set the eye openness of both eyes.
+        """
+        self.right_eye_openness = self.csv_data["openness_R"]
+        self.left_eye_openness = self.csv_data["openness_L"]
+
+    @destroy_on_fail
+    def _set_eye_direction(self):
         """
         Get the eye direction from the csv data. It is a unit vector in the same direction as the eyes.
         """
@@ -177,7 +187,7 @@ class HtcViveProData(Data):
         return result
 
     @destroy_on_fail
-    def _get_head_angles(self):
+    def _set_head_angles(self):
         """
         Get the head orientation from the csv data. It is expressed as Euler angles in degrees and is measured by the VR helmet.
         """
@@ -189,7 +199,7 @@ class HtcViveProData(Data):
         self.head_angles = self.interpolate_repeated_frames(unwrapped_head_angles)
 
     @destroy_on_fail
-    def _get_head_angular_velocity(self):
+    def _set_head_angular_velocity(self):
         """
         Get the head angular velocity from the csv data.
         We keep both the Euler angles derivative in degrees/s and the filtered angular velocity norm.
@@ -204,24 +214,3 @@ class HtcViveProData(Data):
         Get a numpy array of bool indicating if the eye-tracker declared this data frame as valid.
         """
         self.data_validity = np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31)
-
-
-# eyetracker_invalid_data_index = np.array([])
-# if np.sum(data["eye_valid_L"]) != 31 * len(data["eye_valid_L"]) or np.sum(
-#         data["eye_valid_R"]
-# ) != 31 * len(data["eye_valid_R"]):
-#     if PLOT_BAD_DATA_FLAG:
-#         plt.figure()
-#         plt.plot(data["eye_valid_L"] / 31, label="eye_valid_L")
-#         plt.plot(data["eye_valid_R"] / 31, label="eye_valid_R")
-#         plt.plot(data["openness_L"], label="openness_L")
-#         plt.plot(data["openness_R"], label="openness_R")
-#         plt.legend()
-#         plt.show()
-#     eyetracker_invalid_data_index = np.where(
-#         np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)
-#     )[0]
-# eyetracker_invalid_sequences = np.array_split(
-#     np.array(eyetracker_invalid_data_index),
-#     np.flatnonzero(np.diff(np.array(eyetracker_invalid_data_index)) > 1) + 1,
-# )

@@ -41,8 +41,11 @@ class Data(ABC):
 
         # Extended attributes
         self._validity_flag = True
+        self.dt: float | None = None
         # These will be set by the subclass
         self.time_vector: np.ndarray[float] | None = None
+        self.right_eye_openness: np.ndarray[float] | None = None
+        self.left_eye_openness: np.ndarray[float] | None = None
         self.eye_direction: np.ndarray[float] | None = None
         self.head_angles: np.ndarray[float] | None = None
         self.head_angular_velocity: np.ndarray[float] | None = None
@@ -82,14 +85,18 @@ class Data(ABC):
             )
         return self.time_vector[-1] - self.time_vector[0]
 
-    @property
-    def dt(self):
+    @destroy_on_fail
+    def _set_dt(self):
         if self.time_vector is None:
             raise RuntimeError(
                 "The dt property can only be called after the time_vector has been set "
                 "(i.e., after the data objects has been instantiated)."
             )
-        return np.nanmean(self.time_vector[1:] - self.time_vector[:-1])
+        if self.dt is not None:
+            raise RuntimeError(
+                "dt can only be set once at the very beginning of the data processing, because the time vector will be modified later."
+            )
+        self.dt = np.nanmean(self.time_vector[1:] - self.time_vector[:-1])
 
     @property
     def file_name(self):
@@ -123,21 +130,28 @@ class Data(ABC):
         pass
 
     @abstractmethod
-    def _get_eye_direction(self):
+    def _set_eye_openness(self):
+        """
+        Get the eye openness from the data file.
+        """
+        pass
+
+    @abstractmethod
+    def _set_eye_direction(self):
         """
         Get the eye direction from the data file.
         """
         pass
 
     @abstractmethod
-    def _get_head_angles(self):
+    def _set_head_angles(self):
         """
         Get the head angles from the data file.
         """
         pass
 
     @abstractmethod
-    def _get_head_angular_velocity(self):
+    def _set_head_angular_velocity(self):
         """
         Get the head angular velocity from the data file.
         """
@@ -155,6 +169,8 @@ class Data(ABC):
         In case of an error, return an object full of Nones.
         """
         self.time_vector = None
+        self.right_eye_openness = None
+        self.left_eye_openness = None
         self.eye_direction = None
         self.head_angles = None
         self.head_angular_velocity = None
