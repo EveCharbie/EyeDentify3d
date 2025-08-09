@@ -31,16 +31,19 @@ class HtcViveProData(Data):
         super().__init__(error_type, time_range)
         self.data_file_path: str = data_file_path
 
-        # Load the data
+        # Load the data and set the time vector
         self.csv_data: pd.DataFrame = pd.read_csv(self.data_file_path, sep=";")
         self._check_validity()
         self._set_time_vector()
         self._discard_data_out_of_range()
         self._set_dt()
         self._remove_duplicates()  # This method is specific to HTC Vive Pro data, as it has duplicated frames
+
+        # Initialize variables
         self._set_eye_openness()
         self._set_eye_direction()
         self._set_head_angles()
+        self._set_gaze_direction()
         self._set_head_angular_velocity()
         self._set_data_invalidity()
 
