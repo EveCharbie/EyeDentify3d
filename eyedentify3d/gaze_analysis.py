@@ -98,8 +98,14 @@ def detect_saccades(time_vector, eye_direction, gaze_direction):
     ) / (time_vector[-1] - time_vector[-2])
 
     eye_angular_acceleration_rad = np.zeros((eye_direction.shape[1],))
-    eye_angular_acceleration_rad[:-1] = (eye_angular_velocity_rad[1:] - eye_angular_velocity_rad[:-1]) / (
-        time_vector[1:] - time_vector[:-1]
+    eye_angular_acceleration_rad[0] = (eye_angular_velocity_rad[1] - eye_angular_velocity_rad[0]) / (
+        time_vector[1] - time_vector[0]
+    )
+    eye_angular_acceleration_rad[1:-1] = (eye_angular_velocity_rad[2:] - eye_angular_velocity_rad[:-2]) / (
+        time_vector[2:] - time_vector[:-2]
+    )
+    eye_angular_acceleration_rad[-1] = (eye_angular_velocity_rad[-1] - eye_angular_velocity_rad[-2]) / (
+        time_vector[-1] - time_vector[-2]
     )
 
     acceleration_threshold = 4000  # deg/s²
@@ -1546,9 +1552,14 @@ def main():
             else None
         )
 
-        nb_blinks = len(blink_sequences)
-        nb_blinks_pre_cue = len(blink_sequences_pre_cue)
-        nb_blinks_post_cue = len(blink_sequences_post_cue)
+        if len(blink_sequences[0]) != 0:
+            nb_blinks = len(blink_sequences)
+            nb_blinks_pre_cue = len(blink_sequences_pre_cue)
+            nb_blinks_post_cue = len(blink_sequences_post_cue)
+        else:
+            nb_blinks = 0
+            nb_blinks_pre_cue = 0
+            nb_blinks_post_cue = 0
 
         nb_saccades = len(saccade_sequences)
         nb_saccades_pre_cue = len(saccade_sequences_pre_cue)

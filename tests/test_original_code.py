@@ -12,9 +12,6 @@ from eyedentify3d import (
     TimeRange,
     HtcViveProData,
     ErrorType,
-    detect_blinks,
-    detect_saccades,
-    get_gaze_direction,
     detect_visual_scanning,
     apply_minimal_duration,
     sliding_window,
@@ -49,23 +46,16 @@ def perform_one_file(
     gaze_behavior_identifier = GazeBehaviorIdentifier(deepcopy(original_data_object))
     gaze_behavior_identifier.detect_blink_sequences()
     gaze_behavior_identifier.detect_invalid_sequences()
+    gaze_behavior_identifier.detect_saccade_sequences()
     data_object = gaze_behavior_identifier.data_object
     # --- new version (end) --- #
 
     blink_sequences = gaze_behavior_identifier.blink.sequences
     eyetracker_invalid_data_index = gaze_behavior_identifier.invalid.frame_indices
     eyetracker_invalid_sequences = gaze_behavior_identifier.invalid.sequences
-
-    # Detect saccades
-    gaze_direction = get_gaze_direction(data_object.head_angles, data_object.eye_direction)
-    (
-        saccade_sequences,
-        eye_angular_velocity_rad,
-        eye_angular_acceleration_rad,
-        saccade_amplitudes,
-        velocity_threshold_saccades,
-        acceleration_threshold_saccades,
-    ) = detect_saccades(data_object.time_vector, data_object.eye_direction, gaze_direction)
+    gaze_direction = data_object.gaze_direction
+    saccade_sequences = gaze_behavior_identifier.saccade.sequences
+    saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
 
     # Detect visual scanning
     visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = detect_visual_scanning(

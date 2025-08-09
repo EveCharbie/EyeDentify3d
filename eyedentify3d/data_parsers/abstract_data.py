@@ -5,6 +5,7 @@ import numpy as np
 
 from ..error_type import ErrorType
 from ..time_range import TimeRange
+from ..utils.rotation_utils import get_gaze_direction
 
 
 def destroy_on_fail(method):
@@ -48,9 +49,10 @@ class Data(ABC):
         self.left_eye_openness: np.ndarray[float] | None = None
         self.eye_direction: np.ndarray[float] | None = None
         self.head_angles: np.ndarray[float] | None = None
+        self.gaze_direction: np.ndarray[float] | None = None
         self.head_angular_velocity: np.ndarray[float] | None = None
         self.head_velocity_norm: np.ndarray[float] | None = None
-        self.data_validity: np.ndarray[bool] | None = None
+        self.data_invalidity: np.ndarray[bool] | None = None
 
     @property
     def error_type(self):
@@ -150,6 +152,19 @@ class Data(ABC):
         """
         pass
 
+    @destroy_on_fail
+    def _set_gaze_direction(self):
+        """
+        Get the gaze direction from the head angles and the eye direction.
+        The gaze direction is a unit vector expressed in the global reference frame representing the combined rotations of the head and eyes.
+        """
+        if self.head_angles is None or self.eye_direction is None:
+            raise RuntimeError(
+                "The gaze direction can only be set after the head angles and eye direction have been set "
+                "(i.e., after the data objects has been instantiated)."
+            )
+        self.gaze_direction = get_gaze_direction(self.head_angles, self.eye_direction)
+
     @abstractmethod
     def _set_head_angular_velocity(self):
         """
@@ -158,9 +173,9 @@ class Data(ABC):
         pass
 
     @abstractmethod
-    def _set_data_validity(self):
+    def _set_data_invalidity(self):
         """
-        Set the validity of the data.
+        Set the invalidity of the data.
         """
         pass
 
@@ -173,5 +188,7 @@ class Data(ABC):
         self.left_eye_openness = None
         self.eye_direction = None
         self.head_angles = None
+        self.gaze_direction = None
         self.head_angular_velocity = None
         self.head_velocity_norm = None
+        self.identified_indices = None

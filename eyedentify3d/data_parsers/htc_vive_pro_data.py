@@ -31,18 +31,21 @@ class HtcViveProData(Data):
         super().__init__(error_type, time_range)
         self.data_file_path: str = data_file_path
 
-        # Load the data
+        # Load the data and set the time vector
         self.csv_data: pd.DataFrame = pd.read_csv(self.data_file_path, sep=";")
         self._check_validity()
         self._set_time_vector()
         self._discard_data_out_of_range()
         self._set_dt()
         self._remove_duplicates()  # This method is specific to HTC Vive Pro data, as it has duplicated frames
+
+        # Initialize variables
         self._set_eye_openness()
         self._set_eye_direction()
         self._set_head_angles()
+        self._set_gaze_direction()
         self._set_head_angular_velocity()
-        self._set_data_validity()
+        self._set_data_invalidity()
 
     @property
     def data_file_path(self):
@@ -61,7 +64,7 @@ class HtcViveProData(Data):
         """
         Check if the eye-tracker data is valid.
         """
-        time_vector = self.csv_data["time(100ns)"]
+        time_vector = np.array(self.csv_data["time(100ns)"])
         if len(time_vector) == 0:
             self._validity_flag = False
             error_str = f"The file {self.file_name} is empty. There is no element in the field 'time(100ns)'. Please check the file."
@@ -76,7 +79,7 @@ class HtcViveProData(Data):
             self.error_type(error_str)
             return
 
-        if np.any((time_vector[1:] - time_vector[:-1]) > 0):
+        if np.any((time_vector[1:] - time_vector[:-1]) < 0):
             self._validity_flag = False
             error_str = f"The time vector in file {self.file_name} is not strictly increasing. Please check the file."
             self.error_type(error_str)
@@ -209,8 +212,8 @@ class HtcViveProData(Data):
         self.head_velocity_norm = filter_data(head_velocity_norm[np.newaxis, :])[0, :]
 
     @destroy_on_fail
-    def _set_data_validity(self):
+    def _set_data_invalidity(self):
         """
-        Get a numpy array of bool indicating if the eye-tracker declared this data frame as valid.
+        Get a numpy array of bool indicating if the eye-tracker declared this data frame as invalid.
         """
-        self.data_validity = np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31)
+        self.data_invalidity = np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31)

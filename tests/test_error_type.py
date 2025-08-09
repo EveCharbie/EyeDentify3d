@@ -22,7 +22,7 @@ def test_error_type_skip():
     # No assertion needed as we're testing that nothing happens
 
 
-@patch('sys.stdout', new_callable=io.StringIO)
+@patch("sys.stdout", new_callable=io.StringIO)
 def test_error_type_print(mock_stdout):
     """Test that ErrorType.PRINT prints to console."""
     error_handler = ErrorType.PRINT
@@ -30,12 +30,12 @@ def test_error_type_print(mock_stdout):
     assert mock_stdout.getvalue() == "Test error message\n"
 
 
-@patch('builtins.open', new_callable=mock_open)
+@patch("builtins.open", new_callable=mock_open)
 def test_error_type_file(mock_file):
     """Test that ErrorType.FILE writes to a file."""
     error_handler = ErrorType.FILE
     error_handler("Test error message")
-    
+
     # Check that open was called with the right arguments
     mock_file.assert_called_once_with("bad_data_files.txt", "a")
     # Check that write was called with the right arguments
@@ -59,23 +59,23 @@ def test_error_type_integration():
     """Integration test for all error types."""
     # Test SKIP
     ErrorType.SKIP("This should be skipped")
-    
+
     # Test PRINT
-    with patch('sys.stdout', new_callable=io.StringIO) as mock_stdout:
+    with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
         ErrorType.PRINT("This should be printed")
         assert "This should be printed" in mock_stdout.getvalue()
-    
+
     # Test FILE
     test_filename = "bad_data_files.txt"
     # Remove the file if it exists
     if os.path.exists(test_filename):
         os.remove(test_filename)
-    
+
     try:
         ErrorType.FILE("This should be written to file")
         # Check that the file exists and contains the message
         assert os.path.exists(test_filename)
-        with open(test_filename, 'r') as f:
+        with open(test_filename, "r") as f:
             content = f.read()
         assert "This should be written to file" in content
     finally:

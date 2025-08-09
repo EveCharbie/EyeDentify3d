@@ -171,3 +171,13 @@ eyedentify3d/figures/
 
 .aider*
 
+
+eyedentify3d/bad_data_files.txt
+
+eyedentify3d/event_excluded_at_cut_off.txt
+
+eyedentify3d/output_log.txt
+
+eyedentify3d/output_metrics.csv
+
+eyedentify3d/output_metrics.pkl
