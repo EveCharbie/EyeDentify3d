@@ -47,7 +47,7 @@ class GazeBehaviorIdentifier:
         self._data_object = value
 
     def _initialize_identified_indices(self):
-        self.identified_indices = np.empty((self.data_object.time_vector.shape[0], ), dtype=bool)
+        self.identified_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
         self.identified_indices.fill(False)
 
     def remove_bad_frames(self, event_identifier):

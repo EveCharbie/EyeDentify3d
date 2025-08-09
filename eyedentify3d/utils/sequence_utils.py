@@ -16,7 +16,9 @@ def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
     return sequence
 
 
-def apply_minimal_duration(original_sequences: list[np.ndarray], time_vector: np.ndarray, minimal_duration: float = 0.05) -> list[np.ndarray]:
+def apply_minimal_duration(
+    original_sequences: list[np.ndarray], time_vector: np.ndarray, minimal_duration: float = 0.05
+) -> list[np.ndarray]:
     """
     Go through the original sequences and remove all sequences that are shorter than the minimal duration.
     This is useful for example to impose that an event can only be categorized as a fixation if it lasts more than 100 ms.
@@ -36,7 +38,9 @@ def apply_minimal_duration(original_sequences: list[np.ndarray], time_vector: np
     return sequences
 
 
-def apply_minimal_number_of_frames(original_sequences: list[np.ndarray], minimal_number_of_frames: int = 2) -> list[np.ndarray]:
+def apply_minimal_number_of_frames(
+    original_sequences: list[np.ndarray], minimal_number_of_frames: int = 2
+) -> list[np.ndarray]:
     """
     Go through the original sequences and remove all sequences that are shorter than the minimal number of frames.
     Typically, sequences shorter than 2 frames are (hard to handle and are not considered as valid events anyway).
@@ -53,11 +57,10 @@ def apply_minimal_number_of_frames(original_sequences: list[np.ndarray], minimal
         sequences += [i_sequence]
     return sequences
 
+
 def _check_direction_alignment(
-        sequence1: np.ndarray, 
-        sequence2: np.ndarray,
-        gaze_direction: np.ndarray, 
-        max_angle: float):
+    sequence1: np.ndarray, sequence2: np.ndarray, gaze_direction: np.ndarray, max_angle: float
+):
     """
     Check if the gaze is moving in a similar direction during the two sequences.
 
@@ -81,15 +84,16 @@ def _check_direction_alignment(
 
     return angle_deg < max_angle
 
+
 def _can_merge_sequences(
-        sequence1: np.ndarray,
-        sequence2: np.ndarray,
-        time_vector: np.ndarray,
-        gaze_direction: np.ndarray,
-        identified_indices: np.ndarray,
-        max_time_gap: float,
-        check_directionality: bool,
-        max_angle: float
+    sequence1: np.ndarray,
+    sequence2: np.ndarray,
+    time_vector: np.ndarray,
+    gaze_direction: np.ndarray,
+    identified_indices: np.ndarray,
+    max_time_gap: float,
+    check_directionality: bool,
+    max_angle: float,
 ):
     """
     Check if the two sequences can be merged together (if the gap between the sequences si smaller than max_time_gap and
@@ -117,7 +121,7 @@ def _can_merge_sequences(
         return False
 
     # Check if there was not already an event identified in the gap
-    if gap_end_index > gap_start_index and not np.any(identified_indices[:, gap_start_index:gap_end_index+ 1]):
+    if gap_end_index > gap_start_index and not np.any(identified_indices[:, gap_start_index : gap_end_index + 1]):
         return False
 
     # Check if gaze is moving in the same direction
@@ -126,14 +130,16 @@ def _can_merge_sequences(
 
     return True
 
+
 def merge_close_sequences(
-        sequence_candidates: list[np.ndarray],
-        time_vector: np.ndarray,
-        gaze_direction: np.ndarray,
-        identified_indices: np.ndarray,
-        max_gap: float,
-        check_directionality: bool = False,
-        max_angle: float = 30):
+    sequence_candidates: list[np.ndarray],
+    time_vector: np.ndarray,
+    gaze_direction: np.ndarray,
+    identified_indices: np.ndarray,
+    max_gap: float,
+    check_directionality: bool = False,
+    max_angle: float = 30,
+):
     """
     Merge event sequences that are temporally close and similarly aligned (if check_directionality is True).
 
@@ -164,14 +170,14 @@ def merge_close_sequences(
         # TODO: could be optimized by using a more efficient search method
         for i, merged_seq in enumerate(merged_sequences):
             if _can_merge_sequences(
-                    merged_seq,
-                    candidate,
-                    time_vector,
-                    gaze_direction,
-                    identified_indices,
-                    max_gap,
-                    check_directionality,
-                    max_angle,
+                merged_seq,
+                candidate,
+                time_vector,
+                gaze_direction,
+                identified_indices,
+                max_gap,
+                check_directionality,
+                max_angle,
             ):
                 # Merge by extending the sequence range
                 merged_sequences[i] = np.arange(candidate[0], candidate[-1] + 1)
@@ -183,4 +189,3 @@ def merge_close_sequences(
             merged_sequences.append(candidate.copy())
 
     return merged_sequences
-

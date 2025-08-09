@@ -13,6 +13,7 @@ def rot_x_matrix(angle):
         ]
     )
 
+
 def rot_y_matrix(angle):
     """
     Rotation matrix around the y-axis
@@ -24,6 +25,7 @@ def rot_y_matrix(angle):
             [-np.sin(angle), 0, np.cos(angle)],
         ]
     )
+
 
 def rot_z_matrix(angle):
     """
@@ -48,11 +50,10 @@ def unwrap_rotation(angles: np.ndarray) -> np.ndarray:
     """
     return np.unwrap(angles, period=360, axis=1)
 
+
 def rotation_matrix_from_euler_angles(angle_sequence: str, angles: np.ndarray):
     if len(angles.shape) > 1:
-        raise ValueError(
-            f"The angles should be of shape (nb_angles, ). You have {angles.shape}"
-        )
+        raise ValueError(f"The angles should be of shape (nb_angles, ). You have {angles.shape}")
     if len(angle_sequence) != angles.shape[0]:
         raise ValueError(
             f"The number of angles and the length of the angle_sequence must match. You have {angles.shape} and {angle_sequence}"
@@ -68,6 +69,7 @@ def rotation_matrix_from_euler_angles(angle_sequence: str, angles: np.ndarray):
     for angle, axis in zip(angles, angle_sequence):
         rotation_matrix = rotation_matrix @ matrix[axis](angle)
     return rotation_matrix
+
 
 def get_gaze_direction(head_angles: np.ndarray, eye_direction: np.ndarray):
     """
@@ -93,6 +95,7 @@ def get_gaze_direction(head_angles: np.ndarray, eye_direction: np.ndarray):
 
     return gaze_direction
 
+
 def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float:
     """
     Get the angle between two vectors in radians.
@@ -116,7 +119,9 @@ def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float
         norm1 = np.linalg.norm(vector1)
         norm2 = np.linalg.norm(vector2)
         if norm1 == 0 or norm2 == 0:
-            raise RuntimeError("The gaze vectors should be unitary. This should not happen, please contact the developer.")
+            raise RuntimeError(
+                "The gaze vectors should be unitary. This should not happen, please contact the developer."
+            )
 
         cos_angle = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
 
