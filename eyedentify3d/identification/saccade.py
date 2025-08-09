@@ -15,13 +15,15 @@ class SaccadeEvent:
         2. The eye angular acceleration is larger than `min_acceleration_threshold` deg/s² for at least two frames
     Please note that only the eye (not gaze) movements were used to identify saccades.
     """
-    def __init__(self,
-                 data_object: DataObject,
-                 identified_indices: np.ndarray,
-                 min_acceleration_threshold: float = 4000,
-                 velocity_window_size: float = 0.5,
-                 velocity_factor: float = 5.0
-                 ):
+
+    def __init__(
+        self,
+        data_object: DataObject,
+        identified_indices: np.ndarray,
+        min_acceleration_threshold: float = 4000,
+        velocity_window_size: float = 0.52,  # TODO: make modulable
+        velocity_factor: float = 5.0,
+    ):
         """
         Parameters:
         ----------
@@ -68,7 +70,9 @@ class SaccadeEvent:
             vector_before = data_object.eye_direction[:, i_frame - 1]
             vector_after = data_object.eye_direction[:, i_frame + 1]
             angle = get_angle_between_vectors(vector_before, vector_after)
-            eye_angular_velocity[i_frame] = angle / (data_object.time_vector[i_frame + 1] - data_object.time_vector[i_frame - 1])
+            eye_angular_velocity[i_frame] = angle / (
+                data_object.time_vector[i_frame + 1] - data_object.time_vector[i_frame - 1]
+            )
 
         # Deal with the first and last frames separately
         first_angle = get_angle_between_vectors(data_object.eye_direction[:, 0], data_object.eye_direction[:, 1])
@@ -83,7 +87,9 @@ class SaccadeEvent:
         Computes the eye angular acceleration in deg/s² as a centered finite difference of the eye angular
         velocity.
         """
-        self.eye_angular_acceleration = centered_finite_difference(data_object.time_vector, self.eye_angular_velocity[np.newaxis, :])[0, :]
+        self.eye_angular_acceleration = centered_finite_difference(
+            data_object.time_vector, self.eye_angular_velocity[np.newaxis, :]
+        )[0, :]
 
     def set_the_velocity_threshold(self, data_object: DataObject):
         """
@@ -97,16 +103,16 @@ class SaccadeEvent:
         # Compute the velocity threshold
         velocity_threshold = np.zeros((self.eye_angular_velocity.shape[0],))
         # Deal with the first frames separately
-        velocity_threshold[: int(frame_window_size / 2)] = (
-                np.nanmedian(np.abs(self.eye_angular_velocity[:frame_window_size]))
+        velocity_threshold[: int(frame_window_size / 2)] = np.nanmedian(
+            np.abs(self.eye_angular_velocity[:frame_window_size])
         )
         for i_frame in range(self.eye_angular_velocity.shape[0] - frame_window_size):
-            velocity_threshold[int(i_frame + frame_window_size / 2)] = (
-                    np.nanmedian(np.abs(self.eye_angular_velocity[i_frame: i_frame + frame_window_size]))
+            velocity_threshold[int(i_frame + frame_window_size / 2)] = np.nanmedian(
+                np.abs(self.eye_angular_velocity[i_frame : i_frame + frame_window_size])
             )
         # Deal with the last frames separately
-        velocity_threshold[int(-frame_window_size / 2):] = (
-                np.nanmedian(np.abs(self.eye_angular_velocity[-frame_window_size:]))
+        velocity_threshold[int(-frame_window_size / 2) :] = np.nanmedian(
+            np.abs(self.eye_angular_velocity[-frame_window_size:])
         )
         self.velocity_threshold = velocity_threshold * self.velocity_factor
 
@@ -132,7 +138,7 @@ class SaccadeEvent:
                     # One frame is not long enough for a sequence
                     continue
                 acceleration_above_threshold = np.where(
-                    np.abs(self.eye_angular_acceleration[i[0] - 1: i[-1] + 1]) > self.min_acceleration_threshold
+                    np.abs(self.eye_angular_acceleration[i[0] - 1 : i[-1] + 1]) > self.min_acceleration_threshold
                 )[0]
                 if len(acceleration_above_threshold) > 1:
                     self.sequences += [i]
@@ -149,7 +155,7 @@ class SaccadeEvent:
             identified_indices,
             max_gap=0.041656794425087115,  # TODO: make modulable
             check_directionality=True,
-            max_angle=30.,  # TODO: make modulable
+            max_angle=30.0,  # TODO: make modulable
         )
         self.frame_indices = np.concatenate(self.sequences)
 
@@ -167,4 +173,3 @@ class SaccadeEvent:
             angle = get_angle_between_vectors(vector_before, vector_after)
             saccade_amplitudes += [angle * 180 / np.pi]
         self.saccade_amplitudes = saccade_amplitudes
-
