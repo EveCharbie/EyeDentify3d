@@ -126,7 +126,7 @@ def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float
         cos_angle = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
 
         if cos_angle > 1 or cos_angle < -1:
-            raise RuntimeError("The vectors are too far apart to compute a valid angle.")
+            raise RuntimeError("This should not happen, please contact the developer.")
 
         angle = np.arccos(cos_angle)
 

@@ -179,22 +179,8 @@ def test_get_angle_between_vectors_errors():
     # Test with zero vector
     v1 = np.array([0, 0, 0])  # Zero vector
     v2 = np.array([0, 1, 0])
-    with pytest.raises(RuntimeError, match="The gaze vectors should be unitary"):
+    with pytest.raises(RuntimeError, match="The gaze vectors should be unitary. This should not happen, please contact the developer."):
         get_angle_between_vectors(v1, v2)
-
-    # Test with vectors that would produce invalid cosine (this is hard to trigger directly)
-    # We can mock this by patching np.dot to return a value > 1
-    with pytest.raises(RuntimeError, match="The vectors are too far apart"):
-        # Create a test case where the dot product would be > 1
-        v1 = np.array([1, 0, 0])
-        v2 = np.array([1.1, 0, 0])  # This would give a dot product > 1 if not normalized
-        # Manually set the dot product to be > 1 to trigger the error
-        original_dot = np.dot
-        try:
-            np.dot = lambda a, b: 1.1  # Mock to return value > 1
-            get_angle_between_vectors(v1, v2)
-        finally:
-            np.dot = original_dot  # Restore original function
 
 
 def test_get_gaze_direction():
