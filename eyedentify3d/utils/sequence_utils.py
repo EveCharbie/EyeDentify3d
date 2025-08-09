@@ -117,16 +117,16 @@ def _can_merge_sequences(
         This parameter is only used if check_directionality is True.
     """
     # Define the gap between the two sequences
-    gap_start_index = sequence2[0]
-    gap_end_index = sequence1[-1] + 1
+    gap_start_index = sequence1[-1]
+    gap_end_index = sequence2[0]
 
     # Check if there is a too large gap between them
-    time_gap = np.abs(time_vector[gap_start_index] - time_vector[gap_end_index])
+    time_gap = time_vector[gap_end_index] - time_vector[gap_start_index]
     if time_gap >= max_time_gap:
         return False
 
     # Check if there was not already an event identified in the gap
-    if gap_end_index > gap_start_index and not np.any(identified_indices[:, gap_start_index : gap_end_index + 1]):
+    if gap_end_index > gap_start_index and np.any(identified_indices[gap_start_index : gap_end_index + 1]):
         return False
 
     # Check if gaze is moving in the same direction
@@ -185,7 +185,7 @@ def merge_close_sequences(
                 max_angle,
             ):
                 # Merge by extending the sequence range
-                merged_sequences[i] = np.arange(candidate[0], candidate[-1] + 1)
+                merged_sequences[i] = np.arange(merged_seq[0], candidate[-1] + 1)
                 merged_with_existing = True
                 break
 

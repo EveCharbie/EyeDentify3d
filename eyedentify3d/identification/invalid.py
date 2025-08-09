@@ -28,7 +28,7 @@ class InvalidEvent:
         """
         Detect the frames declared as invalid by the eye-tracker.
         """
-        self.frame_indices = np.where(data_object.data_validity)[0]
+        self.frame_indices = np.where(data_object.data_invalidity)[0]
 
     def detect_invalid_sequences(self):
         """
