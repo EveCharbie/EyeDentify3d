@@ -1,11 +1,10 @@
 import pytest
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from eyedentify3d.data_parsers.htc_vive_pro_data import HtcViveProData
-from eyedentify3d.error_type import ErrorType
-from eyedentify3d.time_range import TimeRange
+from eyedentify3d import (HtcViveProData, ErrorType, TimeRange)
 
 
 @pytest.fixture
@@ -13,17 +12,17 @@ def mock_csv_data():
     """Create mock CSV data for testing"""
     # Create a DataFrame with minimal required columns
     data = {
-        "time(100ns)": [1000, 2000, 3000, 4000, 5000],
-        "eye_valid_L": [31, 31, 31, 31, 31],
-        "eye_valid_R": [31, 31, 31, 31, 31],
-        "openness_L": [0.9, 0.9, 0.9, 0.9, 0.9],
-        "openness_R": [0.9, 0.9, 0.9, 0.9, 0.9],
-        "gaze_direct_L.x": [0.1, 0.2, 0.3, 0.4, 0.5],
-        "gaze_direct_L.y": [0.1, 0.2, 0.3, 0.4, 0.5],
-        "gaze_direct_L.z": [0.9, 0.8, 0.7, 0.6, 0.5],
-        "helmet_rot_x": [10, 11, 12, 13, 14],
-        "helmet_rot_y": [20, 21, 22, 23, 24],
-        "helmet_rot_z": [30, 31, 32, 33, 34],
+        "time(100ns)": np.linspace(1, 2, 200),
+        "eye_valid_L": [31] * 200,
+        "eye_valid_R": [31] * 200,
+        "openness_L": [0.9] * 200,
+        "openness_R": [0.9] * 200,
+        "gaze_direct_L.x": [0.1, 0.2, 0.3, 0.4, 0.5] * 40,
+        "gaze_direct_L.y": [0.1, 0.2, 0.3, 0.4, 0.5] * 40,
+        "gaze_direct_L.z": [0.9, 0.8, 0.7, 0.6, 0.5] * 40,
+        "helmet_rot_x": [10, 11, 12, 13, 14] * 40,
+        "helmet_rot_y": [20, 21, 22, 23, 24] * 40,
+        "helmet_rot_z": [30, 31, 32, 33, 34] * 40,
     }
     return pd.DataFrame(data)
 
@@ -32,9 +31,9 @@ def mock_csv_data():
 def test_htc_vive_pro_data_init(mock_read_csv, mock_csv_data):
     """Test initialization of HtcViveProData"""
     mock_read_csv.return_value = mock_csv_data
-    
+
     data = HtcViveProData("test.csv")
-    
+
     assert data.data_file_path == "test.csv"
     assert data._validity_flag is True
     assert data.dt is not None
@@ -45,7 +44,7 @@ def test_htc_vive_pro_data_init(mock_read_csv, mock_csv_data):
     assert data.head_angles is not None
     assert data.head_angular_velocity is not None
     assert data.head_velocity_norm is not None
-    assert data.data_validity is not None
+    assert data.data_invalidity is not None
 
 
 def test_data_file_path_setter_valid():
@@ -58,81 +57,70 @@ def test_data_file_path_setter_valid():
 def test_data_file_path_setter_invalid_type():
     """Test setting an invalid data file path type"""
     data = HtcViveProData.__new__(HtcViveProData)  # Create instance without calling __init__
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The data_file_path must be a string, got 123."):
         data.data_file_path = 123
 
 
 def test_data_file_path_setter_invalid_extension():
     """Test setting an invalid data file path extension"""
     data = HtcViveProData.__new__(HtcViveProData)  # Create instance without calling __init__
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The HTC Vive Pro data file must be a .csv file, got invalid_file.txt."):
         data.data_file_path = "invalid_file.txt"
 
 
-@patch('pandas.read_csv')
-def test_check_validity_empty_file(mock_read_csv):
+def test_check_validity_empty_file():
     """Test _check_validity with empty file"""
-    mock_read_csv.return_value = pd.DataFrame({"time(100ns)": []})
-    
-    with patch.object(ErrorType, 'SKIP', return_value=None) as mock_error_handler:
-        data = HtcViveProData.__new__(HtcViveProData)
-        data.error_type = ErrorType.SKIP
-        data.csv_data = pd.DataFrame({"time(100ns)": []})
-        data.file_name = "test.csv"
-        data._validity_flag = True
-        
-        data._check_validity()
-        
-        assert data._validity_flag is False
-        mock_error_handler.assert_called_once()
+    # Create a mock data object
+    data = HtcViveProData.__new__(HtcViveProData)
+    data.error_type = ErrorType.SKIP
+    data.csv_data = pd.DataFrame({"time(100ns)": [],
+                                  "eye_valid_L": [],
+                                  "eye_valid_R": []})
+    data.data_file_path = "test.csv"
+    data._validity_flag = True
+
+    # Check that the validity flag is modified by _check_validity
+    data._check_validity()
+    assert data._validity_flag is False
 
 
-@patch('pandas.read_csv')
-def test_check_validity_invalid_data(mock_read_csv):
+def test_check_validity_invalid_data():
     """Test _check_validity with mostly invalid data"""
-    # Create data where most frames are invalid
+    # Create a mock data object
+    data = HtcViveProData.__new__(HtcViveProData)
+    data.error_type = ErrorType.SKIP
     data_dict = {
         "time(100ns)": list(range(10)),
         "eye_valid_L": [0] * 8 + [31] * 2,  # 80% invalid
         "eye_valid_R": [31] * 10
     }
-    mock_read_csv.return_value = pd.DataFrame(data_dict)
-    
-    with patch.object(ErrorType, 'SKIP', return_value=None) as mock_error_handler:
-        data = HtcViveProData.__new__(HtcViveProData)
-        data.error_type = ErrorType.SKIP
-        data.csv_data = pd.DataFrame(data_dict)
-        data.file_name = "test.csv"
-        data._validity_flag = True
-        
-        data._check_validity()
-        
-        assert data._validity_flag is False
-        mock_error_handler.assert_called_once()
+    data.csv_data = pd.DataFrame(data_dict)
+    data.data_file_path = "test.csv"
+    data._validity_flag = True
+
+    # Check that the validity flag is modified by _check_validity
+    data._check_validity()
+    assert data._validity_flag is False
 
 
-@patch('pandas.read_csv')
-def test_check_validity_non_increasing_time(mock_read_csv):
+def test_check_validity_non_increasing_time():
     """Test _check_validity with non-increasing time vector"""
-    # Create data with non-increasing time
+
+    # Create a mock data object
+    data = HtcViveProData.__new__(HtcViveProData)
+    data.error_type = ErrorType.SKIP
     data_dict = {
         "time(100ns)": [1, 2, 3, 2, 5],  # Time goes backwards
         "eye_valid_L": [31] * 5,
         "eye_valid_R": [31] * 5
     }
-    mock_read_csv.return_value = pd.DataFrame(data_dict)
-    
-    with patch.object(ErrorType, 'SKIP', return_value=None) as mock_error_handler:
-        data = HtcViveProData.__new__(HtcViveProData)
-        data.error_type = ErrorType.SKIP
-        data.csv_data = pd.DataFrame(data_dict)
-        data.file_name = "test.csv"
-        data._validity_flag = True
-        
-        data._check_validity()
-        
-        assert data._validity_flag is False
-        mock_error_handler.assert_called_once()
+    data.csv_data = pd.DataFrame(data_dict)
+    data.data_file_path = "test.csv"
+    data._validity_flag = True
+
+    # Check that the validity flag is modified by _check_validity
+    data._check_validity()
+    assert data._validity_flag is False
 
 
 def test_set_time_vector():
@@ -198,16 +186,16 @@ def test_set_eye_direction():
     """Test _set_eye_direction method"""
     data = HtcViveProData.__new__(HtcViveProData)
     data._validity_flag = True
-    data.file_name = "test.csv"
+    data.data_file_path = "test.csv"
     data.error_type = ErrorType.SKIP
     
     # Create normalized vectors
-    x = [0.1, 0.2, 0.3]
-    y = [0.1, 0.2, 0.3]
-    z = [0.9, 0.8, 0.7]
+    x = [0.1, 0.2, 0.3, 0.1]
+    y = [0.1, 0.2, 0.3, -0.1]
+    z = [0.9, 0.8, 0.7, 0.9]
     
     # Ensure they're unit vectors
-    for i in range(3):
+    for i in range(4):
         norm = np.sqrt(x[i]**2 + y[i]**2 + z[i]**2)
         x[i] /= norm
         y[i] /= norm
@@ -221,32 +209,31 @@ def test_set_eye_direction():
     
     data._set_eye_direction()
     
-    assert data.eye_direction.shape == (3, 3)
+    assert data.eye_direction.shape == (3, 4)
     # Check that vectors are normalized
     norms = np.linalg.norm(data.eye_direction, axis=0)
     assert np.allclose(norms, 1.0)
+    npt.assert_almost_equal(data.eye_direction, np.array([[ 0.10976426,  0.23570226,  0.36650833,  0.10976426],
+                                                           [ 0.10976426,  0.23570226,  0.36650833, -0.10976426],
+                                                           [ 0.98787834,  0.94280904,  0.85518611,  0.98787834]]))
 
 
 def test_set_eye_direction_invalid_norm():
     """Test _set_eye_direction method with invalid norm"""
     data = HtcViveProData.__new__(HtcViveProData)
     data._validity_flag = True
-    data.file_name = "test.csv"
-    
-    with patch.object(ErrorType, 'SKIP', return_value=None) as mock_error_handler:
-        data.error_type = ErrorType.SKIP
+    data.data_file_path = "test.csv"
+    data.error_type = ErrorType.SKIP
         
-        # Create vectors with invalid norms
-        data.csv_data = pd.DataFrame({
-            "gaze_direct_L.x": [2.0, 0.1, 0.1],  # First vector has norm > 1.2
-            "gaze_direct_L.y": [0.0, 0.1, 0.1],
-            "gaze_direct_L.z": [0.0, 0.1, 0.1]
-        })
-        
-        data._set_eye_direction()
-        
-        assert data._validity_flag is False
-        mock_error_handler.assert_called_once()
+    # Create vectors with invalid norms
+    data.csv_data = pd.DataFrame({
+        "gaze_direct_L.x": [2.0, 0.1, 0.1],  # First vector has norm > 1.2
+        "gaze_direct_L.y": [0.0, 0.1, 0.1],
+        "gaze_direct_L.z": [0.0, 0.1, 0.1]
+    })
+
+    data._set_eye_direction()
+    assert data._validity_flag is False
 
 
 def test_interpolate_repeated_frames():
@@ -265,14 +252,10 @@ def test_interpolate_repeated_frames():
     # Check shape is preserved
     assert result.shape == test_data.shape
     
-    # Check that repeated frames are interpolated
-    assert np.allclose(result[:, 1], [2.0, 4.0, 6.0])  # Interpolated values
-    assert np.allclose(result[:, 2], [3.0, 6.0, 9.0])  # Interpolated values
-    
-    # Check that unique frames are preserved
-    assert np.allclose(result[:, 0], test_data[:, 0])
-    assert np.allclose(result[:, 3], test_data[:, 3])
-    assert np.allclose(result[:, 4], test_data[:, 4])
+    # Check that repeated frames are interpolated, but unique frames are preserved
+    npt.assert_almost_equal(result, np.array([[ 1.,  2.,  3.,  4.,  5.],
+                                               [ 2.,  4.,  6.,  8., 10.],
+                                               [ 3.,  6.,  9., 12., 15.]]))
 
 
 def test_interpolate_repeated_frames_invalid_shape():
@@ -282,7 +265,7 @@ def test_interpolate_repeated_frames_invalid_shape():
     # Create data with invalid shape
     test_data = np.array([1.0, 2.0, 3.0])
     
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotImplementedError, match=r"This function was designed for matrix data of shape \(3, n_frames\). "):
         data.interpolate_repeated_frames(test_data)
 
 
@@ -291,9 +274,9 @@ def test_set_head_angles():
     data = HtcViveProData.__new__(HtcViveProData)
     data._validity_flag = True
     data.csv_data = pd.DataFrame({
-        "helmet_rot_x": [10, 11, 12],
-        "helmet_rot_y": [20, 21, 22],
-        "helmet_rot_z": [30, 31, 32]
+        "helmet_rot_x": [10, 11, 12, 13],
+        "helmet_rot_y": [20, 21, 22, 23],
+        "helmet_rot_z": [30, 31, 32, 33]
     })
     
     # Mock the interpolate_repeated_frames method
@@ -305,46 +288,43 @@ def test_set_head_angles():
     # Restore original method
     data.interpolate_repeated_frames = original_interpolate
     
-    assert data.head_angles.shape == (3, 3)
-    assert np.array_equal(data.head_angles[0, :], np.array([10, 11, 12]))
-    assert np.array_equal(data.head_angles[1, :], np.array([20, 21, 22]))
-    assert np.array_equal(data.head_angles[2, :], np.array([30, 31, 32]))
+    assert data.head_angles.shape == (3, 4)
+    npt.assert_almost_equal(data.head_angles, np.array([[10, 11, 12, 13],
+                                                       [20, 21, 22, 23],
+                                                       [30, 31, 32, 33]]))
 
 
-@patch('eyedentify3d.utils.signal_utils.centered_finite_difference')
-@patch('eyedentify3d.utils.signal_utils.filter_data')
-def test_set_head_angular_velocity(mock_filter_data, mock_centered_diff):
+def test_set_head_angular_velocity():
     """Test _set_head_angular_velocity method"""
     data = HtcViveProData.__new__(HtcViveProData)
     data._validity_flag = True
-    data.time_vector = np.array([0.0, 0.1, 0.2])
-    data.head_angles = np.array([
-        [10, 11, 12],
-        [20, 21, 22],
-        [30, 31, 32]
-    ])
-    
-    # Mock the centered_finite_difference to return a known array
-    mock_velocity = np.array([
-        [10, 10, 10],
-        [10, 10, 10],
-        [10, 10, 10]
-    ])
-    mock_centered_diff.return_value = mock_velocity
-    
-    # Mock filter_data to return the input
-    mock_filter_data.return_value = np.array([[17.32, 17.32, 17.32]])
-    
+    data.time_vector = np.linspace(0, 1, 200)
+    data.head_angles = np.zeros((3, 200))
+    for i in range(3):
+        data.head_angles[i, :] = np.linspace(0, 2 * np.pi, 200)
+
     data._set_head_angular_velocity()
     
     assert data.head_angular_velocity is not None
-    assert np.array_equal(data.head_angular_velocity, mock_velocity)
+    assert data.head_angular_velocity.shape == (3, 200)
+    # All values should be 2pi
+    npt.assert_almost_equal(data.head_angular_velocity[0, 0], 2 * np.pi)
+    npt.assert_almost_equal(data.head_angular_velocity[1, 100], 2 * np.pi)
+    npt.assert_almost_equal(data.head_angular_velocity[2, 50], 2 * np.pi)
+    npt.assert_almost_equal(data.head_angular_velocity[0, 150], 2 * np.pi)
     assert data.head_velocity_norm is not None
-    assert len(data.head_velocity_norm) == 3
+
+    norm = np.sqrt(3 * (2*np.pi)**2)
+    npt.assert_almost_equal(norm, 10.88279619)
+    npt.assert_almost_equal(data.head_velocity_norm[0], norm)
+    npt.assert_almost_equal(data.head_velocity_norm[50], norm)
+    npt.assert_almost_equal(data.head_velocity_norm[100], norm)
+    npt.assert_almost_equal(data.head_velocity_norm[150], norm)
+    assert data.head_velocity_norm.shape == (200,)
 
 
-def test_set_data_validity():
-    """Test _set_data_validity method"""
+def test_set_data_invalidity():
+    """Test _set_data_invalidity method"""
     data = HtcViveProData.__new__(HtcViveProData)
     data._validity_flag = True
     data.csv_data = pd.DataFrame({
@@ -352,7 +332,7 @@ def test_set_data_validity():
         "eye_valid_R": [31, 31, 30]   # Third frame is invalid
     })
     
-    data._set_data_validity()
+    data._set_data_invalidity()
     
-    assert data.data_validity is not None
-    assert np.array_equal(data.data_validity, np.array([False, True, True]))
+    assert data.data_invalidity is not None
+    assert np.array_equal(data.data_invalidity, np.array([False, True, True]))

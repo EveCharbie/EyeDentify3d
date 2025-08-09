@@ -59,7 +59,7 @@ class GazeBehaviorIdentifier:
         self.data_object.head_angles[:, event_identifier.frame_indices] = np.nan
         self.data_object.head_angular_velocity[:, event_identifier.frame_indices] = np.nan
         self.data_object.head_velocity_norm[event_identifier.frame_indices] = np.nan
-        self.data_object.data_validity[event_identifier.frame_indices] = np.nan
+        self.data_object.data_invalidity[event_identifier.frame_indices] = np.nan
         self.available_frames[event_identifier.frame_indices] = False
 
     def detect_blink_sequences(self):

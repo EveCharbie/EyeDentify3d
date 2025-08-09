@@ -1,11 +1,9 @@
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock
-from datetime import datetime
 
 from eyedentify3d.data_parsers.abstract_data import Data, destroy_on_fail
-from eyedentify3d.error_type import ErrorType
-from eyedentify3d.time_range import TimeRange
+from eyedentify3d import ErrorType, TimeRange
 
 
 class MockData(Data):
@@ -32,7 +30,7 @@ class MockData(Data):
     def _set_head_angular_velocity(self):
         pass
     
-    def _set_data_validity(self):
+    def _set_data_invalidity(self):
         pass
 
 
@@ -65,7 +63,7 @@ def test_error_type_setter_valid():
 def test_error_type_setter_invalid():
     """Test setting an invalid error type"""
     data = MockData()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The error type must be an ErrorType, got INVALID."):
         data.error_type = "INVALID"
 
 
@@ -91,7 +89,7 @@ def test_time_range_setter_valid():
 def test_time_range_setter_invalid():
     """Test setting an invalid time range"""
     data = MockData()
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="The time range must be an TimeRange, got INVALID."):
         data.time_range = "INVALID"
 
 
@@ -105,7 +103,7 @@ def test_trial_duration():
 def test_trial_duration_no_time_vector():
     """Test getting trial duration without time vector"""
     data = MockData()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=r"The trial_duration property can only be called after the time_vector has been set \(i.e., after the data objects has been instantiated\)."):
         _ = data.trial_duration
 
 
@@ -120,7 +118,7 @@ def test_set_dt():
 def test_set_dt_no_time_vector():
     """Test setting dt without time vector"""
     data = MockData()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=r"The dt property can only be called after the time_vector has been set \(i.e., after the data objects has been instantiated\)."):
         data._set_dt()
 
 
@@ -129,7 +127,7 @@ def test_set_dt_twice():
     data = MockData()
     data._set_time_vector()
     data._set_dt()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="dt can only be set once at the very beginning of the data processing, because the time vector will be modified later."):
         data._set_dt()
 
 
@@ -143,7 +141,7 @@ def test_file_name():
 def test_file_name_no_path():
     """Test getting file name without path"""
     data = MockData()
-    with pytest.raises(AttributeError):
+    with pytest.raises(AttributeError, match="The data file path is not set."):
         _ = data.file_name
 
 

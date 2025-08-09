@@ -50,7 +50,7 @@ class Data(ABC):
         self.head_angles: np.ndarray[float] | None = None
         self.head_angular_velocity: np.ndarray[float] | None = None
         self.head_velocity_norm: np.ndarray[float] | None = None
-        self.data_validity: np.ndarray[bool] | None = None
+        self.data_invalidity: np.ndarray[bool] | None = None
 
     @property
     def error_type(self):
@@ -158,9 +158,9 @@ class Data(ABC):
         pass
 
     @abstractmethod
-    def _set_data_validity(self):
+    def _set_data_invalidity(self):
         """
-        Set the validity of the data.
+        Set the invalidity of the data.
         """
         pass
 
