@@ -9,11 +9,14 @@ def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
     :param indices:
     :return:
     """
-    sequence = np.array_split(
-        np.array(indices),
-        np.flatnonzero(np.diff(np.array(indices)) > 1) + 1,
-    )
-    return sequence
+    if indices.size == 0:
+        return []
+    else:
+        sequence = np.array_split(
+            np.array(indices),
+            np.flatnonzero(np.diff(np.array(indices)) > 1) + 1,
+        )
+        return sequence
 
 
 def apply_minimal_duration(
@@ -31,6 +34,8 @@ def apply_minimal_duration(
     """
     sequences = []
     for i_sequence in original_sequences:
+        if len(i_sequence) < 2:
+            continue
         event_duration = time_vector[i_sequence[-1]] - time_vector[i_sequence[0]]
         if event_duration < minimal_duration:
             continue

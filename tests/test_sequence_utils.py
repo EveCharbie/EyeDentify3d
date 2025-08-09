@@ -1,6 +1,14 @@
 import numpy as np
-import pytest
-from eyedentify3d.utils.sequence_utils import split_sequences
+
+from eyedentify3d.utils.sequence_utils import (
+    split_sequences,
+    apply_minimal_duration,
+    apply_minimal_number_of_frames,
+    _check_direction_alignment,
+    _can_merge_sequences,
+    merge_close_sequences,
+)
+
 
 
 def test_split_sequences_single_sequence():
@@ -28,8 +36,7 @@ def test_split_sequences_empty():
     indices = np.array([])
     sequences = split_sequences(indices)
 
-    assert len(sequences) == 1
-    assert len(sequences[0]) == 0
+    assert len(sequences) == 0
 
 
 def test_split_sequences_single_value():
@@ -60,3 +67,57 @@ def test_split_sequences_large_gaps():
     assert np.array_equal(sequences[0], np.array([1, 2]))
     assert np.array_equal(sequences[1], np.array([10, 11]))
     assert np.array_equal(sequences[2], np.array([100, 101]))
+
+
+def test_apply_minimal_duration():
+    """Test apply_minimal_duration."""
+    indices = np.array([1, 2, 10, 11, 100, 101, 102, 103, 200, 300, 301, 302, 303])
+    sequences = split_sequences(indices)
+    assert len(sequences) == 5
+
+    sequence_modified = apply_minimal_duration(sequences, np.linspace(0, 100, 400), minimal_duration=0.4)
+    assert len(sequence_modified) == 2
+
+    assert np.array_equal(sequence_modified[0], np.array([100, 101, 102, 103]))
+    assert np.array_equal(sequence_modified[1], np.array([300, 301, 302, 303]))
+
+
+def test_apply_minimal_duration_empty_sequence():
+    """Test apply_minimal_duration."""
+    indices = np.array([])
+    sequences = split_sequences(indices)
+    assert len(sequences) == 0
+
+    sequence_modified = apply_minimal_duration(sequences, np.linspace(0, 100, 400), minimal_duration=0.4)
+    assert len(sequence_modified) == 0
+
+
+def test_apply_minimal_number_of_frames():
+    """Test apply_minimal_duration."""
+    indices = np.array([1, 2, 10, 11, 100, 101, 102, 103, 200, 300, 301, 302, 303])
+    sequences = split_sequences(indices)
+    assert len(sequences) == 5
+
+    # Actually does something
+    sequence_modified = apply_minimal_number_of_frames(sequences, minimal_number_of_frames=3)
+    assert len(sequence_modified) == 2
+
+    assert np.array_equal(sequence_modified[0], np.array([100, 101, 102, 103]))
+    assert np.array_equal(sequence_modified[1], np.array([300, 301, 302, 303]))
+
+    # Nothing to do, sequences are already long enough
+    sequence_modified = apply_minimal_number_of_frames(sequences, minimal_number_of_frames=1)
+    assert len(sequence_modified) == 5
+    assert sequence_modified == sequences
+
+
+def test_apply_minimal_number_of_frames_empty_sequence():
+    """Test apply_minimal_duration."""
+    indices = np.array([])
+    sequences = split_sequences(indices)
+    assert len(sequences) == 0
+
+    sequence_modified = apply_minimal_number_of_frames(sequences, minimal_number_of_frames=1)
+    assert len(sequence_modified) == 0
+
+
