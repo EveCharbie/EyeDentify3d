@@ -1,5 +1,6 @@
 import numpy as np
-import pytest
+import numpy.testing as npt
+
 from eyedentify3d.utils.rotation_utils import unwrap_rotation
 
 
@@ -11,7 +12,7 @@ def test_unwrap_rotation_no_jumps():
 
     unwrapped = unwrap_rotation(angles)
     assert unwrapped.shape == angles.shape
-    assert np.allclose(unwrapped, angles)
+    npt.assert_almost_equal(unwrapped, angles)
 
 
 def test_unwrap_rotation_with_jumps():
@@ -32,13 +33,13 @@ def test_unwrap_rotation_with_jumps():
     unwrapped = unwrap_rotation(angles)
 
     # First component: [350, 350, 350, 350, 350, 370, 370, 370, 370, 370]
-    assert np.allclose(unwrapped[0, 5:], 370)
+    npt.assert_almost_equal(unwrapped[0, 5:], np.array([370, 370, 370, 370, 370]))
 
     # Second component: [10, 10, 10, 10, 10, -10, -10, -10, -10, -10]
-    assert np.allclose(unwrapped[1, 5:], -10)
+    npt.assert_almost_equal(unwrapped[1, 5:], np.array([-10, -10, -10, -10, -10]))
 
     # Third component should remain unchanged
-    assert np.allclose(unwrapped[2, :], 180)
+    npt.assert_almost_equal(unwrapped[2, :], np.array([180, 180, 180, 180, 180, 180, 180, 180, 180, 180]))
 
 
 def test_unwrap_rotation_multiple_jumps():
@@ -54,9 +55,10 @@ def test_unwrap_rotation_multiple_jumps():
     unwrapped = unwrap_rotation(angles)
 
     # Expected: [350, 350, 350, 370, 370, 370, 370, 710, 710, 710, 710, 730, 730, 730, 730]
-    assert np.allclose(unwrapped[0, 3:7], 370)
-    assert np.allclose(unwrapped[0, 7:11], 710)
-    assert np.allclose(unwrapped[0, 11:], 730)
+    npt.assert_almost_equal(unwrapped[0, :3], np.array([350., 350., 350.]))
+    npt.assert_almost_equal(unwrapped[0, 3:7], np.array([370., 370., 370., 370.]))
+    npt.assert_almost_equal(unwrapped[0, 7:11], np.array([350., 350., 350., 350.]))
+    npt.assert_almost_equal(unwrapped[0, 11:], np.array([370., 370., 370., 370.]))
 
 
 def test_unwrap_rotation_edge_cases():

@@ -46,21 +46,21 @@ def test_centered_finite_difference_endpoints():
 
 def test_filter_data_shape():
     """Test that filter_data preserves the shape of the input data."""
-    data = np.random.rand(3, 100)
+    data = np.random.rand(3, 200)
     filtered_data = filter_data(data)
     assert filtered_data.shape == data.shape
 
 
 def test_filter_data_constant():
     """Test that filter_data preserves constant signals."""
-    data = np.ones((3, 100))
+    data = np.ones((3, 200))
     filtered_data = filter_data(data)
     assert np.allclose(filtered_data, data)
 
 
 def test_filter_data_parameters():
     """Test that filter_data works with different parameters."""
-    data = np.random.rand(3, 100)
+    data = np.random.rand(3, 200)
 
     # Test with different cutoff frequencies
     filtered_data_low = filter_data(data, cutoff_freq=0.1)
