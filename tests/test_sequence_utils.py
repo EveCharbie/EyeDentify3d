@@ -11,7 +11,6 @@ from eyedentify3d.utils.sequence_utils import (
 )
 
 
-
 def test_split_sequences_single_sequence():
     """Test split_sequences with a single continuous sequence."""
     indices = np.array([0, 1, 2, 3, 4])
@@ -127,35 +126,35 @@ def test_check_direction_alignment():
     # Create two sequences
     sequence1 = np.array([0, 1, 2])
     sequence2 = np.array([5, 6, 7])
-    
+
     # Create gaze direction data
     gaze_direction = np.zeros((3, 10))
-    
+
     # Set up first sequence direction (moving right)
     gaze_direction[:, 0] = [0, 0, 1]  # Start
     gaze_direction[:, 2] = [0.2, 0, 1]  # End
-    
+
     # Test 1: Similar direction (also moving right)
     gaze_direction[:, 5] = [0, 0, 1]  # Start
     gaze_direction[:, 7] = [0.3, 0, 1]  # End
-    
+
     # Should be aligned (angle < 30 degrees)
     assert _check_direction_alignment(sequence1, sequence2, gaze_direction, max_angle=30)
-    
+
     # Test 2: Different direction (moving left)
     gaze_direction[:, 5] = [0.3, 0, 1]  # Start
     gaze_direction[:, 7] = [0, 0, 1]  # End
-    
+
     # Should not be aligned (angle > 30 degrees)
     assert not _check_direction_alignment(sequence1, sequence2, gaze_direction, max_angle=30)
-    
+
     # Test 3: Perpendicular direction (moving up)
     gaze_direction[:, 5] = [0, 0, 1]  # Start
     gaze_direction[:, 7] = [0, 0.3, 1]  # End
-    
+
     # Should not be aligned (angle = 90 degrees)
     assert not _check_direction_alignment(sequence1, sequence2, gaze_direction, max_angle=30)
-    
+
     # Test 4: With larger max_angle tolerance
     assert _check_direction_alignment(sequence1, sequence2, gaze_direction, max_angle=100)
 
@@ -165,48 +164,78 @@ def test_can_merge_sequences():
     # Create two sequences
     sequence1 = np.array([0, 1, 2])
     sequence2 = np.array([4, 5, 6])
-    
+
     # Create time vector with 0.1s intervals
     time_vector = np.arange(10) * 0.1
-    
+
     # Create gaze direction data (all moving in same direction)
     gaze_direction = np.zeros((3, 10))
     for i in range(10):
         gaze_direction[:, i] = [i * 0.1, 0, 1]
-    
+
     # Create identified indices array (all False)
-    identified_indices = np.zeros((10, ), dtype=bool)
-    
+    identified_indices = np.zeros((10,), dtype=bool)
+
     # Test 1: Small time gap, no directionality check
     assert _can_merge_sequences(
-        sequence1, sequence2, time_vector, gaze_direction, 
-        identified_indices, max_time_gap=0.3, check_directionality=False, max_angle=30
+        sequence1,
+        sequence2,
+        time_vector,
+        gaze_direction,
+        identified_indices,
+        max_time_gap=0.3,
+        check_directionality=False,
+        max_angle=30,
     )
-    
+
     # Test 2: Large time gap, should not merge
     assert not _can_merge_sequences(
-        sequence1, sequence2, time_vector, gaze_direction, 
-        identified_indices, max_time_gap=0.01, check_directionality=False, max_angle=30
+        sequence1,
+        sequence2,
+        time_vector,
+        gaze_direction,
+        identified_indices,
+        max_time_gap=0.01,
+        check_directionality=False,
+        max_angle=30,
     )
-    
+
     # Test 3: With directionality check (should pass as they move in same direction)
     assert _can_merge_sequences(
-        sequence1, sequence2, time_vector, gaze_direction, 
-        identified_indices, max_time_gap=0.3, check_directionality=True, max_angle=30
+        sequence1,
+        sequence2,
+        time_vector,
+        gaze_direction,
+        identified_indices,
+        max_time_gap=0.3,
+        check_directionality=True,
+        max_angle=30,
     )
 
     # Test 4: With directionality check (should not pass as they move in the opposite direction)
     gaze_direction[:, sequence2] *= -1
     assert not _can_merge_sequences(
-        sequence1, sequence2, time_vector, gaze_direction,
-        identified_indices, max_time_gap=0.3, check_directionality=True, max_angle=30
+        sequence1,
+        sequence2,
+        time_vector,
+        gaze_direction,
+        identified_indices,
+        max_time_gap=0.3,
+        check_directionality=True,
+        max_angle=30,
     )
-    
+
     # Test 5: With identified frames in the gap
     identified_indices[3] = True
     assert not _can_merge_sequences(
-        sequence1, sequence2, time_vector, gaze_direction, 
-        identified_indices, max_time_gap=0.3, check_directionality=False, max_angle=30
+        sequence1,
+        sequence2,
+        time_vector,
+        gaze_direction,
+        identified_indices,
+        max_time_gap=0.3,
+        check_directionality=False,
+        max_angle=30,
     )
 
 
@@ -217,58 +246,53 @@ def test_merge_close_sequences():
     sequence2 = np.array([4, 5, 6])
     sequence3 = np.array([10, 11, 12])
     sequences = [sequence1, sequence2, sequence3]
-    
+
     # Create time vector with 0.1s intervals
     time_vector = np.arange(15) * 0.1
-    
+
     # Create gaze direction data (all moving in same direction)
     gaze_direction = np.zeros((3, 15))
     for i in range(15):
         gaze_direction[:, i] = [i * 0.1, 0, 1]
-    
+
     # Create identified indices array (all False)
-    identified_indices = np.zeros((15, ), dtype=bool)
-    
+    identified_indices = np.zeros((15,), dtype=bool)
+
     # Test 1: Merge with small gap
     merged = merge_close_sequences(
-        sequences, time_vector, gaze_direction, identified_indices,
-        max_gap=0.3, check_directionality=False
+        sequences, time_vector, gaze_direction, identified_indices, max_gap=0.3, check_directionality=False
     )
-    
+
     # Should merge sequence1 and sequence2, but not sequence3
     assert len(merged) == 2
     assert np.array_equal(merged[0], np.arange(0, 7))
     assert np.array_equal(merged[1], sequence3)
-    
+
     # Test 2: No merging as identified frame in gap
     identified_indices[3] = True  # Add identified frame in gap
     merged = merge_close_sequences(
-        sequences, time_vector, gaze_direction, identified_indices,
-        max_gap=0.3, check_directionality=False
+        sequences, time_vector, gaze_direction, identified_indices, max_gap=0.3, check_directionality=False
     )
     # Should not merge any sequences
     assert len(merged) == 3
-    
+
     # Test 3: Empty input
     merged = merge_close_sequences(
-        [], time_vector, gaze_direction, identified_indices,
-        max_gap=0.3, check_directionality=False
+        [], time_vector, gaze_direction, identified_indices, max_gap=0.3, check_directionality=False
     )
     assert len(merged) == 0
-    
+
     # Test 4: Single-frame sequences (should be filtered out)
     single_frame_seq = [np.array([0]), np.array([2]), np.array([4])]
     merged = merge_close_sequences(
-        single_frame_seq, time_vector, gaze_direction, identified_indices,
-        max_gap=0.3, check_directionality=False
+        single_frame_seq, time_vector, gaze_direction, identified_indices, max_gap=0.3, check_directionality=False
     )
     assert len(merged) == 0
 
     # Test 5: Merge with same directionality
-    identified_indices = np.zeros((15, ), dtype=bool)
+    identified_indices = np.zeros((15,), dtype=bool)
     merged = merge_close_sequences(
-        sequences, time_vector, gaze_direction, identified_indices,
-        max_gap=0.3, check_directionality=True
+        sequences, time_vector, gaze_direction, identified_indices, max_gap=0.3, check_directionality=True
     )
     # Should merge sequence1 and sequence2, but not sequence3
     assert len(merged) == 2
@@ -278,13 +302,10 @@ def test_merge_close_sequences():
     # Test 6: Do not merge with bad directionality
     gaze_direction[:, 4:7] *= -1  # Change direction for sequence2
     merged = merge_close_sequences(
-        sequences, time_vector, gaze_direction, identified_indices,
-        max_gap=0.3, check_directionality=True
+        sequences, time_vector, gaze_direction, identified_indices, max_gap=0.3, check_directionality=True
     )
     # Should not merge sequence1 and sequence2
     assert len(merged) == 3
     assert np.array_equal(merged[0], sequence1)
     assert np.array_equal(merged[1], sequence2)
     assert np.array_equal(merged[2], sequence3)
-
-
