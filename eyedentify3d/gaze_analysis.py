@@ -1552,9 +1552,14 @@ def main():
             else None
         )
 
-        nb_blinks = len(blink_sequences)
-        nb_blinks_pre_cue = len(blink_sequences_pre_cue)
-        nb_blinks_post_cue = len(blink_sequences_post_cue)
+        if len(blink_sequences[0]) != 0:
+            nb_blinks = len(blink_sequences)
+            nb_blinks_pre_cue = len(blink_sequences_pre_cue)
+            nb_blinks_post_cue = len(blink_sequences_post_cue)
+        else:
+            nb_blinks = 0
+            nb_blinks_pre_cue = 0
+            nb_blinks_post_cue = 0
 
         nb_saccades = len(saccade_sequences)
         nb_saccades_pre_cue = len(saccade_sequences_pre_cue)
