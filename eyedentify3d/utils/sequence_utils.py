@@ -16,6 +16,7 @@ def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
             np.array(indices),
             np.flatnonzero(np.diff(np.array(indices)) > 1) + 1,
         )
+        sequence = apply_minimal_number_of_frames(sequence, minimal_number_of_frames=2)
         return sequence
 
 
@@ -74,7 +75,7 @@ def _check_direction_alignment(
     sequence1: The first sequence of indices.
     sequence2: The second sequence of indices.
     gaze_direction: The gaze direction unit vector, shape (3, n_frames).
-    max_angle: The maximum tolerance angle in degrees between the movement of the sequences. If the angle of the
+    max_angle: The maximum tolerance angle in deg between the movement of the sequences. If the angle of the
         movement during the sequences is smaller than this threshold, the sequences are considered to be similarly
         aligned.
     """
@@ -84,10 +85,9 @@ def _check_direction_alignment(
     direction2 = gaze_direction[:, sequence2[-1]] - gaze_direction[:, sequence2[0]]
 
     # Calculate angle between directions
-    angle_rad = get_angle_between_vectors(direction1, direction2)
-    angle_deg = np.degrees(angle_rad)
+    angle = get_angle_between_vectors(direction1, direction2)
 
-    return angle_deg < max_angle
+    return angle < max_angle
 
 
 def _can_merge_sequences(

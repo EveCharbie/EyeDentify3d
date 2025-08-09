@@ -47,6 +47,7 @@ def perform_one_file(
     gaze_behavior_identifier.detect_blink_sequences()
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences()
+    gaze_behavior_identifier.detect_visual_scanning_sequences()
     data_object = gaze_behavior_identifier.data_object
     # --- new version (end) --- #
 
@@ -56,11 +57,9 @@ def perform_one_file(
     gaze_direction = data_object.gaze_direction
     saccade_sequences = gaze_behavior_identifier.saccade.sequences
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
-
-    # Detect visual scanning
-    visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = detect_visual_scanning(
-        data_object.time_vector, gaze_direction, saccade_sequences, data_object.head_velocity_norm
-    )
+    visual_scanning_sequences = gaze_behavior_identifier.visual_scanning.sequences
+    gaze_angular_velocity_rad = gaze_behavior_identifier.visual_scanning.gaze_angular_velocity * np.pi / 180  # Convert deg/s to rad/s
+    identified_indices = gaze_behavior_identifier.identified_indices
 
     # Detect fixations
     intersaccadic_interval = np.zeros((len(data_object.time_vector),))
@@ -70,7 +69,7 @@ def perform_one_file(
         i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
         i_in_blinks = True if any(i in sequence for sequence in blink_sequences) else False
         i_in_eyetracker_invalid = True if i in eyetracker_invalid_data_index else False
-        gaze_velocity_criteria = True if gaze_angular_velocity_rad[i] * np.pi / 180 > 100 else False
+        gaze_velocity_criteria = True if (gaze_angular_velocity_rad[i] * 180 / np.pi) > 100 else False
         if i_in_saccades or i_in_visual_scanning or i_in_blinks or i_in_eyetracker_invalid or gaze_velocity_criteria:
             continue
         else:
@@ -88,7 +87,7 @@ def perform_one_file(
         sliding_window(original_data_object.time_vector, intersaccadic_sequences, gaze_direction)
     )
     fixation_sequences, smooth_pursuit_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuit(
-        data_object.time_vector, gaze_direction, intersaccadic_gouped_sequences, file_name, False
+        data_object.time_vector, gaze_direction, intersaccadic_gouped_sequences, identified_indices, file_name, False
     )
 
     visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)

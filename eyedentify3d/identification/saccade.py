@@ -2,7 +2,7 @@ import numpy as np
 
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import split_sequences, merge_close_sequences
-from ..utils.rotation_utils import get_angle_between_vectors
+from ..utils.rotation_utils import get_angle_between_vectors, compute_angular_velocity
 from ..utils.signal_utils import centered_finite_difference
 
 
@@ -50,7 +50,7 @@ class SaccadeEvent:
         self.velocity_threshold = None
         self.saccade_amplitudes = None
 
-        # Detect blink sequences
+        # Detect saccade sequences
         self.set_eye_angular_velocity(data_object)
         self.set_eye_angular_acceleration(data_object)
         self.set_the_velocity_threshold(data_object)
@@ -65,22 +65,7 @@ class SaccadeEvent:
         the time difference between them. It is computed like a centered finite difference, meaning that the frame i+1
         and i-1 are used to set the value for the frame i.
         """
-        eye_angular_velocity = np.zeros((data_object.eye_direction.shape[1],))
-        for i_frame in range(1, data_object.eye_direction.shape[1] - 1):  # Skipping the first and last frames
-            vector_before = data_object.eye_direction[:, i_frame - 1]
-            vector_after = data_object.eye_direction[:, i_frame + 1]
-            angle = get_angle_between_vectors(vector_before, vector_after)
-            eye_angular_velocity[i_frame] = angle / (
-                data_object.time_vector[i_frame + 1] - data_object.time_vector[i_frame - 1]
-            )
-
-        # Deal with the first and last frames separately
-        first_angle = get_angle_between_vectors(data_object.eye_direction[:, 0], data_object.eye_direction[:, 1])
-        eye_angular_velocity[0] = first_angle / (data_object.time_vector[1] - data_object.time_vector[0])
-        last_angle = get_angle_between_vectors(data_object.eye_direction[:, -2], data_object.eye_direction[:, -1])
-        eye_angular_velocity[-1] = last_angle / (data_object.time_vector[-1] - data_object.time_vector[-2])
-
-        self.eye_angular_velocity = eye_angular_velocity * 180 / np.pi  # Convert to degrees per second
+        self.eye_angular_velocity = compute_angular_velocity(data_object.time_vector, data_object.eye_direction)
 
     def set_eye_angular_acceleration(self, data_object: DataObject):
         """
@@ -119,6 +104,11 @@ class SaccadeEvent:
     def detect_saccade_indices(self):
         """
         Detect when velocity is above the threshold.
+        Note that it is not possible to detect a blinks during a saccade, although it is physiologically possible. This
+            is due to the fact that we consider sequences to be mutually exclusive (and it is hard to detect if the
+            saccade events before and after the blink should have been merges together of not). It is enforced
+            implicitly here as if there is a blink detected earlier, the eye_angular_velocity will be nan and the
+            saccade condition will not be met.
         """
         self.frame_indices = np.where(np.abs(self.eye_angular_velocity) > self.velocity_threshold)[0]
 
@@ -171,5 +161,5 @@ class SaccadeEvent:
             vector_before = data_object.eye_direction[:, sequence[0]]
             vector_after = data_object.eye_direction[:, sequence[-1]]
             angle = get_angle_between_vectors(vector_before, vector_after)
-            saccade_amplitudes += [angle * 180 / np.pi]
+            saccade_amplitudes += [angle]
         self.saccade_amplitudes = saccade_amplitudes

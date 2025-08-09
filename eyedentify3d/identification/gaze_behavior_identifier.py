@@ -5,6 +5,7 @@ from ..error_type import ErrorType
 from ..identification.invalid import InvalidEvent
 from ..identification.blink import BlinkEvent
 from ..identification.saccade import SaccadeEvent
+from ..identification.visual_scanning import VisualScanningEvent
 
 
 class GazeBehaviorIdentifier:
@@ -33,6 +34,7 @@ class GazeBehaviorIdentifier:
         self.blink = None
         self.invalid = None
         self.saccade = None
+        self.visual_scanning = None
         self.identified_indices = None
         self._initialize_identified_indices()
 
@@ -93,4 +95,8 @@ class GazeBehaviorIdentifier:
 
     def detect_saccade_sequences(self):
         self.saccade = SaccadeEvent(self.data_object, self.identified_indices)
+        self.set_identified_frames(self.saccade)
+
+    def detect_visual_scanning_sequences(self):
+        self.visual_scanning = VisualScanningEvent(self.data_object, self.identified_indices)
         self.set_identified_frames(self.saccade)
