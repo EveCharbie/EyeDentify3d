@@ -179,7 +179,9 @@ def test_get_angle_between_vectors_errors():
     # Test with zero vector
     v1 = np.array([0, 0, 0])  # Zero vector
     v2 = np.array([0, 1, 0])
-    with pytest.raises(RuntimeError, match="The gaze vectors should be unitary. This should not happen, please contact the developer."):
+    with pytest.raises(
+        RuntimeError, match="The gaze vectors should be unitary. This should not happen, please contact the developer."
+    ):
         get_angle_between_vectors(v1, v2)
 
 
