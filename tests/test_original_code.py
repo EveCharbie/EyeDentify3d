@@ -12,7 +12,6 @@ from eyedentify3d import (
     TimeRange,
     HtcViveProData,
     ErrorType,
-    detect_saccades,
     detect_visual_scanning,
     apply_minimal_duration,
     sliding_window,
