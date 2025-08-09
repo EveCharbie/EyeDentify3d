@@ -98,8 +98,14 @@ def detect_saccades(time_vector, eye_direction, gaze_direction):
     ) / (time_vector[-1] - time_vector[-2])
 
     eye_angular_acceleration_rad = np.zeros((eye_direction.shape[1],))
-    eye_angular_acceleration_rad[:-1] = (eye_angular_velocity_rad[1:] - eye_angular_velocity_rad[:-1]) / (
-        time_vector[1:] - time_vector[:-1]
+    eye_angular_acceleration_rad[0] = (eye_angular_velocity_rad[1] - eye_angular_velocity_rad[0]) / (
+        time_vector[1] - time_vector[0]
+    )
+    eye_angular_acceleration_rad[1:-1] = (eye_angular_velocity_rad[2:] - eye_angular_velocity_rad[:-2]) / (
+        time_vector[2:] - time_vector[:-2]
+    )
+    eye_angular_acceleration_rad[-1] = (eye_angular_velocity_rad[-1] - eye_angular_velocity_rad[-2]) / (
+        time_vector[-1] - time_vector[-2]
     )
 
     acceleration_threshold = 4000  # deg/s²
