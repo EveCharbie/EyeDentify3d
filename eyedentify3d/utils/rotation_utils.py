@@ -93,12 +93,20 @@ def get_gaze_direction(head_angles: np.ndarray, eye_direction: np.ndarray):
         # Rotate the eye direction vector using the head rotation matrix
         gaze_direction[:, i_frame] = rotation_matrix @ eye_direction[:, i_frame]
 
+        # Ensure it is a unit vector
+        gaze_direction_norm = np.linalg.norm(gaze_direction[:, i_frame])
+        if gaze_direction_norm > 1.2 or gaze_direction_norm < 0.8:
+            raise RuntimeError(
+                "The gaze direction should be a unit vector. This should not happen, please contact the developer."
+            )
+        gaze_direction[:, i_frame] /= gaze_direction_norm
+
     return gaze_direction
 
 
 def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float:
     """
-    Get the angle between two vectors in radians.
+    Get the angle between two vectors in degrees.
 
     Parameters
     ----------
@@ -130,4 +138,45 @@ def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float
 
         angle = np.arccos(cos_angle)
 
-    return angle
+    return angle * 180 / np.pi  # Convert to degrees
+
+
+def compute_angular_velocity(time_vector: np.ndarray, direction_vector: np.ndarray) -> np.ndarray:
+    """
+    Computes the angular velocity in deg/s as the angle difference between two frames divided by
+    the time difference between them. It is computed like a centered finite difference, meaning that the frame i+1
+    and i-1 are used to set the value for the frame i.
+
+    Parameters
+    ----------
+    time_vector: The time vector of the data acquisition, shape (n_frames,).
+    direction_vector: A numpy array of shape (3, n_frames) containing the direction vector for which to compute the angular velocity.
+
+    Returns
+    -------
+    A numpy array of shape (n_frames,) containing the angular velocity in deg/s.
+    """
+    if direction_vector.shape[0] != 3:
+        raise ValueError("The direction vector should be a 3D vector.")
+
+    nb_frames = time_vector.shape[0]
+    if nb_frames < 3:
+        raise ValueError("The time vector should have at least 3 frames to compute angular velocity.")
+
+    if direction_vector.shape[1] != nb_frames:
+        raise ValueError("The time vector should have the same number of frames as the direction vector.")
+
+    angular_velocity = np.zeros((nb_frames,))
+    for i_frame in range(1, nb_frames - 1):  # Skipping the first and last frames
+        vector_before = direction_vector[:, i_frame - 1]
+        vector_after = direction_vector[:, i_frame + 1]
+        angle = get_angle_between_vectors(vector_before, vector_after)
+        angular_velocity[i_frame] = angle / (time_vector[i_frame + 1] - time_vector[i_frame - 1])
+
+    # Deal with the first and last frames separately
+    first_angle = get_angle_between_vectors(direction_vector[:, 0], direction_vector[:, 1])
+    angular_velocity[0] = first_angle / (time_vector[1] - time_vector[0])
+    last_angle = get_angle_between_vectors(direction_vector[:, -2], direction_vector[:, -1])
+    angular_velocity[-1] = last_angle / (time_vector[-1] - time_vector[-2])
+
+    return angular_velocity
