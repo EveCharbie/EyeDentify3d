@@ -224,6 +224,7 @@ def test_get_gaze_direction():
         ),
     )
 
+
 def test_compute_angular_velocity():
     """Test compute_angular_velocity function."""
     # Create a time vector and eye direction
@@ -237,21 +238,39 @@ def test_compute_angular_velocity():
     angular_velocity = compute_angular_velocity(time_vector, eye_direction)
 
     # Check shape
-    assert angular_velocity.shape == (len(time_vector), )
+    assert angular_velocity.shape == (len(time_vector),)
 
     # Check that the velocity increases and decreases as expected (and that the values are expressed in degrees per second)
-    npt.assert_almost_equal(angular_velocity, np.array([ 64.20442871,  71.83935327,  87.56931878, 102.28682319,
-                                                       111.51632601, 111.45979964, 102.14284089,  87.39104318,
-                                                        71.66929997,  64.04596144]))
+    npt.assert_almost_equal(
+        angular_velocity,
+        np.array(
+            [
+                64.20442871,
+                71.83935327,
+                87.56931878,
+                102.28682319,
+                111.51632601,
+                111.45979964,
+                102.14284089,
+                87.39104318,
+                71.66929997,
+                64.04596144,
+            ]
+        ),
+    )
 
     # Check errors
     with pytest.raises(ValueError, match="The direction vector should be a 3D vector."):
         compute_angular_velocity(time_vector, eye_direction[:1, :])  # Not enough components in eye direction
 
-    with pytest.raises(ValueError, match="The time vector should have the same number of frames as the direction vector."):
+    with pytest.raises(
+        ValueError, match="The time vector should have the same number of frames as the direction vector."
+    ):
         compute_angular_velocity(time_vector, eye_direction[:, :-2])  # Not the same number of frames
 
-    with pytest.raises(ValueError, match="The time vector should have the same number of frames as the direction vector."):
+    with pytest.raises(
+        ValueError, match="The time vector should have the same number of frames as the direction vector."
+    ):
         compute_angular_velocity(time_vector[:-2], eye_direction)  # Not the same number of frames
 
     with pytest.raises(ValueError, match="The time vector should have at least 3 frames to compute angular velocity."):
