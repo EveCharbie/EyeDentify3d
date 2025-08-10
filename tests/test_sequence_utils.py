@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from eyedentify3d.utils.sequence_utils import (
     split_sequences,
@@ -44,8 +43,17 @@ def test_split_sequences_single_value():
     indices = np.array([42])
     sequences = split_sequences(indices)
 
+    # Sequences with only one value are filtered out
+    assert sequences == []
+
+
+def test_split_sequences_two_values():
+    """Test split_sequences with a single value."""
+    indices = np.array([42, 43])
+    sequences = split_sequences(indices)
+
     assert len(sequences) == 1
-    assert np.array_equal(sequences[0], np.array([42]))
+    assert np.array_equal(sequences[0], indices)
 
 
 def test_split_sequences_non_consecutive():
@@ -53,9 +61,19 @@ def test_split_sequences_non_consecutive():
     indices = np.array([1, 3, 5, 7, 9])
     sequences = split_sequences(indices)
 
-    assert len(sequences) == 5
-    for i, seq in enumerate(sequences):
-        assert np.array_equal(seq, np.array([indices[i]]))
+    # One frame elements are filtered out
+    assert len(sequences) == 0
+
+
+def test_split_sequences_with_consecutive_values():
+    """Test split_sequences with consecutive indices."""
+    indices = np.array([1, 2, 3, 5, 7, 8, 9])
+    sequences = split_sequences(indices)
+
+    # One frame elements are filtered out
+    assert len(sequences) == 2
+    assert np.array_equal(sequences[0], np.array([1, 2, 3]))
+    assert np.array_equal(sequences[1], np.array([7, 8, 9]))
 
 
 def test_split_sequences_large_gaps():
@@ -73,7 +91,7 @@ def test_apply_minimal_duration():
     """Test apply_minimal_duration."""
     indices = np.array([1, 2, 10, 11, 100, 101, 102, 103, 200, 300, 301, 302, 303])
     sequences = split_sequences(indices)
-    assert len(sequences) == 5
+    assert len(sequences) == 4
 
     sequence_modified = apply_minimal_duration(sequences, np.linspace(0, 100, 400), minimal_duration=0.4)
     assert len(sequence_modified) == 2
@@ -96,7 +114,7 @@ def test_apply_minimal_number_of_frames():
     """Test apply_minimal_duration."""
     indices = np.array([1, 2, 10, 11, 100, 101, 102, 103, 200, 300, 301, 302, 303])
     sequences = split_sequences(indices)
-    assert len(sequences) == 5
+    assert len(sequences) == 4
 
     # Actually does something
     sequence_modified = apply_minimal_number_of_frames(sequences, minimal_number_of_frames=3)
@@ -107,7 +125,7 @@ def test_apply_minimal_number_of_frames():
 
     # Nothing to do, sequences are already long enough
     sequence_modified = apply_minimal_number_of_frames(sequences, minimal_number_of_frames=1)
-    assert len(sequence_modified) == 5
+    assert len(sequence_modified) == 4
     assert sequence_modified == sequences
 
 
