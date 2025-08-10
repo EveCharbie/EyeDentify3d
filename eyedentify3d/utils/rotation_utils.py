@@ -157,7 +157,7 @@ def compute_angular_velocity(time_vector: np.ndarray, direction_vector: np.ndarr
     A numpy array of shape (n_frames,) containing the angular velocity in deg/s.
     """
     if direction_vector.shape[0] != 3:
-        raise ValueError("The eye direction should be a 3D vector.")
+        raise ValueError("The direction vector should be a 3D vector.")
 
     nb_frames = time_vector.shape[0]
     if nb_frames < 3:
