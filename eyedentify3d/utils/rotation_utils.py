@@ -140,6 +140,7 @@ def get_angle_between_vectors(vector1: np.ndarray, vector2: np.ndarray) -> float
 
     return angle * 180 / np.pi  # Convert to degrees
 
+
 def compute_angular_velocity(time_vector: np.ndarray, direction_vector: np.ndarray) -> np.ndarray:
     """
     Computes the angular velocity in deg/s as the angle difference between two frames divided by

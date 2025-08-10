@@ -212,6 +212,13 @@ def test_get_gaze_direction():
     # For 0 degree head rotation, gaze should match eye direction
     npt.assert_almost_equal(gaze_direction[:, 0], eye_direction[:, 0])
 
-    npt.assert_almost_equal(gaze_direction, np.array([[ 0,  0,  0, 0,  0],
-                                                       [ 0, -3.82683432e-01, -7.07106781e-01, -9.23879533e-01, -1.00000000e+00],
-                                                       [ 1.00000000e+00,  9.23879533e-01,  7.07106781e-01, 3.82683432e-01,  0]]))
+    npt.assert_almost_equal(
+        gaze_direction,
+        np.array(
+            [
+                [0, 0, 0, 0, 0],
+                [0, -3.82683432e-01, -7.07106781e-01, -9.23879533e-01, -1.00000000e00],
+                [1.00000000e00, 9.23879533e-01, 7.07106781e-01, 3.82683432e-01, 0],
+            ]
+        ),
+    )

@@ -139,7 +139,9 @@ def detect_saccades(time_vector, eye_direction, gaze_direction, identified_indic
                 saccade_sequences += [i]
 
     # merge saccades events that are less than 5 frames appart and the gaze is moving in the same direction
-    saccade_sequences_merged = merge_close_sequences(saccade_sequences, gaze_direction, identified_indices, check_directionnality=True)
+    saccade_sequences_merged = merge_close_sequences(
+        saccade_sequences, gaze_direction, identified_indices, check_directionnality=True
+    )
 
     # Saccade amplitude
     # Defined as the angle between the beginning and end of the saccade,
@@ -438,9 +440,9 @@ def merge_close_sequences(sequences_candidates, gaze_direction, identified_indic
                     np.sum(np.isnan(gaze_direction[:, range(end_of_merged_sequence, beginning_of_new_sequence + 1)]))
                     == 0
                 )
-                not_already_identified = np.sum(
-                    identified_indices[range(end_of_merged_sequence, beginning_of_new_sequence + 1)]
-                ) == 0
+                not_already_identified = (
+                    np.sum(identified_indices[range(end_of_merged_sequence, beginning_of_new_sequence + 1)]) == 0
+                )
                 if beginning_of_new_sequence - end_of_merged_sequence < 5 and not_invalid and not_already_identified:
                     if check_directionnality:
                         beginning_of_merged_sequence_direction = gaze_direction[:, beginning_of_merged_sequence]
@@ -453,10 +455,14 @@ def merge_close_sequences(sequences_candidates, gaze_direction, identified_indic
                         end_of_new_sequence_direction = gaze_direction[:, end_of_new_sequence]
                         new_sequence_direction = end_of_new_sequence_direction - beginning_of_new_sequence_direction
 
-                        angle = np.arccos(
-                            np.dot(merged_sequence_direction, new_sequence_direction)
-                            / (np.linalg.norm(merged_sequence_direction) * np.linalg.norm(new_sequence_direction))
-                        ) * 180 / np.pi
+                        angle = (
+                            np.arccos(
+                                np.dot(merged_sequence_direction, new_sequence_direction)
+                                / (np.linalg.norm(merged_sequence_direction) * np.linalg.norm(new_sequence_direction))
+                            )
+                            * 180
+                            / np.pi
+                        )
                         candidate_interval = np.array(
                             range(sequences_merged[i_current_merged_sequence][0], sequences_candidates[i][-1] + 1)
                         )
@@ -1328,7 +1334,7 @@ def main():
         data = data.iloc[good_timestamps_index, :]
 
         # Identified indices
-        identified_indices = np.zeros((time_vector.shape[0], ), dtype=bool)
+        identified_indices = np.zeros((time_vector.shape[0],), dtype=bool)
 
         eye_direction = np.array([data["gaze_direct_L.x"], data["gaze_direct_L.y"], data["gaze_direct_L.z"]])
         eye_norm = np.linalg.norm(eye_direction, axis=0)
@@ -1390,10 +1396,11 @@ def main():
 
         # Detect visual scanning
         visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning = (
-            detect_visual_scanning(time_vector,
-                                   gaze_direction,
-                                   identified_indices,
-                                   )
+            detect_visual_scanning(
+                time_vector,
+                gaze_direction,
+                identified_indices,
+            )
         )
         for i in visual_scanning_sequences:
             identified_indices[i] = True

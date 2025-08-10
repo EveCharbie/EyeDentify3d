@@ -57,7 +57,9 @@ def perform_one_file(
     saccade_sequences = gaze_behavior_identifier.saccade.sequences
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
     visual_scanning_sequences = gaze_behavior_identifier.visual_scanning.sequences
-    gaze_angular_velocity_rad = gaze_behavior_identifier.visual_scanning.gaze_angular_velocity * np.pi / 180  # Convert deg/s to rad/s
+    gaze_angular_velocity_rad = (
+        gaze_behavior_identifier.visual_scanning.gaze_angular_velocity * np.pi / 180
+    )  # Convert deg/s to rad/s
     identified_indices = gaze_behavior_identifier.identified_indices
 
     # Detect fixations
