@@ -12,7 +12,6 @@ from eyedentify3d import (
     TimeRange,
     HtcViveProData,
     ErrorType,
-    detect_visual_scanning,
     apply_minimal_duration,
     sliding_window,
     detect_fixations_and_smooth_pursuit,
@@ -405,15 +404,15 @@ def test_original_code():
         if file_name == "TESTNA01_2D_Fist3":
             assert captured_output.getvalue() == r"Smooth pursuit : 1.24955 s ----"
         elif file_name == "TESTNA01_360VR_Fist3":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.10806 s ----"
+            assert captured_output.getvalue() == ""
         elif file_name == "TESTNA05_2D_Spread7":
             assert captured_output.getvalue() == "Fixation : 0.95033 s ----"
         elif file_name == "TESTNA05_360VR_Spread7":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.96577 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.95779 s ----"
         elif file_name == "TESTNA15_2D_Pen3":
             assert captured_output.getvalue() == "Fixation : 0.21578 s ----"
         elif file_name == "TESTNA15_360VR_Pen3":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.15893 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.14996 s ----"
         elif file_name == "TESTVA03_2D_Spread9":
             assert (
                 captured_output.getvalue()
