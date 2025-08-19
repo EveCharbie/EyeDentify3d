@@ -107,7 +107,9 @@ class InterSaccadicEvent:
         angle = np.zeros((nb_frames,))
         for i_frame in range(nb_frames - 1):
             # TODO: Check the logic of the acrsin (arccos instead ?)
-            gaze_displacement = gaze_direction[component_to_keep, i_frame + 1] - gaze_direction[component_to_keep, i_frame]
+            gaze_displacement = (
+                gaze_direction[component_to_keep, i_frame + 1] - gaze_direction[component_to_keep, i_frame]
+            )
             # angle[i_frame] = np.arcsin(gaze_displacement / np.linalg.norm(gaze_displacement))  # 0
             angle[i_frame] = np.arccos(gaze_displacement / np.linalg.norm(gaze_displacement))  # 1
 
@@ -123,7 +125,7 @@ class InterSaccadicEvent:
     #     transforms it into spherical coordinates (angle_1 and angle_2). Finally, a Rayleigh z-test is applied
     #     on the angles to check if the gaze displacement is uniformly distributed on the selected window. If the gaze
     #     direction is coherent (i.e., the p-value is smaller than eta_p), the gaze is moving in a particular direction.
-    #     
+    #
     #     Parameters
     #     ----------
     #     gaze_direction: A 2D numpy array of shape (3, nb_frames) expressing the gaze (head + eyes) direction in 3D space
@@ -136,7 +138,7 @@ class InterSaccadicEvent:
     #         gaze_displacement = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
     #         angle_1[i_frame] = np.arctan2(gaze_displacement[1], gaze_displacement[0])  # Azimuth angle if XYZ coordinates
     #         angle_2[i_frame] = np.arccos(gaze_displacement[2], np.linalg.norm(gaze_displacement[:2]))  # Elevation angle if XYZ coordinates
-    # 
+    #
     #     # Test that the gaze displacement and orientation are coherent inside the window
     #     z_value_1, p_value_1 = pg.circ_rayleigh(angle_1)
     #     z_value_2, p_value_2 = pg.circ_rayleigh(angle_2)
@@ -151,15 +153,17 @@ class InterSaccadicEvent:
 
         nb_frames = gaze_direction.shape[1]
         if nb_frames < 4:
-            raise ValueError("The gaze direction must contain at least 4 frames for the variability decomposition to be "
-                             "meaningful. Please consider changing the window_duration.")
+            raise ValueError(
+                "The gaze direction must contain at least 4 frames for the variability decomposition to be "
+                "meaningful. Please consider changing the window_duration."
+            )
 
         # Center the gaze direction around its mean
         mean_gaze_direction = np.nanmean(gaze_direction, axis=1)
         gaze_direction_centered = gaze_direction - mean_gaze_direction[:, np.newaxis]
-        
+
         # Get the principal and second axis of the gaze direction
-        # Note: The third axis should be almost null as the gaze vector is unitary so the gaze direction is contained 
+        # Note: The third axis should be almost null as the gaze vector is unitary so the gaze direction is contained
         # on the sphere.
         cov = np.ma.cov(np.ma.masked_invalid(gaze_direction_centered)).data
         eigen_values, eigen_vectors = np.linalg.eig(cov)
@@ -180,7 +184,9 @@ class InterSaccadicEvent:
         length_principal_component = np.max(principal_projection) - np.min(principal_projection)
         length_second_component = np.max(second_projection) - np.min(second_projection)
         if np.abs(np.dot(principal_axis, second_axis)) > 0.0001:
-            raise RuntimeError("The principal and second axis are not orthogonal. This should not happen, please contact the developer.")
+            raise RuntimeError(
+                "The principal and second axis are not orthogonal. This should not happen, please contact the developer."
+            )
 
         return length_principal_component, length_second_component
 
@@ -216,7 +222,7 @@ class InterSaccadicEvent:
         parameter_CD = gaze_travel_distance / length_principal_component
         parameter_PD = gaze_travel_distance / gaze_trajectory_length
         parameter_R = np.arctan(mean_gaze_direction_radius_range)
-    
+
         return parameter_D, parameter_CD, parameter_PD, parameter_R
 
     def get_window_sequences(self, time_vector: np.ndarray) -> list[np.ndarray]:
@@ -256,7 +262,7 @@ class InterSaccadicEvent:
                     raise RuntimeError("The merging went wrong")
 
                 window_sequences.append(np.arange(window_start_idx, window_end_idx + 1))
-                    
+
                 # Break if we've reached the end
                 if window_end_idx >= sequence_end_idx:
                     break
@@ -267,11 +273,7 @@ class InterSaccadicEvent:
         return window_sequences
 
     @staticmethod
-    def _find_time_index(time_vector: np.ndarray,
-                         target_time: float,
-                         start_bound: int, 
-                         end_bound: int
-                         ) -> int:
+    def _find_time_index(time_vector: np.ndarray, target_time: float, start_bound: int, end_bound: int) -> int:
         """
         Find the index corresponding to a target time within specified bounds.
 
@@ -286,18 +288,18 @@ class InterSaccadicEvent:
         -------
             idx: The index closest to target_time within bounds
         """
-        candidate_idx = np.searchsorted(time_vector, target_time, side='left')
-        
+        candidate_idx = np.searchsorted(time_vector, target_time, side="left")
+
         # Ensure index is within valid bounds
         idx = np.clip(candidate_idx, start_bound, end_bound)
-        
+
         return idx
 
-        # 
-        # 
+        #
+        #
         # window_indices = []
         # for intersaccadic_sequence in self.sequences:
-        #     
+        #
         #     # Initialize the indices of the window
         #     window_start_idx = intersaccadic_sequence[0]
         #     current_window_end = 0
@@ -318,7 +320,7 @@ class InterSaccadicEvent:
         #             break
         #         window_start_idx = \
         #         np.where(data_object.time_vector < data_object.time_vector[current_window_end - 1] - self.window_overlap)[0][-1]
-        # 
+        #
         # return window_indices
 
     def set_coherent_and_incoherent_sequences(self, data_object: DataObject):
@@ -342,8 +344,9 @@ class InterSaccadicEvent:
                 continue
 
             # Compute the directionality coherence p-value for the current window
-            p_value = self.detect_directionality_coherence_on_axis(data_object.gaze_direction[:, current_window],
-                                                                   component_to_keep=1)
+            p_value = self.detect_directionality_coherence_on_axis(
+                data_object.gaze_direction[:, current_window], component_to_keep=1
+            )
             for i_idx in current_window:
                 p_values[i_idx] += [p_value]
 
@@ -356,7 +359,9 @@ class InterSaccadicEvent:
         coherent_indices = np.where(mean_p_values > self.eta_p)[0]
         self.coherent_sequences = split_sequences(coherent_indices)
 
-    def classify_obvious_sequences(self, data_object: DataObject, all_intersaccadic_sequences: list[np.ndarray]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def classify_obvious_sequences(
+        self, data_object: DataObject, all_intersaccadic_sequences: list[np.ndarray]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Sequences where all (smooth pursuit) or none (fixation) of the criteria are met are classified as such and
         other sequences are classified as ambiguous.
@@ -387,7 +392,6 @@ class InterSaccadicEvent:
         ambiguous_indices = np.array(ambiguous_indices, dtype=int)
 
         return fixation_indices, smooth_pursuit_indices, ambiguous_indices
-
 
     # def classify_ambiguous_sequences(self,
     #                                  data_object: DataObject,
@@ -485,13 +489,14 @@ class InterSaccadicEvent:
     #
     #     return fixation_indices, smooth_pursuit_indices, uncertain_sequences
 
-    def classify_ambiguous_sequences(self,
-                                     data_object: DataObject,
-                                     all_intersaccadic_sequences: list[np.ndarray],
-                                     ambiguous_indices: np.ndarray,
-                                     fixation_indices: np.ndarray,
-                                     smooth_pursuit_indices: np.ndarray,
-                                     ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
+    def classify_ambiguous_sequences(
+        self,
+        data_object: DataObject,
+        all_intersaccadic_sequences: list[np.ndarray],
+        ambiguous_indices: np.ndarray,
+        fixation_indices: np.ndarray,
+        smooth_pursuit_indices: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
         """
         Classify ambiguous sequences as smooth pursuit-like or fixation-like segments.
 
@@ -524,8 +529,7 @@ class InterSaccadicEvent:
             if criteria_3:
                 # Smooth pursuit-like: try to merge with adjacent compatible segments
                 merged_range = self._find_mergeable_segment_range(
-                    i_sequence, sequence, all_intersaccadic_sequences,
-                    data_object, fixation_indices
+                    i_sequence, sequence, all_intersaccadic_sequences, data_object, fixation_indices
                 )
 
                 if merged_range is not None:
@@ -543,17 +547,18 @@ class InterSaccadicEvent:
                 sequences_to_remove += [i_sequence]
 
         # Return remaining uncertain sequences
-        uncertain_sequences = [
-            seq for i, seq in enumerate(ambiguous_sequences)
-            if i not in sequences_to_remove
-        ]
+        uncertain_sequences = [seq for i, seq in enumerate(ambiguous_sequences) if i not in sequences_to_remove]
 
         return fixation_indices, smooth_pursuit_indices, uncertain_sequences
 
-    def _find_mergeable_segment_range(self, sequence_idx: int, sequence: np.ndarray,
-                                      all_sequences: list[np.ndarray],
-                                      data_object: DataObject,
-                                      fixation_indices: np.ndarray) -> tuple[int, int] | None:
+    def _find_mergeable_segment_range(
+        self,
+        sequence_idx: int,
+        sequence: np.ndarray,
+        all_sequences: list[np.ndarray],
+        data_object: DataObject,
+        fixation_indices: np.ndarray,
+    ) -> tuple[int, int] | None:
         """
         Find the range of indices that can be merged with the current sequence.
 
@@ -565,28 +570,30 @@ class InterSaccadicEvent:
 
         # Find backward extension
         start_idx = self._extend_segment_backward(
-            sequence_idx, sequence[0], sequence_mean,
-            all_sequences, data_object, fixation_indices
+            sequence_idx, sequence[0], sequence_mean, all_sequences, data_object, fixation_indices
         )
 
         # Find forward extension
         end_idx = self._extend_segment_forward(
-            sequence_idx, sequence[-1], sequence_mean,
-            all_sequences, data_object, fixation_indices
+            sequence_idx, sequence[-1], sequence_mean, all_sequences, data_object, fixation_indices
         )
 
         if end_idx - start_idx <= 2:
-            raise RuntimeError("The merged sequence is too short. This should not happen, please contact the developer.")
+            raise RuntimeError(
+                "The merged sequence is too short. This should not happen, please contact the developer."
+            )
 
         return start_idx, end_idx
 
-    def _extend_segment_backward(self,
-                                 current_idx: int,
-                                 boundary_idx: int,
-                                 reference_mean: np.ndarray,
-                                 all_sequences: list[np.ndarray],
-                                 data_object: DataObject,
-                                 fixation_indices: np.ndarray) -> int:
+    def _extend_segment_backward(
+        self,
+        current_idx: int,
+        boundary_idx: int,
+        reference_mean: np.ndarray,
+        all_sequences: list[np.ndarray],
+        data_object: DataObject,
+        fixation_indices: np.ndarray,
+    ) -> int:
         """Extend segment backward while segments are compatible."""
         if current_idx == 0:
             return boundary_idx
@@ -597,8 +604,7 @@ class InterSaccadicEvent:
             candidate_seq = all_sequences[search_idx]
 
             # Stop if we hit a fixation or non-adjacent sequence
-            if (boundary_idx not in candidate_seq or
-                    any(idx in fixation_indices for idx in candidate_seq)):
+            if boundary_idx not in candidate_seq or any(idx in fixation_indices for idx in candidate_seq):
                 break
 
             # Check angular compatibility
@@ -610,12 +616,15 @@ class InterSaccadicEvent:
 
         return boundary_idx
 
-    def _extend_segment_forward(self, current_idx: int,
-                                boundary_idx: int,
-                                reference_mean: np.ndarray,
-                                all_sequences: list[np.ndarray],
-                                data_object: DataObject,
-                                fixation_indices: np.ndarray) -> int:
+    def _extend_segment_forward(
+        self,
+        current_idx: int,
+        boundary_idx: int,
+        reference_mean: np.ndarray,
+        all_sequences: list[np.ndarray],
+        data_object: DataObject,
+        fixation_indices: np.ndarray,
+    ) -> int:
         """Extend segment forward while segments are compatible."""
         if current_idx >= len(all_sequences) - 1:
             return boundary_idx
@@ -626,8 +635,7 @@ class InterSaccadicEvent:
             candidate_seq = all_sequences[search_idx]
 
             # Stop if we hit a fixation or non-adjacent sequence
-            if (boundary_idx not in candidate_seq or
-                    any(idx in fixation_indices for idx in candidate_seq)):
+            if boundary_idx not in candidate_seq or any(idx in fixation_indices for idx in candidate_seq):
                 break
 
             # Check angular compatibility
@@ -639,26 +647,27 @@ class InterSaccadicEvent:
 
         return boundary_idx
 
-    def _sequences_are_compatible(self, reference_mean: np.ndarray,
-                                  candidate_seq: np.ndarray,
-                                  data_object: DataObject) -> bool:
+    def _sequences_are_compatible(
+        self, reference_mean: np.ndarray, candidate_seq: np.ndarray, data_object: DataObject
+    ) -> bool:
         """Check if two sequences are compatible based on angular difference."""
         candidate_mean = np.nanmean(data_object.gaze_direction[:, candidate_seq], axis=1)
         angle = get_angle_between_vectors(reference_mean, candidate_mean)
         return angle < self.phi
 
-    def _classify_criteria3_segment(self, merged_range: tuple[int, int],
-                                 data_object: DataObject,
-                                 fixation_indices: np.ndarray,
-                                 smooth_pursuit_indices: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _classify_criteria3_segment(
+        self,
+        merged_range: tuple[int, int],
+        data_object: DataObject,
+        fixation_indices: np.ndarray,
+        smooth_pursuit_indices: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Classify a merged segment as fixation or smooth pursuit."""
         start_idx, end_idx = merged_range
         indices = list(range(start_idx, end_idx + 1))
 
         # Compute parameters for the merged segment
-        _, _, _, parameter_R = self.compute_larsson_parameters(
-            data_object.gaze_direction[:, indices]
-        )
+        _, _, _, parameter_R = self.compute_larsson_parameters(data_object.gaze_direction[:, indices])
 
         if parameter_R * 180 / np.pi > self.eta_min_smooth_pursuit:
             # The gaze moves
@@ -670,8 +679,7 @@ class InterSaccadicEvent:
         return fixation_indices, smooth_pursuit_indices
 
     @staticmethod
-    def _find_sequences_in_range(merged_range: tuple[int, int],
-                                 ambiguous_sequences: list[np.ndarray]) -> list[int]:
+    def _find_sequences_in_range(merged_range: tuple[int, int], ambiguous_sequences: list[np.ndarray]) -> list[int]:
         """Find which ambiguous sequences overlap with the merged range."""
         start_idx, end_idx = merged_range
         merged_set = set(range(start_idx, end_idx + 1))
@@ -682,7 +690,6 @@ class InterSaccadicEvent:
                 overlapping_sequences.append(i_sequence)
 
         return overlapping_sequences
-
 
     def classify_sequences(self, data_object: DataObject, identified_indices: np.ndarray):
         """
@@ -695,8 +702,10 @@ class InterSaccadicEvent:
             self.incoherent_sequences,
         )
         if len(all_intersaccadic_sequences) == 1 and all_intersaccadic_sequences[0].shape == (0,):
-            raise RuntimeError("There should be at least one even if there is no saccades. "
-                               "This should not happen, please contact the developer.")
+            raise RuntimeError(
+                "There should be at least one even if there is no saccades. "
+                "This should not happen, please contact the developer."
+            )
 
         fixation_indices, smooth_pursuit_indices, ambiguous_indices = self.classify_obvious_sequences(
             data_object,
@@ -713,5 +722,5 @@ class InterSaccadicEvent:
         self.smooth_pursuit_indices = np.sort(smooth_pursuit_indices)
         self.fixation_indices = np.sort(fixation_indices)
         self.uncertain_sequences = uncertain_sequences
-    
+
         return

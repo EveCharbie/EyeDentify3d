@@ -109,11 +109,12 @@ class GazeBehaviorIdentifier:
         self.remove_bad_frames(self.invalid)
         self.set_identified_frames(self.invalid)
 
-    def detect_saccade_sequences(self,
-            min_acceleration_threshold: float = 4000,
-            velocity_window_size: float = 0.52,
-            velocity_factor: float = 5.0,
-            ):
+    def detect_saccade_sequences(
+        self,
+        min_acceleration_threshold: float = 4000,
+        velocity_window_size: float = 0.52,
+        velocity_factor: float = 5.0,
+    ):
         """
         Detects saccade sequences in the data object.
 
@@ -148,16 +149,16 @@ class GazeBehaviorIdentifier:
         self.set_identified_frames(self.saccade)
 
     def detect_fixation_and_smooth_pursuit_sequences(
-            self,
-            window_duration: float = 0.022,
-            window_overlap: float = 0.006,
-            eta_p: float = 0.01,
-            eta_d: float = 0.45,
-            eta_cd: float = 0.5,
-            eta_pd: float = 0.2,
-            eta_max_fixation: float = 1.9,
-            eta_min_smooth_pursuit: float = 1.7,
-            phi: float = 45,
+        self,
+        window_duration: float = 0.022,
+        window_overlap: float = 0.006,
+        eta_p: float = 0.01,
+        eta_d: float = 0.45,
+        eta_cd: float = 0.5,
+        eta_pd: float = 0.2,
+        eta_max_fixation: float = 1.9,
+        eta_min_smooth_pursuit: float = 1.7,
+        phi: float = 45,
     ):
         """
         Detects fixation and smooth pursuit sequences in the data object.
@@ -203,7 +204,9 @@ class GazeBehaviorIdentifier:
             phi,
         )
 
-        self.fixation = FixationEvent(self.data_object, self.identified_indices, self.inter_saccadic_sequences.fixation_indices)
+        self.fixation = FixationEvent(
+            self.data_object, self.identified_indices, self.inter_saccadic_sequences.fixation_indices
+        )
         self.smooth_pursuit = SmoothPursuitEvent(
             self.data_object,
             self.identified_indices,

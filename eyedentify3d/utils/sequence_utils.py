@@ -195,6 +195,7 @@ def merge_close_sequences(
 
     return merged_sequences
 
+
 def merge_sequence_lists(sequences_1: list[np.ndarray], sequences_2: list[np.ndarray]):
     """
     Merges two lists of sequences and sort them based on the first element of the sequences.
@@ -202,4 +203,4 @@ def merge_sequence_lists(sequences_1: list[np.ndarray], sequences_2: list[np.nda
     """
     all_sequences = sequences_1 + sequences_2
     # Sort by the first index of each sequence
-    return sorted(all_sequences, key=lambda seq: seq[0] if len(seq) > 0 else float('inf'))
+    return sorted(all_sequences, key=lambda seq: seq[0] if len(seq) > 0 else float("inf"))
