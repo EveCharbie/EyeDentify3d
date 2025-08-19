@@ -21,7 +21,7 @@ class SaccadeEvent:
         data_object: DataObject,
         identified_indices: np.ndarray,
         min_acceleration_threshold: float = 4000,
-        velocity_window_size: float = 0.52,  # TODO: make modulable
+        velocity_window_size: float = 0.52,
         velocity_factor: float = 5.0,
     ):
         """
