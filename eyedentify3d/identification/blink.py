@@ -15,6 +15,7 @@ class BlinkEvent:
         """
         Parameters:
         data_object: The EyeDentify3d object containing the parsed eye-tracking data.
+        eye_openness_threshold: The threshold for the eye openness to consider a blink event. Default is 0.5.
         """
 
         # Original attributes

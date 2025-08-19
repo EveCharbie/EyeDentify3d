@@ -1230,7 +1230,7 @@ def check_if_there_is_sequence_overlap(
     eyetracker_invalid_sequences,
 ):
     """
-    This function just check if there was problems in the classification algorithm
+    This function just check if there were problems in the classification algorithm
     """
 
     # Blinks and invalid data must not overlap with any other sequences
@@ -1444,6 +1444,8 @@ def main():
             time_vector, gaze_direction, intersaccadic_gouped_sequences, identified_indices, figname, PLOT_CRITERIA_FLAG
         )
         for i in fixation_sequences:
+            identified_indices[i] = True
+        for i in smooth_pursuit_sequences:
             identified_indices[i] = True
 
         visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)

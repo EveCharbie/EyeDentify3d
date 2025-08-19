@@ -110,6 +110,18 @@ class Data(ABC):
         else:
             raise AttributeError("The data file path is not set.")
 
+    @property
+    def nb_frames(self):
+        """
+        Get the number of frames measured in the data file.
+        """
+        if self.time_vector is None:
+            raise RuntimeError(
+                "The nb_frames property can only be called after the time_vector has been set "
+                "(i.e., after the data objects has been instantiated)."
+            )
+        return self.time_vector.shape[0]
+
     @abstractmethod
     def _check_validity(self):
         """
