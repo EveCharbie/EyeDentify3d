@@ -5,6 +5,7 @@ from .event import Event
 from ..utils.data_utils import DataObject
 from ..utils.rotation_utils import get_angle_between_vectors
 from ..utils.sequence_utils import split_sequences, apply_minimal_duration, merge_sequence_lists
+from ..utils.signal_utils import find_time_index
 
 
 class InterSaccadicEvent(Event):
@@ -18,17 +19,17 @@ class InterSaccadicEvent(Event):
     def __init__(
         self,
         data_object: DataObject,
-        identified_indices: np.ndarray,
-        minimal_duration: float,
-        window_duration: float,
-        window_overlap: float,
-        eta_p: float,
-        eta_d: float,
-        eta_cd: float,
-        eta_pd: float,
-        eta_max_fixation: float,
-        eta_min_smooth_pursuit: float,
-        phi: float,
+        identified_indices: np.ndarray = None,
+        minimal_duration: float = None,
+        window_duration: float = None,
+        window_overlap: float = None,
+        eta_p: float = None,
+        eta_d: float = None,
+        eta_cd: float = None,
+        eta_pd: float = None,
+        eta_max_fixation: float = None,
+        eta_min_smooth_pursuit: float = None,
+        phi: float = None,
     ):
         """
         Parameters:
@@ -51,12 +52,14 @@ class InterSaccadicEvent(Event):
         super().__init__()
 
         # Checks
-        if window_duration < 2 * window_overlap:
+        if window_duration is not None and window_overlap is not None and window_duration < 2 * window_overlap:
             raise ValueError(
                 f"The window_duration ({window_duration} s) must be at least twice the window_overlap ({window_overlap} s)."
             )
 
         # Original attributes
+        self.data_object = data_object
+        self.identified_indices = identified_indices
         self.minimal_duration = minimal_duration
         self.window_duration = window_duration
         self.window_overlap = window_overlap
@@ -75,19 +78,19 @@ class InterSaccadicEvent(Event):
         self.smooth_pursuit_indices: np.ndarray[int] = None
         self.uncertain_sequences: list[np.ndarray[int]] = None
 
-        # Detect visual scanning sequences
-        self.detect_intersaccadic_indices(identified_indices)
+    def initialize(self):
+        self.detect_intersaccadic_indices()
         self.split_sequences()
-        self.keep_only_sequences_long_enough(data_object)
-        self.set_coherent_and_incoherent_sequences(data_object)
+        self.keep_only_sequences_long_enough()
+        self.set_coherent_and_incoherent_sequences()
         self.set_intersaccadic_sequences()
-        self.classify_sequences(data_object)
+        self.classify_sequences()
 
-    def detect_intersaccadic_indices(self, identified_indices: np.ndarray):
+    def detect_intersaccadic_indices(self):
         """
         Detect when velocity is above the threshold and if the frames are not already identified.
         """
-        self.frame_indices = np.where(identified_indices == False)[0]
+        self.frame_indices = np.where(self.identified_indices == False)[0]
 
     @staticmethod
     def detect_directionality_coherence_on_axis(gaze_direction: np.ndarray, component_to_keep: int) -> float:
@@ -217,7 +220,7 @@ class InterSaccadicEvent(Event):
 
                 # Calculate end time and find corresponding index
                 window_end_time = current_window_start_time + self.window_duration
-                window_end_idx = self._find_time_index(time_vector, window_end_time, method="last")
+                window_end_idx = find_time_index(time_vector, window_end_time, method="last")
 
                 # Handle edge case: if remaining sequence is very short, extend to sequence end
                 remaining_duration = sequence_end_time - time_vector[window_end_idx]
@@ -238,59 +241,33 @@ class InterSaccadicEvent(Event):
                 current_window_start_time = time_vector[window_end_idx - 1] - self.window_overlap
 
                 # Find start index for next window start
-                window_start_idx = self._find_time_index(time_vector, current_window_start_time, method="first")
+                window_start_idx = find_time_index(time_vector, current_window_start_time, method="first")
 
         return window_sequences
 
-    @staticmethod
-    def _find_time_index(time_vector: np.ndarray, target_time: float, method: str) -> int:
-        """
-        Find the index corresponding to a target time within specified bounds.
-
-        Parameters
-        ----------
-        time_vector: Array of time values
-        target_time: Time to find index for
-        method: Method to find index, either the first index to s ('first') or ('last')
-
-        Returns
-        -------
-            idx: The index closest to target_time
-        """
-        if method == "first":
-            idx = np.where(time_vector < target_time)[0][-1]
-        elif method == "last":
-            if np.all(time_vector <= target_time):
-                idx = len(time_vector) - 1
-            else:
-                idx = np.where(time_vector > target_time)[0][0]
-        else:
-            raise ValueError(f"The method should be either 'first' or 'last', got {method}.")
-        return idx
-
-    def set_coherent_and_incoherent_sequences(self, data_object: DataObject):
+    def set_coherent_and_incoherent_sequences(self):
         """
         Split the inter-saccadic sequences into overlapping windows. Merge the consecutive windows that are similar in
         nature based on if they are coherent or incoherent in terms of gaze direction.
         """
         # Split this sequence into overlapping windows
-        intersaccadic_window_sequences = self.get_window_sequences(time_vector=data_object.time_vector)
+        intersaccadic_window_sequences = self.get_window_sequences(time_vector=self.data_object.time_vector)
 
         # We store the p-values for each frame in a list of lists
         # Each frame can be part of several windows, so we store the p-values for each of the window it was part of and
         # use the mean p-value to classify this frame.
-        p_values = [[] for _ in range(len(data_object.time_vector))]
+        p_values = [[] for _ in range(len(self.data_object.time_vector))]
 
         for current_window in intersaccadic_window_sequences:
             # Sanity check
-            nb_elements = int(np.prod(np.array(data_object.gaze_direction[:, current_window].shape)))
-            if int(np.sum(np.isnan(data_object.gaze_direction[:, current_window]))) > (nb_elements - 6):
+            nb_elements = int(np.prod(np.array(self.data_object.gaze_direction[:, current_window].shape)))
+            if int(np.sum(np.isnan(self.data_object.gaze_direction[:, current_window]))) > (nb_elements - 6):
                 # Too much NaN values in the window, skip it
                 continue
 
             # Compute the directionality coherence p-value for the current window
             p_value = self.detect_directionality_coherence_on_axis(
-                data_object.gaze_direction[:, current_window], component_to_keep=0
+                self.data_object.gaze_direction[:, current_window], component_to_keep=0
             )
             for i_idx in current_window:
                 p_values[i_idx] += [p_value]
@@ -301,13 +278,13 @@ class InterSaccadicEvent(Event):
         incoherent_indices = np.where(mean_p_values <= self.eta_p)[0]
         incoherent_sequences = split_sequences(incoherent_indices)
         self.incoherent_sequences = apply_minimal_duration(
-            incoherent_sequences, data_object.time_vector, self.minimal_duration
+            incoherent_sequences, self.data_object.time_vector, self.minimal_duration
         )
 
         coherent_indices = np.where(mean_p_values > self.eta_p)[0]
         coherent_sequences = split_sequences(coherent_indices)
         self.coherent_sequences = apply_minimal_duration(
-            coherent_sequences, data_object.time_vector, self.minimal_duration
+            coherent_sequences, self.data_object.time_vector, self.minimal_duration
         )
 
     def classify_obvious_sequences(
@@ -561,17 +538,17 @@ class InterSaccadicEvent(Event):
             )
         return
 
-    def classify_sequences(self, data_object: DataObject) -> None:
+    def classify_sequences(self) -> None:
         """
         Classify the inter-saccadic sequences into coherent and incoherent sequences based on the gaze direction.
         TODO: add _on_sphere option.
         """
         fixation_indices, smooth_pursuit_indices, ambiguous_indices = self.classify_obvious_sequences(
-            data_object,
+            self.data_object,
             self.sequences,
         )
         fixation_indices, smooth_pursuit_indices, uncertain_sequences = self.classify_ambiguous_sequences(
-            data_object,
+            self.data_object,
             self.sequences,
             ambiguous_indices,
             fixation_indices,

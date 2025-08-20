@@ -2,7 +2,6 @@ import numpy as np
 
 from .event import Event
 from ..utils.data_utils import DataObject
-from ..utils.sequence_utils import split_sequences
 
 
 class InvalidEvent(Event):
@@ -18,12 +17,15 @@ class InvalidEvent(Event):
         """
         super().__init__()
 
-        # Detect invalid sequences
-        self.detect_invalid_indices(data_object)
+        # Original attributes
+        self.data_object = data_object
+
+    def initialize(self):
+        self.detect_invalid_indices()
         self.split_sequences()
 
-    def detect_invalid_indices(self, data_object: DataObject):
+    def detect_invalid_indices(self):
         """
         Detect the frames declared as invalid by the eye-tracker.
         """
-        self.frame_indices = np.where(data_object.data_invalidity)[0]
+        self.frame_indices = np.where(self.data_object.data_invalidity)[0]

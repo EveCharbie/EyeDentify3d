@@ -203,4 +203,3 @@ class Data(ABC):
         self.gaze_direction = None
         self.head_angular_velocity = None
         self.head_velocity_norm = None
-        self.identified_indices = None

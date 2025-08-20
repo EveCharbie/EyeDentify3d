@@ -26,4 +26,7 @@ class TimeRange:
         -------
         A numpy array of indices where the time values are within the specified range.
         """
-        return np.where(np.logical_and(time_vector >= self.min_time, time_vector <= self.max_time))[0]
+        # This approach is less clean but is robust no NaNs in the time_vector
+        beginning_idx = np.where(time_vector >= self.min_time)[0][0]
+        end_idx = np.where(time_vector <= self.max_time)[0][-1]
+        return np.arange(beginning_idx, end_idx + 1)

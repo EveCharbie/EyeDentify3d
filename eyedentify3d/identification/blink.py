@@ -21,19 +21,20 @@ class BlinkEvent(Event):
         super().__init__()
 
         # Original attributes
+        self.data_object = data_object
         self.eye_openness_threshold = eye_openness_threshold
 
-        # Detect blink sequences
-        self.detect_blink_indices(data_object)
+    def initialize(self):
+        self.detect_blink_indices()
         self.split_sequences()
 
-    def detect_blink_indices(self, data_object: DataObject):
+    def detect_blink_indices(self):
         """
         Detect the frames declared as invalid by the eye-tracker.
         """
         self.frame_indices = np.where(
             np.logical_and(
-                data_object.right_eye_openness < self.eye_openness_threshold,
-                data_object.left_eye_openness < self.eye_openness_threshold,
+                self.data_object.right_eye_openness < self.eye_openness_threshold,
+                self.data_object.left_eye_openness < self.eye_openness_threshold,
             )
         )[0]

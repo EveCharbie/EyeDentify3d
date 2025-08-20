@@ -1,6 +1,10 @@
+from typing import Self
 import numpy as np
 
 from ..utils.data_utils import DataObject
+from ..utils.sequence_utils import get_sequences_in_range
+from ..time_range import TimeRange
+from ..data_parsers.reduced_data import ReducedData
 from ..error_type import ErrorType
 from ..identification.invalid import InvalidEvent
 from ..identification.blink import BlinkEvent
@@ -21,17 +25,14 @@ class GazeBehaviorIdentifier:
     def __init__(
         self,
         data_object: DataObject,
-        error_type: ErrorType = ErrorType.PRINT,
     ):
         """
         Parameters
         ----------
         data_object: The EyeDentify3d object containing the parsed eye-tracking data.
-        error_type: How to handle errors. Default is ErrorType.PRINT, which prints the error message.
         """
         # Initial attributes
         self.data_object = data_object
-        self.error_type = error_type
 
         # Extended attributes
         self.blink: BlinkEvent = None
@@ -100,6 +101,7 @@ class GazeBehaviorIdentifier:
         eye_openness_threshold: The threshold for the eye openness to consider a blink event. Default is 0.5.
         """
         self.blink = BlinkEvent(self.data_object, eye_openness_threshold)
+        self.blink.initialize()
         self.remove_bad_frames(self.blink)
         self.set_identified_frames(self.blink)
 
@@ -108,6 +110,7 @@ class GazeBehaviorIdentifier:
         Detects invalid sequences in the data object.
         """
         self.invalid = InvalidEvent(self.data_object)
+        self.invalid.initialize()
         self.remove_bad_frames(self.invalid)
         self.set_identified_frames(self.invalid)
 
@@ -136,6 +139,7 @@ class GazeBehaviorIdentifier:
             velocity_window_size,
             velocity_factor,
         )
+        self.saccade.initialize()
         self.set_identified_frames(self.saccade)
 
     def detect_visual_scanning_sequences(self, min_velocity_threshold: float = 100, minimal_duration: float = 0.040):
@@ -154,6 +158,8 @@ class GazeBehaviorIdentifier:
             min_velocity_threshold,
             minimal_duration,
         )
+        self.visual_scanning.initialize()
+
         # Remove frames where visual scanning events are detected
         self.set_identified_frames(self.visual_scanning)
         # Also remove all frames where the velocity is above threshold, as these frames are not available for the
@@ -224,16 +230,21 @@ class GazeBehaviorIdentifier:
             eta_min_smooth_pursuit,
             phi,
         )
+        self.inter_saccadic_sequences.initialize()
 
         self.fixation = FixationEvent(
             self.data_object, self.identified_indices, self.inter_saccadic_sequences.fixation_indices, minimal_duration
         )
+        self.fixation.initialize()
+
         self.smooth_pursuit = SmoothPursuitEvent(
             self.data_object,
             self.identified_indices,
             self.inter_saccadic_sequences.smooth_pursuit_indices,
             minimal_duration,
         )
+        self.smooth_pursuit.initialize()
+
         self.set_identified_frames(self.fixation)
         self.set_identified_frames(self.smooth_pursuit)
 

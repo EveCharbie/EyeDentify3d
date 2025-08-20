@@ -20,7 +20,7 @@ class SaccadeEvent(Event):
     def __init__(
         self,
         data_object: DataObject,
-        identified_indices: np.ndarray,
+        identified_indices: np.ndarray = None,
         min_acceleration_threshold: float = 4000,
         velocity_window_size: float = 0.52,
         velocity_factor: float = 5.0,
@@ -40,6 +40,8 @@ class SaccadeEvent(Event):
         super().__init__()
 
         # Original attributes
+        self.data_object = data_object
+        self.identified_indices = identified_indices
         self.min_acceleration_threshold = min_acceleration_threshold
         self.velocity_window_size = velocity_window_size
         self.velocity_factor = velocity_factor
@@ -50,41 +52,41 @@ class SaccadeEvent(Event):
         self.velocity_threshold: np.ndarray[float] = None
         self.saccade_amplitudes: np.ndarray[float] = None
 
-        # Detect saccade sequences
-        self.set_eye_angular_velocity(data_object)
-        self.set_eye_angular_acceleration(data_object)
-        self.set_the_velocity_threshold(data_object)
+    def initialize(self):
+        self.set_eye_angular_velocity()
+        self.set_eye_angular_acceleration()
+        self.set_the_velocity_threshold()
         self.detect_saccade_indices()
         self.detect_saccade_sequences()
-        self.merge_sequences(data_object, identified_indices)
+        self.merge_sequences()
         self.adjust_indices_to_sequences()
-        self.compute_saccade_amplitude(data_object)
+        self.compute_saccade_amplitude()
 
-    def set_eye_angular_velocity(self, data_object: DataObject):
+    def set_eye_angular_velocity(self):
         """
         Computes the eye angular velocity in deg/s as the angle difference between two frames divided by
         the time difference between them. It is computed like a centered finite difference, meaning that the frame i+1
         and i-1 are used to set the value for the frame i.
         """
-        self.eye_angular_velocity = compute_angular_velocity(data_object.time_vector, data_object.eye_direction)
+        self.eye_angular_velocity = compute_angular_velocity(self.data_object.time_vector, self.data_object.eye_direction)
 
-    def set_eye_angular_acceleration(self, data_object: DataObject):
+    def set_eye_angular_acceleration(self):
         """
         Computes the eye angular acceleration in deg/s² as a centered finite difference of the eye angular
         velocity.
         """
         self.eye_angular_acceleration = centered_finite_difference(
-            data_object.time_vector, self.eye_angular_velocity[np.newaxis, :]
+            self.data_object.time_vector, self.eye_angular_velocity[np.newaxis, :]
         )[0, :]
 
-    def set_the_velocity_threshold(self, data_object: DataObject):
+    def set_the_velocity_threshold(self):
         """
         Set the velocity threshold based in the velocity_window_size and velocity_factor.
         Note that the velocity threshold changes in time as it is computed using the rolling median of the eye angular
         velocity.
         """
         # Get a number of frames corresponding to the velocity window size
-        frame_window_size = int(self.velocity_window_size / data_object.dt)
+        frame_window_size = int(self.velocity_window_size / self.data_object.dt)
 
         # Compute the velocity threshold
         velocity_threshold = np.zeros((self.eye_angular_velocity.shape[0],))
@@ -134,22 +136,22 @@ class SaccadeEvent(Event):
                 if len(acceleration_above_threshold) > 1:
                     self.sequences += [i]
 
-    def merge_sequences(self, data_object: DataObject, identified_indices: np.ndarray):
+    def merge_sequences(self):
         """
         Modify the sequences detected to merge saccade sequences that are close in time and have a similar direction of
         movement.
         """
         self.sequences = merge_close_sequences(
             self.sequences,
-            data_object.time_vector,
-            data_object.gaze_direction,
-            identified_indices,
+            self.data_object.time_vector,
+            self.data_object.gaze_direction,
+            self.identified_indices,
             max_gap=0.041656794425087115,  # TODO: make modulable
             check_directionality=True,
             max_angle=30.0,  # TODO: make modulable
         )
 
-    def compute_saccade_amplitude(self, data_object: DataObject):
+    def compute_saccade_amplitude(self):
         """
         Compute the amplitude of each saccade sequence. It is defined as the angle between the beginning and end of the
         saccade in degrees.
@@ -158,8 +160,8 @@ class SaccadeEvent(Event):
         """
         saccade_amplitudes = []
         for sequence in self.sequences:
-            vector_before = data_object.eye_direction[:, sequence[0]]
-            vector_after = data_object.eye_direction[:, sequence[-1]]
+            vector_before = self.data_object.eye_direction[:, sequence[0]]
+            vector_after = self.data_object.eye_direction[:, sequence[-1]]
             angle = get_angle_between_vectors(vector_before, vector_after)
             saccade_amplitudes += [angle]
         self.saccade_amplitudes = saccade_amplitudes

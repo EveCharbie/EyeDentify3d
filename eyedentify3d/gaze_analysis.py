@@ -1081,10 +1081,11 @@ def compute_intermediary_metrics(
                     elif post_cue_timing_idx in i:
                         # Remove this event but write it in a file so that we know what was removed
                         if cut_file is None:
-                            print(
-                                f"{sequence_type} : {np.round(time_vector[i[-1]] - time_vector[i[0]] + dt, decimals=5)} s ----",
-                                end="",
-                            )
+                            # print(
+                            #     f"{sequence_type} : {np.round(time_vector[i[-1]] - time_vector[i[0]] + dt, decimals=5)} s ----",
+                            #     end="",
+                            # )
+                            pass
                         else:
                             cut_file.write(f"{sequence_type} : {time_vector[i[-1]] - time_vector[i[0]] + dt} s \n")
                     elif i[0] > post_cue_timing_idx:
