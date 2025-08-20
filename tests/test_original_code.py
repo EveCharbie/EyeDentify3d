@@ -367,9 +367,9 @@ def test_original_code():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        # "TESTNA01_2D_Fist3": 7.180,  # s
-        # "TESTNA01_360VR_Fist3": 7.180,
-        # "TESTNA05_2D_Spread7": 5.060,
+        "TESTNA01_2D_Fist3": 7.180,  # s
+        "TESTNA01_360VR_Fist3": 7.180,
+        "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
         "TESTNA15_360VR_Pen3": 4.230,
@@ -408,16 +408,16 @@ def test_original_code():
         elif file_name == "TESTNA15_2D_Pen3":
             assert captured_output.getvalue() == "Fixation : 0.21578 s ----"
         elif file_name == "TESTNA15_360VR_Pen3":
-            assert captured_output.getvalue() == ""
+            assert captured_output.getvalue() == "Smooth pursuit : 0.09211 s ----"
         elif file_name == "TESTVA03_2D_Spread9":
             assert (
                 captured_output.getvalue()
-                == "The file TESTVA03_2D_Spread9.csv is empty. There is no element in the field 'time(100ns)'. Please check the file.\n"
+                == "The file TESTVA03_2D_Spread9.csv is empty. There is no element in the field 'time(100ns)'. Please check the file."
             )
         elif file_name == "TESTNA10_360VR_Fist3":
             assert (
                 captured_output.getvalue()
-                == "More than 50% of the data from file TESTNA10_360VR_Fist3.csv is declared invalid by the eye-tracker, skipping this file.\n"
+                == "More than 50% of the data from file TESTNA10_360VR_Fist3.csv is declared invalid by the eye-tracker, skipping this file."
             )
 
         # Compare the data with reference

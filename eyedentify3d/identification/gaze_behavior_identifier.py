@@ -71,7 +71,7 @@ class GazeBehaviorIdentifier:
                 "The event identifier must have a 'frame_indices' attribute. This should not happen, please contact the developer."
             )
 
-        self.data_object.time_vector[event_identifier.frame_indices] = np.nan
+        # self.data_object.time_vector[event_identifier.frame_indices] = np.nan
         self.data_object.eye_direction[:, event_identifier.frame_indices] = np.nan
         self.data_object.head_angles[:, event_identifier.frame_indices] = np.nan
         self.data_object.gaze_direction[:, event_identifier.frame_indices] = np.nan
