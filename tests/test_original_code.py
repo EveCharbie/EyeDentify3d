@@ -66,10 +66,11 @@ def perform_one_file(
         eta_min_smooth_pursuit=2,
         phi=45,
     )
+    gaze_behavior_identifier.finalize()  # This is mandatory
+
     # --- new version (end) --- #
 
     blink_sequences = gaze_behavior_identifier.blink.sequences
-    eyetracker_invalid_sequences = gaze_behavior_identifier.invalid.sequences
     saccade_sequences = gaze_behavior_identifier.saccade.sequences
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
     visual_scanning_sequences = gaze_behavior_identifier.visual_scanning.sequences
@@ -78,15 +79,6 @@ def perform_one_file(
     )  # Convert deg/s to rad/s
     fixation_sequences = gaze_behavior_identifier.fixation.sequences
     smooth_pursuit_sequences = gaze_behavior_identifier.smooth_pursuit.sequences
-
-    check_if_there_is_sequence_overlap(
-        fixation_sequences,
-        smooth_pursuit_sequences,
-        visual_scanning_sequences,
-        blink_sequences,
-        saccade_sequences,
-        eyetracker_invalid_sequences,
-    )
 
     (
         smooth_pursuit_sequences_pre_cue,

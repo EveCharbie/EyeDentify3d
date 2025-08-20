@@ -36,7 +36,7 @@ class VisualScanningEvent(Event):
         self.minimal_duration = minimal_duration
 
         # Extended attributes
-        self.gaze_angular_velocity = None
+        self.gaze_angular_velocity: np.ndarray[float] = None
 
         # Detect visual scanning sequences
         self.set_gaze_angular_velocity(data_object)
