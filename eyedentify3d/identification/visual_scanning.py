@@ -2,7 +2,7 @@ import numpy as np
 
 from .event import Event
 from ..utils.data_utils import DataObject
-from ..utils.sequence_utils import split_sequences, merge_close_sequences, apply_minimal_duration
+from ..utils.sequence_utils import merge_close_sequences
 from ..utils.rotation_utils import compute_angular_velocity
 
 

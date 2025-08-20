@@ -190,3 +190,20 @@ def test_destroy_on_error():
     assert data.head_angles is None
     assert data.head_angular_velocity is None
     assert data.head_velocity_norm is None
+
+
+def test_nb_frames():
+    """Test getting the number of frames"""
+    data = MockData()
+    data._set_time_vector()
+    assert data.nb_frames == 5  # 5 time points in the time vector
+
+
+def test_nb_frames_error():
+    """Test getting the number of frames when time_vector is not set"""
+    data = MockData()
+    with pytest.raises(
+        RuntimeError,
+        match=r"The nb_frames property can only be called after the time_vector has been set \(i.e., after the data objects has been instantiated\).",
+    ):
+        data.nb_frames
