@@ -120,4 +120,4 @@ class ReducedData:
 
     @data_invalidity.setter
     def data_invalidity(self, value: np.ndarray[bool]):
-        self._data_invalidity= value[self.indices]
+        self._data_invalidity = value[self.indices]

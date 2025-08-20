@@ -3,7 +3,6 @@ import biorbd
 from scipy import signal
 
 
-
 def find_time_index(time_vector: np.ndarray, target_time: float, method: str) -> int:
     """
     Find the index corresponding to a target time within specified bounds.

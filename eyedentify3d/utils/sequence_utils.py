@@ -7,6 +7,7 @@ from ..utils.signal_utils import find_time_index
 
 # TODO: This could be transformed into a class that handles the sequences and their properties
 
+
 def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
     """
     Split an array of indices into an array of sequences of consecutive indices.
@@ -209,7 +210,10 @@ def merge_sequence_lists(sequences_1: list[np.ndarray], sequences_2: list[np.nda
     # Sort by the first index of each sequence
     return sorted(all_sequences, key=lambda seq: seq[0] if len(seq) > 0 else float("inf"))
 
-def get_sequences_in_range(time_vector: np.ndarray[float], time_range: TimeRange, sequences: list[np.ndarray[int]]) -> list[np.ndarray[int]]:
+
+def get_sequences_in_range(
+    time_vector: np.ndarray[float], time_range: TimeRange, sequences: list[np.ndarray[int]]
+) -> list[np.ndarray[int]]:
     """
     Get the sequences before and after the timing cue.
     Note: the event occurring during the cue is removed.

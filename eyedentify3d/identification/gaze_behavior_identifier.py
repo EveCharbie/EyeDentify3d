@@ -254,14 +254,17 @@ class GazeBehaviorIdentifier:
         Returns the indices of the frames that are not identified as any event.
         Here we deliberately exclude frames that have a large gaze velocity but that are not part of a visual scanning
         """
-        unidentified_indices = np.ones((self.data_object.time_vector.shape[0]), dtype=bool)  # Initialize as all frames identified
+        unidentified_indices = np.ones(
+            (self.data_object.time_vector.shape[0]), dtype=bool
+        )  # Initialize as all frames identified
         for sequence in (
-                self.blink.sequences +
-                self.invalid.sequences +
-                self.saccade.sequences +
-                self.visual_scanning.sequences +
-                self.fixation.sequences +
-                self.smooth_pursuit.sequences):
+            self.blink.sequences
+            + self.invalid.sequences
+            + self.saccade.sequences
+            + self.visual_scanning.sequences
+            + self.fixation.sequences
+            + self.smooth_pursuit.sequences
+        ):
             if len(sequence) != 0:
                 unidentified_indices[sequence] = False  # Mark identified frames as False
 
@@ -275,102 +278,116 @@ class GazeBehaviorIdentifier:
         # Blinks and invalid data must not overlap with any other sequences
         for blink in self.blink.sequences + self.invalid.sequences:
             for sequence in (
-                    self.saccade.sequences +
-                    self.visual_scanning.sequences +
-                    self.inter_saccadic_sequences.sequences +
-                    self.fixation.sequences +
-                    self.smooth_pursuit.sequences):
+                self.saccade.sequences
+                + self.visual_scanning.sequences
+                + self.inter_saccadic_sequences.sequences
+                + self.fixation.sequences
+                + self.smooth_pursuit.sequences
+            ):
                 if any(item in blink for item in sequence):
-                    raise RuntimeError("Problem: Blink or Invalid data sequence overlap with another sequence."
-                                       "This should not happen, please contact the developer.")
+                    raise RuntimeError(
+                        "Problem: Blink or Invalid data sequence overlap with another sequence."
+                        "This should not happen, please contact the developer."
+                    )
 
         # Saccades, visual scanning, fixations, and smooth pursuits must not overlap with each other
         for saccade in self.saccade.sequences:
             for sequence in (
-                    self.visual_scanning.sequences +
-                    self.inter_saccadic_sequences.sequences +
-                    self.fixation.sequences +
-                    self.smooth_pursuit.sequences):
+                self.visual_scanning.sequences
+                + self.inter_saccadic_sequences.sequences
+                + self.fixation.sequences
+                + self.smooth_pursuit.sequences
+            ):
                 if any(item in saccade for item in sequence):
                     raise RuntimeError(
                         "Problem: Saccade sequence overlap with Inter-saccadic, Visual scanning, Fixation, or Smooth pursuit sequences"
-                        "This should not happen, please contact the developer.")
+                        "This should not happen, please contact the developer."
+                    )
 
         for visual_scanning in self.visual_scanning.sequences:
             for sequence in (
-                    self.inter_saccadic_sequences.sequences +
-                    self.fixation.sequences +
-                    self.smooth_pursuit.sequences):
+                self.inter_saccadic_sequences.sequences + self.fixation.sequences + self.smooth_pursuit.sequences
+            ):
                 if any(item in visual_scanning for item in sequence):
                     raise RuntimeError(
                         "Problem:  Visual scanning sequence overlap with Inter-saccadic, Fixation, or Smooth pursuit sequences"
-                        "This should not happen, please contact the developer.")
+                        "This should not happen, please contact the developer."
+                    )
 
         for fixation in self.fixation.sequences:
             for sequence in self.smooth_pursuit.sequences:
                 if any(item in fixation for item in sequence):
                     raise RuntimeError(
                         "Problem: Fixation sequence overlap with Smooth pursuit sequences"
-                        "This should not happen, please contact the developer.")
+                        "This should not happen, please contact the developer."
+                    )
 
         # Check that inter-saccadic sequences are all fixations, smooth pursuits, or unknown sequences
-        if (len(self.fixation.sequences) + len(self.smooth_pursuit.sequences)) > len(self.inter_saccadic_sequences.sequences):
-            raise RuntimeError("There is more inter-saccadic sequences than there are fixations + smooth pursuits."
-                               "This should not happen, please contact the developer.")
+        if (len(self.fixation.sequences) + len(self.smooth_pursuit.sequences)) > len(
+            self.inter_saccadic_sequences.sequences
+        ):
+            raise RuntimeError(
+                "There is more inter-saccadic sequences than there are fixations + smooth pursuits."
+                "This should not happen, please contact the developer."
+            )
         for sequence in self.fixation.sequences + self.smooth_pursuit.sequences:
             for frame in sequence:
                 if frame not in self.inter_saccadic_sequences.frame_indices:
                     raise RuntimeError(
                         "There is a fixation or smooth pursuit sequence that is not part of an inter-saccadic sequence."
-                        "This should not happen, please contact the developer.")
+                        "This should not happen, please contact the developer."
+                    )
 
         # Check that the identified frames are the frames in the sequences
         for sequence in (
-            self.blink.sequences +
-            self.invalid.sequences +
-            self.saccade.sequences +
-            self.visual_scanning.sequences +
-            self.inter_saccadic_sequences.sequences +
-            self.fixation.sequences +
-            self.smooth_pursuit.sequences):
+            self.blink.sequences
+            + self.invalid.sequences
+            + self.saccade.sequences
+            + self.visual_scanning.sequences
+            + self.inter_saccadic_sequences.sequences
+            + self.fixation.sequences
+            + self.smooth_pursuit.sequences
+        ):
             if not np.all(self.identified_indices[sequence]):
                 raise RuntimeError(
                     "There are frames that are not considered as identified, but that are part of an event sequence."
-                    "This should not happen, please contact the developer.")
+                    "This should not happen, please contact the developer."
+                )
         for frame in np.where(self.unidentified_indices)[0]:
             if frame in np.where(self.identified_indices)[0] and frame not in self.fast_frame_indices:
                 raise RuntimeError(
                     "There are frames that are considered as unidentified, but that are also considered as identified."
-                    "This should not happen, please contact the developer.")
+                    "This should not happen, please contact the developer."
+                )
             for sequence in (
-                self.blink.sequences +
-                self.invalid.sequences +
-                self.saccade.sequences +
-                self.visual_scanning.sequences +
-                self.inter_saccadic_sequences.sequences +
-                self.fixation.sequences +
-                self.smooth_pursuit.sequences):
+                self.blink.sequences
+                + self.invalid.sequences
+                + self.saccade.sequences
+                + self.visual_scanning.sequences
+                + self.inter_saccadic_sequences.sequences
+                + self.fixation.sequences
+                + self.smooth_pursuit.sequences
+            ):
                 if frame in sequence:
                     raise RuntimeError(
-                    "There are frames that are considered as unidentified, but that are part of an event sequence."
-                    "This should not happen, please contact the developer.")
+                        "There are frames that are considered as unidentified, but that are part of an event sequence."
+                        "This should not happen, please contact the developer."
+                    )
 
     def finalize(self):
         self.validate_sequences()
         self.is_finalized = True
 
-    def _get_event_at_split_timing(self,
-                                   timing: float,
-                                   time_vector: np.ndarray[float],
-                                   dt: float,
-                                   error_type: ErrorType) -> tuple[str, int, int]:
+    def _get_event_at_split_timing(
+        self, timing: float, time_vector: np.ndarray[float], dt: float, error_type: ErrorType
+    ) -> tuple[str, int, int]:
 
         for sequence_type, sequence_list in (
-                ("Blink", self.blink.sequences),
-                ("Saccade", self.saccade.sequences),
-                ("Visual scanning", self.visual_scanning.sequences),
-                ("Fixation", self.fixation.sequences),
-                ("Smooth pursuit", self.smooth_pursuit.sequences)
+            ("Blink", self.blink.sequences),
+            ("Saccade", self.saccade.sequences),
+            ("Visual scanning", self.visual_scanning.sequences),
+            ("Fixation", self.fixation.sequences),
+            ("Smooth pursuit", self.smooth_pursuit.sequences),
         ):
             for sequence in sequence_list:
                 beginning_time = time_vector[sequence[0]]
@@ -433,7 +450,9 @@ class GazeBehaviorIdentifier:
         )
 
         # Inter-saccadic
-        reduced_gaze_behavior_identifier.inter_saccadic_sequences = InterSaccadicEvent(reduced_data_object).from_sequences(
+        reduced_gaze_behavior_identifier.inter_saccadic_sequences = InterSaccadicEvent(
+            reduced_data_object
+        ).from_sequences(
             get_sequences_in_range(self.data_object.time_vector, time_range, self.inter_saccadic_sequences.sequences)
         )
 
@@ -462,7 +481,9 @@ class GazeBehaviorIdentifier:
 
         return reduced_gaze_behavior_identifier
 
-    def split(self, split_timings: list[float], event_at_split_handling: ErrorType = ErrorType.PRINT) -> list["GazeBehaviorIdentifier"]:
+    def split(
+        self, split_timings: list[float], event_at_split_handling: ErrorType = ErrorType.PRINT
+    ) -> list["GazeBehaviorIdentifier"]:
         """
         Split the GazeBehaviorIdentifier into multiple instances based on the provided split timings.
         Note: the event sequence happening at the splitting will be excluded from both sides of the split.
@@ -481,16 +502,16 @@ class GazeBehaviorIdentifier:
         """
 
         if not self.is_finalized:
-            raise RuntimeError("The GazeBehaviorIdentifier must be finalized before splitting. Please call finalize() first.")
+            raise RuntimeError(
+                "The GazeBehaviorIdentifier must be finalized before splitting. Please call finalize() first."
+            )
 
         gaze_behavior_identifiers = []
         beginning_time = self.data_object.time_vector[0]
         for timing in split_timings:
             event_at_split, end_time, new_beginning_time = self._get_event_at_split_timing(
-                                                                                        timing,
-                                                                                        self.data_object.time_vector,
-                                                                                        self.data_object.dt,
-                                                                                        event_at_split_handling)
+                timing, self.data_object.time_vector, self.data_object.dt, event_at_split_handling
+            )
             time_range = TimeRange(beginning_time, end_time)
             reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
             gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]

@@ -54,7 +54,9 @@ class VisualScanningEvent(Event):
         the time difference between them. It is computed like a centered finite difference, meaning that the frame i+1
         and i-1 are used to set the value for the frame i.
         """
-        self.gaze_angular_velocity = compute_angular_velocity(self.data_object.time_vector, self.data_object.gaze_direction)
+        self.gaze_angular_velocity = compute_angular_velocity(
+            self.data_object.time_vector, self.data_object.gaze_direction
+        )
 
     def detect_visual_scanning_indices(self):
         """

@@ -84,7 +84,10 @@ def perform_one_file(
     fixation_sequences = gaze_behavior_identifier.fixation.sequences
     smooth_pursuit_sequences = gaze_behavior_identifier.smooth_pursuit.sequences
 
-    pre_cue_gaze_behavior_identifier, post_cue_gaze_behavior_identifier = gaze_behavior_identifiers[0], gaze_behavior_identifiers[1]
+    pre_cue_gaze_behavior_identifier, post_cue_gaze_behavior_identifier = (
+        gaze_behavior_identifiers[0],
+        gaze_behavior_identifiers[1],
+    )
     smooth_pursuit_sequences_pre_cue = pre_cue_gaze_behavior_identifier.smooth_pursuit.sequences
     smooth_pursuit_sequences_post_cue = post_cue_gaze_behavior_identifier.smooth_pursuit.sequences
     fixation_sequences_pre_cue = pre_cue_gaze_behavior_identifier.fixation.sequences
