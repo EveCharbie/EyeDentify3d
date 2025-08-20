@@ -138,7 +138,7 @@ class GazeBehaviorIdentifier:
 
     def detect_visual_scanning_sequences(self,
                                          min_velocity_threshold: float = 100,
-                                         minimal_duration: float = 0.1):
+                                         minimal_duration: float = 0.040):
         """
         Detects visual scanning sequences in the data object.
 
@@ -164,7 +164,7 @@ class GazeBehaviorIdentifier:
 
     def detect_fixation_and_smooth_pursuit_sequences(
         self,
-        minimal_duration: float = 0.045,
+        minimal_duration: float = 0.04,
         window_duration: float = 0.022,
         window_overlap: float = 0.006,
         eta_p: float = 0.01,

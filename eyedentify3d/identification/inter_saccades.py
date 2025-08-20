@@ -53,8 +53,6 @@ class InterSaccadicEvent(Event):
         # Checks
         if window_duration < 2 * window_overlap:
             raise ValueError(f"The window_duration ({window_duration} s) must be at least twice the window_overlap ({window_overlap} s).")
-        if minimal_duration <= window_duration:
-            raise ValueError(f"The minimal_duration ({minimal_duration} s) must be greater than the window_duration ({window_duration} s).")
 
         # Original attributes
         self.minimal_duration = minimal_duration
@@ -143,10 +141,8 @@ class InterSaccadicEvent(Event):
         cov = np.ma.cov(np.ma.masked_invalid(gaze_direction_centered)).data
         eigen_values, eigen_vectors = np.linalg.eig(cov)
         if np.sum(cov) == 0:
-            # No variability means something went wrong
-            principal_axis = np.array([np.nan, np.nan, np.nan])
-            second_axis = np.array([np.nan, np.nan, np.nan])
-            raise RuntimeError(cov)
+            raise RuntimeError("There was no variability in the gaze direction on this window. "
+                               "This should not happen, please contact the developer.")
         else:
             # Sort the eigen values in descending order
             sorted_indices = np.argsort(eigen_values)[::-1]
@@ -305,10 +301,13 @@ class InterSaccadicEvent(Event):
         mean_p_values = np.array([np.nanmean(np.array(p)) for p in p_values])
 
         incoherent_indices = np.where(mean_p_values <= self.eta_p)[0]
-        self.incoherent_sequences = split_sequences(incoherent_indices)
+        incoherent_sequences = split_sequences(incoherent_indices)
+        self.incoherent_sequences = apply_minimal_duration(incoherent_sequences, data_object.time_vector, self.minimal_duration)
 
         coherent_indices = np.where(mean_p_values > self.eta_p)[0]
-        self.coherent_sequences = split_sequences(coherent_indices)
+        coherent_sequences = split_sequences(coherent_indices)
+        self.coherent_sequences = apply_minimal_duration(coherent_sequences, data_object.time_vector, self.minimal_duration)
+
 
     def classify_obvious_sequences(
         self, data_object: DataObject, all_intersaccadic_sequences: list[np.ndarray]

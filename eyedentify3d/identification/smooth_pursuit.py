@@ -35,7 +35,6 @@ class SmoothPursuitEvent(Event):
         self.frame_indices = smooth_pursuit_indices
         self.split_sequences()
         self.merge_sequences(data_object, identified_indices)
-        self.keep_only_sequences_long_enough(data_object)
         self.adjust_indices_to_sequences()
 
     def merge_sequences(self, data_object: DataObject, identified_indices: np.ndarray):
