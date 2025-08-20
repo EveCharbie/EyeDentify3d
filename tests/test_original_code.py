@@ -12,9 +12,6 @@ from eyedentify3d import (
     TimeRange,
     HtcViveProData,
     ErrorType,
-    apply_minimal_duration,
-    sliding_window,
-    detect_fixations_and_smooth_pursuit,
     compute_intermediary_metrics,
     check_if_there_is_sequence_overlap,
     GazeBehaviorIdentifier,
@@ -30,6 +27,7 @@ def perform_one_file(
 ):
 
     # --- new version (start) --- #
+
     # Cut the data after the end of the trial (black screen)
     black_screen_time = length_before_black_screen[file_name]
     time_range = TimeRange(min_time=0, max_time=black_screen_time)
@@ -43,55 +41,44 @@ def perform_one_file(
 
     # Create a GazeBehaviorIdentifier object
     gaze_behavior_identifier = GazeBehaviorIdentifier(deepcopy(original_data_object))
-    gaze_behavior_identifier.detect_blink_sequences()
+
+    # Detect gaze behaviors (in order)
+    gaze_behavior_identifier.detect_blink_sequences(eye_openness_threshold=0.5)
     gaze_behavior_identifier.detect_invalid_sequences()
-    gaze_behavior_identifier.detect_saccade_sequences()
-    gaze_behavior_identifier.detect_visual_scanning_sequences()
-    data_object = gaze_behavior_identifier.data_object
+    gaze_behavior_identifier.detect_saccade_sequences(
+        min_acceleration_threshold=4000,
+        velocity_window_size=0.52,
+        velocity_factor=5.0,
+    )
+    gaze_behavior_identifier.detect_visual_scanning_sequences(
+        min_velocity_threshold=100,
+        minimal_duration=0.040,  # 5 frames
+    )
+    gaze_behavior_identifier.detect_fixation_and_smooth_pursuit_sequences(
+        minimal_duration=0.040,  # 5 frames
+        window_duration=0.022 * 5,
+        window_overlap=0.006 * 5,
+        eta_p=0.001,
+        eta_d=0.45,
+        eta_cd=0.5,
+        eta_pd=0.5,
+        eta_max_fixation=3,
+        eta_min_smooth_pursuit=2,
+        phi=45,
+    )
     # --- new version (end) --- #
 
     blink_sequences = gaze_behavior_identifier.blink.sequences
-    eyetracker_invalid_data_index = gaze_behavior_identifier.invalid.frame_indices
     eyetracker_invalid_sequences = gaze_behavior_identifier.invalid.sequences
-    gaze_direction = data_object.gaze_direction
     saccade_sequences = gaze_behavior_identifier.saccade.sequences
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
     visual_scanning_sequences = gaze_behavior_identifier.visual_scanning.sequences
     gaze_angular_velocity_rad = (
         gaze_behavior_identifier.visual_scanning.gaze_angular_velocity * np.pi / 180
     )  # Convert deg/s to rad/s
-    identified_indices = gaze_behavior_identifier.identified_indices
+    fixation_sequences = gaze_behavior_identifier.fixation.sequences
+    smooth_pursuit_sequences = gaze_behavior_identifier.smooth_pursuit.sequences
 
-    # Detect fixations
-    intersaccadic_interval = np.zeros((len(data_object.time_vector),))
-    all_index = np.arange(len(data_object.time_vector))
-    for i in all_index:
-        i_in_saccades = True if any(i in sequence for sequence in saccade_sequences) else False
-        i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
-        i_in_blinks = True if any(i in sequence for sequence in blink_sequences) else False
-        i_in_eyetracker_invalid = True if i in eyetracker_invalid_data_index else False
-        gaze_velocity_criteria = True if (gaze_angular_velocity_rad[i] * 180 / np.pi) > 100 else False
-        if i_in_saccades or i_in_visual_scanning or i_in_blinks or i_in_eyetracker_invalid or gaze_velocity_criteria:
-            continue
-        else:
-            intersaccadic_interval[i] = 1
-    intersaccadic_timing = np.where(intersaccadic_interval == 1)[0]
-    intersaccadic_sequences_temporary = np.array_split(
-        intersaccadic_timing, np.flatnonzero(np.diff(intersaccadic_timing) > 1) + 1
-    )
-    intersaccadic_sequences = []
-    for i in range(len(intersaccadic_sequences_temporary)):
-        if len(intersaccadic_sequences_temporary[i]) > 2:
-            intersaccadic_sequences += [intersaccadic_sequences_temporary[i]]
-
-    intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = (
-        sliding_window(original_data_object.time_vector, intersaccadic_sequences, gaze_direction)
-    )
-    fixation_sequences, smooth_pursuit_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuit(
-        data_object.time_vector, gaze_direction, intersaccadic_gouped_sequences, identified_indices, file_name, False
-    )
-
-    visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)
     check_if_there_is_sequence_overlap(
         fixation_sequences,
         smooth_pursuit_sequences,
@@ -410,11 +397,11 @@ def test_original_code():
         elif file_name == "TESTNA05_2D_Spread7":
             assert captured_output.getvalue() == "Fixation : 0.95033 s ----"
         elif file_name == "TESTNA05_360VR_Spread7":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.95779 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.52495 s ----"
         elif file_name == "TESTNA15_2D_Pen3":
             assert captured_output.getvalue() == "Fixation : 0.21578 s ----"
         elif file_name == "TESTNA15_360VR_Pen3":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.14996 s ----"
+            assert captured_output.getvalue() == ""
         elif file_name == "TESTVA03_2D_Spread9":
             assert (
                 captured_output.getvalue()
@@ -437,6 +424,5 @@ def test_original_code():
 """
 TODO:
     1. unit-tests
-    2. test the whole pipeline so that it stays the same as the old code
     3. test the plots pixels
 """

@@ -21,7 +21,7 @@ def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
 
 
 def apply_minimal_duration(
-    original_sequences: list[np.ndarray], time_vector: np.ndarray, minimal_duration: float = 0.05
+    original_sequences: list[np.ndarray], time_vector: np.ndarray, minimal_duration
 ) -> list[np.ndarray]:
     """
     Go through the original sequences and remove all sequences that are shorter than the minimal duration.
@@ -31,7 +31,7 @@ def apply_minimal_duration(
     ----------
     original_sequences: A list of sequences, each sequence is a numpy array of indices.
     time_vector: A numpy array of the time of acquisition of each data frame.
-    minimal_duration: The minimal duration in seconds of the event. Default is 0.05 seconds (50 ms).
+    minimal_duration: The minimal duration in seconds of the event.
     """
     sequences = []
     for i_sequence in original_sequences:
@@ -194,3 +194,13 @@ def merge_close_sequences(
             merged_sequences.append(candidate.copy())
 
     return merged_sequences
+
+
+def merge_sequence_lists(sequences_1: list[np.ndarray], sequences_2: list[np.ndarray]):
+    """
+    Merges two lists of sequences and sort them based on the first element of the sequences.
+    Note that this function assumes that there is no overlap between the sequences from the two lists.
+    """
+    all_sequences = sequences_1 + sequences_2
+    # Sort by the first index of each sequence
+    return sorted(all_sequences, key=lambda seq: seq[0] if len(seq) > 0 else float("inf"))

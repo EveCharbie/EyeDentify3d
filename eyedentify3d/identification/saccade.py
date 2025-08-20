@@ -1,12 +1,13 @@
 import numpy as np
 
+from .event import Event
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import split_sequences, merge_close_sequences
 from ..utils.rotation_utils import get_angle_between_vectors, compute_angular_velocity
 from ..utils.signal_utils import centered_finite_difference
 
 
-class SaccadeEvent:
+class SaccadeEvent(Event):
     """
     Class to detect saccade sequences.
     A saccade event is detected when both conditions are met:
@@ -21,7 +22,7 @@ class SaccadeEvent:
         data_object: DataObject,
         identified_indices: np.ndarray,
         min_acceleration_threshold: float = 4000,
-        velocity_window_size: float = 0.52,  # TODO: make modulable
+        velocity_window_size: float = 0.52,
         velocity_factor: float = 5.0,
     ):
         """
@@ -36,6 +37,7 @@ class SaccadeEvent:
             a saccade. Default is 5, meaning that the eye angular velocity must be larger than 5 times the rolling
             median to be considered a saccade.
         """
+        super().__init__()
 
         # Original attributes
         self.min_acceleration_threshold = min_acceleration_threshold
@@ -43,12 +45,10 @@ class SaccadeEvent:
         self.velocity_factor = velocity_factor
 
         # Extended attributes
-        self.frame_indices: np.ndarray | None = None
-        self.sequences: list[np.ndarray] = []
-        self.eye_angular_velocity = None
-        self.eye_angular_acceleration = None
-        self.velocity_threshold = None
-        self.saccade_amplitudes = None
+        self.eye_angular_velocity: np.ndarray[float] = None
+        self.eye_angular_acceleration: np.ndarray[float] = None
+        self.velocity_threshold: np.ndarray[float] = None
+        self.saccade_amplitudes: np.ndarray[float] = None
 
         # Detect saccade sequences
         self.set_eye_angular_velocity(data_object)
@@ -57,6 +57,7 @@ class SaccadeEvent:
         self.detect_saccade_indices()
         self.detect_saccade_sequences()
         self.merge_sequences(data_object, identified_indices)
+        self.adjust_indices_to_sequences()
         self.compute_saccade_amplitude(data_object)
 
     def set_eye_angular_velocity(self, data_object: DataObject):
@@ -147,7 +148,6 @@ class SaccadeEvent:
             check_directionality=True,
             max_angle=30.0,  # TODO: make modulable
         )
-        self.frame_indices = np.concatenate(self.sequences)
 
     def compute_saccade_amplitude(self, data_object: DataObject):
         """
