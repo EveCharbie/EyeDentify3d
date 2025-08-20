@@ -14,6 +14,8 @@ import biorbd
 import pingouin as pg
 from scipy import signal
 
+from eyedentify3d.utils.sequence_utils import apply_minimal_duration, apply_minimal_number_of_frames
+
 """
 Variables extracted from the raw data and used for the current analysis.
 'time(100ns)' = time stamps of the recorded frames
@@ -228,17 +230,17 @@ def detect_visual_scanning(time_vector, gaze_direction, identified_indices):
 
     return visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning
 
-
-def apply_minimal_duration(sequences_tempo, number_of_frames_min):
-    """
-    Consider only sequences that are longer than a certain number of frames
-    """
-    sequences = []
-    for i_sequence in sequences_tempo:
-        if len(i_sequence) < number_of_frames_min:
-            continue
-        sequences += [i_sequence]
-    return sequences
+#
+# def apply_minimal_duration(sequences_tempo, number_of_frames_min):
+#     """
+#     Consider only sequences that are longer than a certain number of frames
+#     """
+#     sequences = []
+#     for i_sequence in sequences_tempo:
+#         if len(i_sequence) < number_of_frames_min:
+#             continue
+#         sequences += [i_sequence]
+#     return sequences
 
 
 def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
@@ -260,7 +262,8 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
         while window_end_idx < end_of_intersaccadic_gap:
             window_end_idx = np.where(time_vector > time_vector[window_start_idx] + t_wind)[0]
             if len(window_end_idx) != 0 and window_end_idx[0] < end_of_intersaccadic_gap:
-                if end_of_intersaccadic_gap - window_end_idx[0] <= 2:
+                if time_vector[end_of_intersaccadic_gap] - time_vector[window_end_idx[0]] < t_overlap:
+                    # if end_of_intersaccadic_gap - window_end_idx[0] <= 2:
                     window_end_idx = end_of_intersaccadic_gap
                 else:
                     window_end_idx = window_end_idx[0]
@@ -289,26 +292,31 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     intersaccadic_coherent_sequences = np.array_split(
         coherent_windows, np.flatnonzero(np.diff(coherent_windows) > 1) + 1
     )
+    intersaccadic_coherent_sequences = apply_minimal_duration(intersaccadic_coherent_sequences, time_vector, minimal_duration=0.04)
     intersaccadic_incoherent_sequences = np.array_split(
         incoherent_windows, np.flatnonzero(np.diff(incoherent_windows) > 1) + 1
     )
+    intersaccadic_incoherent_sequences = apply_minimal_duration(intersaccadic_incoherent_sequences, time_vector, minimal_duration=0.04)
 
-    intersaccadic_gouped_sequences = intersaccadic_coherent_sequences[:]
-    for i_sequence in intersaccadic_incoherent_sequences:
-        for j in range(len(intersaccadic_gouped_sequences)):
-            if len(intersaccadic_gouped_sequences[j]) == 0:
-                intersaccadic_gouped_sequences = [i_sequence]
-            elif i_sequence[0] < intersaccadic_gouped_sequences[0][0]:
-                intersaccadic_gouped_sequences.insert(0, i_sequence)
-            else:
-                if i_sequence[0] > intersaccadic_gouped_sequences[j][0]:
-                    if j == len(intersaccadic_gouped_sequences) - 1:
-                        intersaccadic_gouped_sequences.append(i_sequence)
-                    elif (
-                        i_sequence[0] > intersaccadic_gouped_sequences[j][0]
-                        and i_sequence[0] < intersaccadic_gouped_sequences[j + 1][0]
-                    ):
-                        intersaccadic_gouped_sequences.insert(j + 1, i_sequence)
+    if len(intersaccadic_coherent_sequences) == 0:
+        intersaccadic_gouped_sequences = intersaccadic_incoherent_sequences
+    else:
+        intersaccadic_gouped_sequences = intersaccadic_coherent_sequences[:]
+        for i_sequence in intersaccadic_incoherent_sequences:
+            for j in range(len(intersaccadic_gouped_sequences)):
+                if len(intersaccadic_gouped_sequences[j]) == 0:
+                    intersaccadic_gouped_sequences = [i_sequence]
+                elif i_sequence[0] < intersaccadic_gouped_sequences[0][0]:
+                    intersaccadic_gouped_sequences.insert(0, i_sequence)
+                else:
+                    if i_sequence[0] > intersaccadic_gouped_sequences[j][0]:
+                        if j == len(intersaccadic_gouped_sequences) - 1:
+                            intersaccadic_gouped_sequences.append(i_sequence)
+                        elif (
+                            i_sequence[0] > intersaccadic_gouped_sequences[j][0]
+                            and i_sequence[0] < intersaccadic_gouped_sequences[j + 1][0]
+                        ):
+                            intersaccadic_gouped_sequences.insert(j + 1, i_sequence)
 
     return intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences
 
@@ -395,9 +403,9 @@ def discriminate_fixations_and_smooth_pursuit(gaze_direction):
     second_projection = np.zeros((gaze_direction.shape[1]))
     for i in range(gaze_direction.shape[1]):
         principal_projection[i] = np.dot(zeros_mean_gaze_direction[:, i], principal_axis)
-        second_projection = np.dot(zeros_mean_gaze_direction[:, i], second_axis)  # d_pc2
-    d_pc1 = np.max(principal_projection) - np.min(principal_projection)
-    d_pc2 = np.max(second_projection) - np.min(second_projection)
+        second_projection[i] = np.dot(zeros_mean_gaze_direction[:, i], second_axis)
+    d_pc1 = np.nanmax(principal_projection) - np.nanmin(principal_projection)
+    d_pc2 = np.nanmax(second_projection) - np.nanmin(second_projection)
     if np.abs(np.dot(principal_axis, second_axis)) > 0.0001:
         # The third axis should be almost null since the data is projected on a sphere (no variance radially)
         raise ValueError("The principal and second axis are not orthogonal.")
@@ -423,7 +431,7 @@ def merge_close_sequences(sequences_candidates, gaze_direction, identified_indic
     Merge events that are less than 5 frames appart and the gaze is moving in the same direction (if check_directionnality=True)
     """
 
-    sequences_candidates = apply_minimal_duration(sequences_candidates, 2)
+    sequences_candidates = apply_minimal_number_of_frames(sequences_candidates, 2)
     if len(sequences_candidates) == 0:
         sequences_merged = []
     else:
@@ -649,12 +657,12 @@ def detect_fixations_and_smooth_pursuit(
                     gaze_direction[:, range(before_idx, after_idx + 1)]
                 )
                 if parameter_R > eta_minSmp:
-                    smooth_pursuit_timing += list(range(before_idx, after_idx))
+                    smooth_pursuit_timing += list(range(before_idx, after_idx + 1))
                 else:
-                    fixation_timing += list(range(before_idx, after_idx))
+                    fixation_timing += list(range(before_idx, after_idx + 1))
 
                 for i_uncertain_sequences, uncertain in enumerate(uncertain_sequences_tempo):
-                    if any(item in uncertain for item in list(range(before_idx, after_idx))):
+                    if any(item in uncertain for item in list(range(before_idx, after_idx + 1))):
                         uncertain_sequences_to_remove += [i_uncertain_sequences]
         else:
             # Fixation like segment
@@ -1259,8 +1267,8 @@ def main():
     # Define the path to the data
     datapath = "../AllData/"
     black_screen_timing_file_path = "length_before_black_screen.xlsx"
-    black_screen_timing_data = pd.read_excel(datapath + black_screen_timing_file_path)
-    trial_names = list(black_screen_timing_data["Video Name"])
+    # black_screen_timing_data = pd.read_excel(datapath + black_screen_timing_file_path)
+    # trial_names = list(black_screen_timing_data["Video Name"])
     fixation_duration_threshold = 0.1  # 100 ms
     smooth_pursuit_duration_threshold = 0.1  # 100 ms
 
@@ -1402,7 +1410,15 @@ def main():
                 identified_indices,
             )
         )
+        visual_scanning_sequences = apply_minimal_duration(
+            visual_scanning_sequences,
+            time_vector,
+            minimal_duration=0.040, # Was 5 frames, but now we use 40 ms because of inconsistent acquisition rate
+        )
         for i in visual_scanning_sequences:
+            identified_indices[i] = True
+        gaze_velocity_criteria = np.where(gaze_angular_velocity_rad * 180 / np.pi > 100)[0]
+        for i in gaze_velocity_criteria:
             identified_indices[i] = True
 
         # Detect fixations
@@ -1413,13 +1429,13 @@ def main():
             i_in_visual_scanning = True if any(i in sequence for sequence in visual_scanning_sequences) else False
             i_in_blinks = True if any(i in sequence for sequence in blink_sequences) else False
             i_in_eyetracker_invalid = True if i in eyetracker_invalid_data_index else False
-            gaze_velocity_criteria = True if gaze_angular_velocity_rad[i] * 180 / np.pi > 100 else False
+            i_in_gaze_velocity_criteria = True if i in gaze_velocity_criteria else False
             if (
                 i_in_saccades
                 or i_in_visual_scanning
                 or i_in_blinks
                 or i_in_eyetracker_invalid
-                or gaze_velocity_criteria
+                or i_in_gaze_velocity_criteria
             ):
                 continue
             else:
@@ -1432,6 +1448,11 @@ def main():
         for i in range(len(intersaccadic_sequences_temporary)):
             if len(intersaccadic_sequences_temporary[i]) > 2:
                 intersaccadic_sequences += [intersaccadic_sequences_temporary[i]]
+        intersaccadic_sequences = apply_minimal_duration(
+            intersaccadic_sequences,
+            time_vector,
+            minimal_duration=0.040, # Was 5 frames, but now we use 40 ms because of inconsistent acquisition rate
+        )
 
         intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = (
             sliding_window(time_vector, intersaccadic_sequences, gaze_direction)
@@ -1448,7 +1469,6 @@ def main():
         for i in smooth_pursuit_sequences:
             identified_indices[i] = True
 
-        visual_scanning_sequences = apply_minimal_duration(visual_scanning_sequences, number_of_frames_min=5)
         check_if_there_is_sequence_overlap(
             fixation_sequences,
             smooth_pursuit_sequences,
