@@ -12,11 +12,11 @@ class SmoothPursuitEvent(Event):
     """
 
     def __init__(
-            self,
-            data_object: DataObject,
-            identified_indices: np.ndarray,
-            smooth_pursuit_indices: np.ndarray,
-            minimal_duration: float,
+        self,
+        data_object: DataObject,
+        identified_indices: np.ndarray,
+        smooth_pursuit_indices: np.ndarray,
+        minimal_duration: float,
     ):
         """
         Parameters:

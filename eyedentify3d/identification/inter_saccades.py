@@ -52,7 +52,9 @@ class InterSaccadicEvent(Event):
 
         # Checks
         if window_duration < 2 * window_overlap:
-            raise ValueError(f"The window_duration ({window_duration} s) must be at least twice the window_overlap ({window_overlap} s).")
+            raise ValueError(
+                f"The window_duration ({window_duration} s) must be at least twice the window_overlap ({window_overlap} s)."
+            )
 
         # Original attributes
         self.minimal_duration = minimal_duration
@@ -108,9 +110,7 @@ class InterSaccadicEvent(Event):
         nb_frames = gaze_direction.shape[1]
         angle = np.zeros((nb_frames,))
         for i_frame in range(nb_frames - 1):
-            gaze_displacement = (
-                gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
-            )
+            gaze_displacement = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
             angle[i_frame] = np.arcsin(gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement))
 
         # Test that the gaze displacement and orientation are coherent inside the window
@@ -141,8 +141,10 @@ class InterSaccadicEvent(Event):
         cov = np.ma.cov(np.ma.masked_invalid(gaze_direction_centered)).data
         eigen_values, eigen_vectors = np.linalg.eig(cov)
         if np.sum(cov) == 0:
-            raise RuntimeError("There was no variability in the gaze direction on this window. "
-                               "This should not happen, please contact the developer.")
+            raise RuntimeError(
+                "There was no variability in the gaze direction on this window. "
+                "This should not happen, please contact the developer."
+            )
         else:
             # Sort the eigen values in descending order
             sorted_indices = np.argsort(eigen_values)[::-1]
@@ -215,9 +217,7 @@ class InterSaccadicEvent(Event):
 
                 # Calculate end time and find corresponding index
                 window_end_time = current_window_start_time + self.window_duration
-                window_end_idx = self._find_time_index(
-                    time_vector, window_end_time, method="last"
-                )
+                window_end_idx = self._find_time_index(time_vector, window_end_time, method="last")
 
                 # Handle edge case: if remaining sequence is very short, extend to sequence end
                 remaining_duration = sequence_end_time - time_vector[window_end_idx]
@@ -238,9 +238,7 @@ class InterSaccadicEvent(Event):
                 current_window_start_time = time_vector[window_end_idx - 1] - self.window_overlap
 
                 # Find start index for next window start
-                window_start_idx = self._find_time_index(
-                    time_vector, current_window_start_time, method="first"
-                )
+                window_start_idx = self._find_time_index(time_vector, current_window_start_time, method="first")
 
         return window_sequences
 
@@ -302,12 +300,15 @@ class InterSaccadicEvent(Event):
 
         incoherent_indices = np.where(mean_p_values <= self.eta_p)[0]
         incoherent_sequences = split_sequences(incoherent_indices)
-        self.incoherent_sequences = apply_minimal_duration(incoherent_sequences, data_object.time_vector, self.minimal_duration)
+        self.incoherent_sequences = apply_minimal_duration(
+            incoherent_sequences, data_object.time_vector, self.minimal_duration
+        )
 
         coherent_indices = np.where(mean_p_values > self.eta_p)[0]
         coherent_sequences = split_sequences(coherent_indices)
-        self.coherent_sequences = apply_minimal_duration(coherent_sequences, data_object.time_vector, self.minimal_duration)
-
+        self.coherent_sequences = apply_minimal_duration(
+            coherent_sequences, data_object.time_vector, self.minimal_duration
+        )
 
     def classify_obvious_sequences(
         self, data_object: DataObject, all_intersaccadic_sequences: list[np.ndarray]

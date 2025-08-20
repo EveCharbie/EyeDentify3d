@@ -230,6 +230,7 @@ def detect_visual_scanning(time_vector, gaze_direction, identified_indices):
 
     return visual_scanning_sequences, gaze_angular_velocity_rad, velocity_threshold_visual_scanning
 
+
 #
 # def apply_minimal_duration(sequences_tempo, number_of_frames_min):
 #     """
@@ -292,11 +293,15 @@ def sliding_window(time_vector, intersaccadic_sequences, gaze_direction):
     intersaccadic_coherent_sequences = np.array_split(
         coherent_windows, np.flatnonzero(np.diff(coherent_windows) > 1) + 1
     )
-    intersaccadic_coherent_sequences = apply_minimal_duration(intersaccadic_coherent_sequences, time_vector, minimal_duration=0.04)
+    intersaccadic_coherent_sequences = apply_minimal_duration(
+        intersaccadic_coherent_sequences, time_vector, minimal_duration=0.04
+    )
     intersaccadic_incoherent_sequences = np.array_split(
         incoherent_windows, np.flatnonzero(np.diff(incoherent_windows) > 1) + 1
     )
-    intersaccadic_incoherent_sequences = apply_minimal_duration(intersaccadic_incoherent_sequences, time_vector, minimal_duration=0.04)
+    intersaccadic_incoherent_sequences = apply_minimal_duration(
+        intersaccadic_incoherent_sequences, time_vector, minimal_duration=0.04
+    )
 
     if len(intersaccadic_coherent_sequences) == 0:
         intersaccadic_gouped_sequences = intersaccadic_incoherent_sequences
@@ -1413,7 +1418,7 @@ def main():
         visual_scanning_sequences = apply_minimal_duration(
             visual_scanning_sequences,
             time_vector,
-            minimal_duration=0.040, # Was 5 frames, but now we use 40 ms because of inconsistent acquisition rate
+            minimal_duration=0.040,  # Was 5 frames, but now we use 40 ms because of inconsistent acquisition rate
         )
         for i in visual_scanning_sequences:
             identified_indices[i] = True
@@ -1451,7 +1456,7 @@ def main():
         intersaccadic_sequences = apply_minimal_duration(
             intersaccadic_sequences,
             time_vector,
-            minimal_duration=0.040, # Was 5 frames, but now we use 40 ms because of inconsistent acquisition rate
+            minimal_duration=0.040,  # Was 5 frames, but now we use 40 ms because of inconsistent acquisition rate
         )
 
         intersaccadic_gouped_sequences, intersaccadic_coherent_sequences, intersaccadic_incoherent_sequences = (

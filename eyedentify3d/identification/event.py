@@ -24,7 +24,7 @@ class Event:
         """
         Remove sequences that are too short.
         """
-        if not hasattr(self, 'minimal_duration'):
+        if not hasattr(self, "minimal_duration"):
             raise AttributeError("The 'minimal_duration' attribute is not set for this event.")
         self.sequences = apply_minimal_duration(self.sequences, data_object.time_vector, self.minimal_duration)
 

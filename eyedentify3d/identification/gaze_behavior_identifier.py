@@ -136,9 +136,7 @@ class GazeBehaviorIdentifier:
         )
         self.set_identified_frames(self.saccade)
 
-    def detect_visual_scanning_sequences(self,
-                                         min_velocity_threshold: float = 100,
-                                         minimal_duration: float = 0.040):
+    def detect_visual_scanning_sequences(self, min_velocity_threshold: float = 100, minimal_duration: float = 0.040):
         """
         Detects visual scanning sequences in the data object.
 
@@ -159,7 +157,9 @@ class GazeBehaviorIdentifier:
         # Also remove all frames where the velocity is above threshold, as these frames are not available for the
         # detection of other events. Please note that these frames might not be part of a visual scanning event if the
         # velocity is not maintained for at least minimal_duration.
-        high_velocity_condition = np.abs(self.visual_scanning.gaze_angular_velocity) > self.visual_scanning.min_velocity_threshold
+        high_velocity_condition = (
+            np.abs(self.visual_scanning.gaze_angular_velocity) > self.visual_scanning.min_velocity_threshold
+        )
         self.identified_indices[high_velocity_condition] = True
 
     def detect_fixation_and_smooth_pursuit_sequences(
