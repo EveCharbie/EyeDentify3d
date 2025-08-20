@@ -1,12 +1,13 @@
 import numpy as np
 import pingouin as pg
 
+from .event import Event
 from ..utils.data_utils import DataObject
 from ..utils.rotation_utils import get_angle_between_vectors
-from ..utils.sequence_utils import split_sequences, apply_minimal_number_of_frames, merge_sequence_lists
+from ..utils.sequence_utils import split_sequences, apply_minimal_duration, merge_sequence_lists
 
 
-class InterSaccadicEvent:
+class InterSaccadicEvent(Event):
     """
     Class to extract 'inter-saccadic' sequences. These sequences are defined as the sequences of frames that have not
     been yet identified (this is partly why order matters in the identification of the behaviors).
@@ -18,15 +19,16 @@ class InterSaccadicEvent:
         self,
         data_object: DataObject,
         identified_indices: np.ndarray,
-        window_duration: float = 0.022,
-        window_overlap: float = 0.006,
-        eta_p: float = 0.01,
-        eta_d: float = 0.45,
-        eta_cd: float = 0.5,
-        eta_pd: float = 0.2,
-        eta_max_fixation: float = 1.9,
-        eta_min_smooth_pursuit: float = 1.7,
-        phi: float = 45,
+        minimal_duration: float,
+        window_duration: float,
+        window_overlap: float,
+        eta_p: float,
+        eta_d: float,
+        eta_cd: float,
+        eta_pd: float,
+        eta_max_fixation: float,
+        eta_min_smooth_pursuit: float,
+        phi: float,
     ):
         """
         Parameters:
@@ -46,7 +48,16 @@ class InterSaccadicEvent:
         eta_min_smooth_pursuit: The threshold for the minimum smooth pursuit range (in degrees).
         """
 
+        super().__init__()
+
+        # Checks
+        if window_duration < 2 * window_overlap:
+            raise ValueError(f"The window_duration ({window_duration} s) must be at least twice the window_overlap ({window_overlap} s).")
+        if minimal_duration <= window_duration:
+            raise ValueError(f"The minimal_duration ({minimal_duration} s) must be greater than the window_duration ({window_duration} s).")
+
         # Original attributes
+        self.minimal_duration = minimal_duration
         self.window_duration = window_duration
         self.window_overlap = window_overlap
         self.eta_p = eta_p
@@ -58,32 +69,25 @@ class InterSaccadicEvent:
         self.phi = phi
 
         # Extended attributes
-        self.frame_indices: np.ndarray | None = None
-        self.sequences: list[np.ndarray] = []
-        self.coherent_sequences = None
-        self.incoherent_sequences = None
-        self.fixation_indices = None
-        self.smooth_pursuit_indices = None
-        self.uncertain_sequences = None
+        self.coherent_sequences: list[np.ndarray[int]] = None
+        self.incoherent_sequences: list[np.ndarray[int]] = None
+        self.fixation_indices: np.ndarray[int] = None
+        self.smooth_pursuit_indices: np.ndarray[int] = None
+        self.uncertain_sequences: list[np.ndarray[int]] = None
 
         # Detect visual scanning sequences
         self.detect_intersaccadic_indices(identified_indices)
-        self.detect_intersaccadic_sequences()
+        self.split_sequences()
+        self.keep_only_sequences_long_enough(data_object)
         self.set_coherent_and_incoherent_sequences(data_object)
-        self.classify_sequences(data_object, identified_indices)
+        self.set_intersaccadic_sequences()
+        self.classify_sequences(data_object)
 
     def detect_intersaccadic_indices(self, identified_indices: np.ndarray):
         """
         Detect when velocity is above the threshold and if the frames are not already identified.
         """
         self.frame_indices = np.where(identified_indices == False)[0]
-
-    def detect_intersaccadic_sequences(self):
-        """
-        Detect the frames where there is a visual scanning.
-        """
-        sequence_candidates = split_sequences(self.frame_indices)
-        self.sequences = apply_minimal_number_of_frames(sequence_candidates, minimal_number_of_frames=3)
 
     @staticmethod
     def detect_directionality_coherence_on_axis(gaze_direction: np.ndarray, component_to_keep: int) -> float:
@@ -106,43 +110,14 @@ class InterSaccadicEvent:
         nb_frames = gaze_direction.shape[1]
         angle = np.zeros((nb_frames,))
         for i_frame in range(nb_frames - 1):
-            # TODO: Check the logic of the acrsin (arccos instead ?)
             gaze_displacement = (
-                gaze_direction[component_to_keep, i_frame + 1] - gaze_direction[component_to_keep, i_frame]
+                gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
             )
-            # angle[i_frame] = np.arcsin(gaze_displacement / np.linalg.norm(gaze_displacement))  # 0
-            angle[i_frame] = np.arccos(gaze_displacement / np.linalg.norm(gaze_displacement))  # 1
+            angle[i_frame] = np.arcsin(gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement))
 
         # Test that the gaze displacement and orientation are coherent inside the window
         z_value, p_value = pg.circ_rayleigh(angle)
         return p_value
-
-    # def detect_directionality_coherence_on_sphere(self, gaze_direction: np.ndarray) -> float:
-    #     """
-    #     Detects the coherence of the gaze direction inside a window using a Rayleigh z-test on both spherical
-    #     coordinates. The directionality is considered coherent if one of the two spherical coordinates is coherent.
-    #     This function first computes the gaze displacement vector between two consecutive frames, and then
-    #     transforms it into spherical coordinates (angle_1 and angle_2). Finally, a Rayleigh z-test is applied
-    #     on the angles to check if the gaze displacement is uniformly distributed on the selected window. If the gaze
-    #     direction is coherent (i.e., the p-value is smaller than eta_p), the gaze is moving in a particular direction.
-    #
-    #     Parameters
-    #     ----------
-    #     gaze_direction: A 2D numpy array of shape (3, nb_frames) expressing the gaze (head + eyes) direction in 3D space
-    #         through a unit vector.
-    #     """
-    #     nb_frames = gaze_direction.shape[1]
-    #     angle_1 = np.zeros((nb_frames,))
-    #     angle_2 = np.zeros((nb_frames,))
-    #     for i_frame in range(nb_frames - 1):
-    #         gaze_displacement = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
-    #         angle_1[i_frame] = np.arctan2(gaze_displacement[1], gaze_displacement[0])  # Azimuth angle if XYZ coordinates
-    #         angle_2[i_frame] = np.arccos(gaze_displacement[2], np.linalg.norm(gaze_displacement[:2]))  # Elevation angle if XYZ coordinates
-    #
-    #     # Test that the gaze displacement and orientation are coherent inside the window
-    #     z_value_1, p_value_1 = pg.circ_rayleigh(angle_1)
-    #     z_value_2, p_value_2 = pg.circ_rayleigh(angle_2)
-    #     return np.logical_or(p_value_1 < self.eta_p, p_value_2 < self.eta_p)
 
     @staticmethod
     def variability_decomposition(gaze_direction: np.ndarray) -> tuple[float, float]:
@@ -152,9 +127,9 @@ class InterSaccadicEvent:
         """
 
         nb_frames = gaze_direction.shape[1]
-        if nb_frames < 4:
+        if nb_frames < 3:
             raise ValueError(
-                "The gaze direction must contain at least 4 frames for the variability decomposition to be "
+                "The gaze direction must contain at least 3 frames for the variability decomposition to be "
                 "meaningful. Please consider changing the window_duration."
             )
 
@@ -238,42 +213,43 @@ class InterSaccadicEvent:
 
             # Calculate window positions using time-based approach
             current_window_start_time = sequence_start_time
+            window_start_idx = sequence_start_idx
 
             while current_window_start_time < sequence_end_time:
-                # Find start index for current window
-                window_start_idx = self._find_time_index(
-                    time_vector, current_window_start_time, sequence_start_idx, sequence_end_idx
-                )
 
                 # Calculate end time and find corresponding index
                 window_end_time = current_window_start_time + self.window_duration
                 window_end_idx = self._find_time_index(
-                    time_vector, window_end_time, sequence_start_idx, sequence_end_idx
+                    time_vector, window_end_time, method="last"
                 )
 
                 # Handle edge case: if remaining sequence is very short, extend to sequence end
                 remaining_duration = sequence_end_time - time_vector[window_end_idx]
-                if remaining_duration <= self.window_overlap:
+                if remaining_duration < self.window_overlap:
                     window_end_idx = sequence_end_idx
 
-                # # Only add windows with sufficient samples
-                # if window_end_idx - window_start_idx >= 3:  # Minimum 3 samples
+                window_sequences.append(np.arange(window_start_idx, window_end_idx))
+
+                # Only add windows with sufficient samples
                 if window_end_idx - window_start_idx < 3:
                     raise RuntimeError("The merging went wrong")
-
-                window_sequences.append(np.arange(window_start_idx, window_end_idx + 1))
 
                 # Break if we've reached the end
                 if window_end_idx >= sequence_end_idx:
                     break
 
                 # Calculate next window start time with overlap
-                current_window_start_time = time_vector[window_end_idx] - self.window_overlap
+                current_window_start_time = time_vector[window_end_idx - 1] - self.window_overlap
+
+                # Find start index for next window start
+                window_start_idx = self._find_time_index(
+                    time_vector, current_window_start_time, method="first"
+                )
 
         return window_sequences
 
     @staticmethod
-    def _find_time_index(time_vector: np.ndarray, target_time: float, start_bound: int, end_bound: int) -> int:
+    def _find_time_index(time_vector: np.ndarray, target_time: float, method: str) -> int:
         """
         Find the index corresponding to a target time within specified bounds.
 
@@ -281,47 +257,22 @@ class InterSaccadicEvent:
         ----------
         time_vector: Array of time values
         target_time: Time to find index for
-        start_bound: Minimum valid index
-        end_bound: Maximum valid index
+        method: Method to find index, either the first index to s ('first') or ('last')
 
         Returns
         -------
-            idx: The index closest to target_time within bounds
+            idx: The index closest to target_time
         """
-        candidate_idx = np.searchsorted(time_vector, target_time, side="left")
-
-        # Ensure index is within valid bounds
-        idx = np.clip(candidate_idx, start_bound, end_bound)
-
+        if method == "first":
+            idx = np.where(time_vector < target_time)[0][-1]
+        elif method == "last":
+            if np.all(time_vector <= target_time):
+                idx = len(time_vector) - 1
+            else:
+                idx = np.where(time_vector > target_time)[0][0]
+        else:
+            raise ValueError(f"The method should be either 'first' or 'last', got {method}.")
         return idx
-
-        #
-        #
-        # window_indices = []
-        # for intersaccadic_sequence in self.sequences:
-        #
-        #     # Initialize the indices of the window
-        #     window_start_idx = intersaccadic_sequence[0]
-        #     current_window_end = 0
-        #     end_of_intersaccadic_gap = intersaccadic_sequence[-1]
-        #     while current_window_end < end_of_intersaccadic_gap:
-        #         current_window_end = \
-        #         np.where(data_object.time_vector > data_object.time_vector[window_start_idx] + self.window_duration)[0]
-        #         if len(current_window_end) != 0 and current_window_end[0] < end_of_intersaccadic_gap:
-        #             if end_of_intersaccadic_gap - current_window_end[0] <= 2:
-        #                 current_window_end = end_of_intersaccadic_gap
-        #             else:
-        #                 current_window_end = current_window_end[0]
-        #         else:
-        #             current_window_end = end_of_intersaccadic_gap
-        #         if current_window_end - window_start_idx > 2:
-        #             window_indices.append(np.arange(window_start_idx, current_window_end))
-        #         if current_window_end == end_of_intersaccadic_gap:
-        #             break
-        #         window_start_idx = \
-        #         np.where(data_object.time_vector < data_object.time_vector[current_window_end - 1] - self.window_overlap)[0][-1]
-        #
-        # return window_indices
 
     def set_coherent_and_incoherent_sequences(self, data_object: DataObject):
         """
@@ -345,7 +296,7 @@ class InterSaccadicEvent:
 
             # Compute the directionality coherence p-value for the current window
             p_value = self.detect_directionality_coherence_on_axis(
-                data_object.gaze_direction[:, current_window], component_to_keep=1
+                data_object.gaze_direction[:, current_window], component_to_keep=0
             )
             for i_idx in current_window:
                 p_values[i_idx] += [p_value]
@@ -392,102 +343,6 @@ class InterSaccadicEvent:
         ambiguous_indices = np.array(ambiguous_indices, dtype=int)
 
         return fixation_indices, smooth_pursuit_indices, ambiguous_indices
-
-    # def classify_ambiguous_sequences(self,
-    #                                  data_object: DataObject,
-    #                                  all_intersaccadic_sequences: list[np.ndarray],
-    #                                  ambiguous_indices: np.ndarray,
-    #                                  fixation_indices: np.ndarray,
-    #                                  smooth_pursuit_indices: np.ndarray,
-    #                                  ) -> tuple[np.ndarray, np.ndarray, list[np.ndarray]]:
-    #     """
-    #     Sequences where some of the criteria are met are classified as smooth pursuit like or fixation like segments.
-    #      - smooth pursuit like if ...
-    #      - fixation like if ...
-    #     """
-    #     ambiguous_sequences = split_sequences(ambiguous_indices)
-    #
-    #     uncertain_sequences_to_remove = []
-    #     for i_sequence, sequence in enumerate(ambiguous_sequences):
-    #         parameter_D, parameter_CD, parameter_PD, parameter_R = self.compute_larsson_parameters(
-    #             data_object.gaze_direction[:, sequence]
-    #         )
-    #         criteria_3 = parameter_PD > self.eta_pd
-    #         criteria_4 = parameter_R * 180 / np.pi > self.eta_max_fixation
-    #         if criteria_3:
-    #             # Smooth pursuit like segment
-    #             same_segment_backward = True
-    #             before_idx = sequence[0]
-    #             current_i_sequence = i_sequence
-    #             if i_sequence == 0:
-    #                 same_segment_backward = False
-    #             while same_segment_backward:
-    #                 current_i_sequence -= 1
-    #                 if before_idx in all_intersaccadic_sequences[current_i_sequence]:
-    #                     if before_idx in fixation_indices:
-    #                         same_segment_backward = False
-    #                     else:
-    #                         uncertain_mean = np.nanmean(data_object.gaze_direction[:, sequence], axis=1)
-    #                         current_mean = np.nanmean(
-    #                             data_object.gaze_direction[:, all_intersaccadic_sequences[current_i_sequence]], axis=1
-    #                         )
-    #                         angle = get_angle_between_vectors(uncertain_mean, current_mean)
-    #                         if np.abs(angle) * 180 / np.pi < self.phi:
-    #                             before_idx = all_intersaccadic_sequences[current_i_sequence][0]
-    #                         else:
-    #                             same_segment_backward = False
-    #                 else:
-    #                     same_segment_backward = False
-    #             same_segment_forward = True
-    #             after_idx = sequence[-1]
-    #             current_i_sequence = i_sequence
-    #             if i_sequence == len(all_intersaccadic_sequences) - 1:
-    #                 same_segment_forward = False
-    #             while same_segment_forward:
-    #                 current_i_sequence += 1
-    #                 if len(all_intersaccadic_sequences) <= current_i_sequence:
-    #                     same_segment_forward = False
-    #                 elif after_idx in all_intersaccadic_sequences[current_i_sequence]:
-    #                     if after_idx in fixation_indices:
-    #                         same_segment_forward = False
-    #                     else:
-    #                         uncertain_mean = np.nanmean(data_object.gaze_direction[:, sequence], axis=1)
-    #                         current_mean = np.nanmean(
-    #                             data_object.gaze_direction[:, all_intersaccadic_sequences[current_i_sequence]], axis=1
-    #                         )
-    #                         angle = get_angle_between_vectors(uncertain_mean, current_mean)
-    #                         if np.abs(angle) * 180 / np.pi < self.phi:
-    #                             after_idx = all_intersaccadic_sequences[current_i_sequence][-1]
-    #                         else:
-    #                             same_segment_forward = False
-    #                 else:
-    #                     same_segment_forward = False
-    #             if len(range(before_idx, after_idx)) > 2:
-    #                 parameter_D, parameter_CD, parameter_PD, parameter_R = self.compute_larsson_parameters(
-    #                     data_object.gaze_direction[:, range(before_idx, after_idx + 1)]
-    #                 )
-    #                 if parameter_R * 180 / np.pi > self.eta_min_smooth_pursuit:
-    #                     smooth_pursuit_indices += list(range(before_idx, after_idx))
-    #                 else:
-    #                     fixation_indices += list(range(before_idx, after_idx))
-    #
-    #                 for i_uncertain_sequences, uncertain in enumerate(ambiguous_sequences):
-    #                     if any(item in uncertain for item in list(range(before_idx, after_idx))):
-    #                         uncertain_sequences_to_remove += [i_uncertain_sequences]
-    #         else:
-    #             # Fixation like segment
-    #             if criteria_4:
-    #                 smooth_pursuit_indices += list(sequence)
-    #             else:
-    #                 fixation_indices += list(sequence)
-    #             uncertain_sequences_to_remove += [i_sequence]
-    #
-    #     uncertain_sequences = []
-    #     for i_sequence in range(len(ambiguous_sequences)):
-    #         if i_sequence not in uncertain_sequences_to_remove:
-    #             uncertain_sequences += [ambiguous_sequences[i_sequence]]
-    #
-    #     return fixation_indices, smooth_pursuit_indices, uncertain_sequences
 
     def classify_ambiguous_sequences(
         self,
@@ -691,29 +546,33 @@ class InterSaccadicEvent:
 
         return overlapping_sequences
 
-    def classify_sequences(self, data_object: DataObject, identified_indices: np.ndarray):
+    def set_intersaccadic_sequences(self) -> None:
+        """
+        Define the inter-saccadic sequences as the combination of coherent and incoherent sequences.
+        """
+        self.sequences = merge_sequence_lists(
+            self.coherent_sequences,
+            self.incoherent_sequences,
+        )
+        if len(self.sequences) == 1 and self.sequences[0].shape == (0,):
+            raise RuntimeError(
+                "There should be at least one intersaccadic sequence even if there is no saccade. "
+                "This should not happen, please contact the developer."
+            )
+        return
+
+    def classify_sequences(self, data_object: DataObject) -> None:
         """
         Classify the inter-saccadic sequences into coherent and incoherent sequences based on the gaze direction.
         TODO: add _on_sphere option.
         """
-
-        all_intersaccadic_sequences = merge_sequence_lists(
-            self.coherent_sequences,
-            self.incoherent_sequences,
-        )
-        if len(all_intersaccadic_sequences) == 1 and all_intersaccadic_sequences[0].shape == (0,):
-            raise RuntimeError(
-                "There should be at least one even if there is no saccades. "
-                "This should not happen, please contact the developer."
-            )
-
         fixation_indices, smooth_pursuit_indices, ambiguous_indices = self.classify_obvious_sequences(
             data_object,
-            all_intersaccadic_sequences,
+            self.sequences,
         )
         fixation_indices, smooth_pursuit_indices, uncertain_sequences = self.classify_ambiguous_sequences(
             data_object,
-            all_intersaccadic_sequences,
+            self.sequences,
             ambiguous_indices,
             fixation_indices,
             smooth_pursuit_indices,

@@ -21,7 +21,7 @@ def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
 
 
 def apply_minimal_duration(
-    original_sequences: list[np.ndarray], time_vector: np.ndarray, minimal_duration: float = 0.05
+    original_sequences: list[np.ndarray], time_vector: np.ndarray, minimal_duration
 ) -> list[np.ndarray]:
     """
     Go through the original sequences and remove all sequences that are shorter than the minimal duration.
@@ -31,7 +31,7 @@ def apply_minimal_duration(
     ----------
     original_sequences: A list of sequences, each sequence is a numpy array of indices.
     time_vector: A numpy array of the time of acquisition of each data frame.
-    minimal_duration: The minimal duration in seconds of the event. Default is 0.05 seconds (50 ms).
+    minimal_duration: The minimal duration in seconds of the event.
     """
     sequences = []
     for i_sequence in original_sequences:

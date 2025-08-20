@@ -1,11 +1,12 @@
 import numpy as np
 
+from .event import Event
 from ..utils.data_utils import DataObject
-from ..utils.sequence_utils import split_sequences, merge_close_sequences
+from ..utils.sequence_utils import split_sequences, merge_close_sequences, apply_minimal_duration
 from ..utils.rotation_utils import compute_angular_velocity
 
 
-class VisualScanningEvent:
+class VisualScanningEvent(Event):
     """
     Class to detect visual scanning sequences.
     A visual scanning event is detected when the gaze velocity is larger than 100 deg/s, but which are not saccades.
@@ -16,7 +17,8 @@ class VisualScanningEvent:
         self,
         data_object: DataObject,
         identified_indices: np.ndarray,
-        min_velocity_threshold: float = 100,
+        min_velocity_threshold: float,
+        minimal_duration: float,
     ):
         """
         Parameters:
@@ -25,21 +27,24 @@ class VisualScanningEvent:
         identified_indices: A boolean array indicating which frames have already been identified as events.
         min_velocity_threshold: The minimal threshold for the gaze angular velocity to consider a visual scanning
             event, in deg/s.
+        minimal_duration: The minimal duration of the visual scanning event, in seconds.
         """
+        super().__init__()
 
         # Original attributes
         self.min_velocity_threshold = min_velocity_threshold
+        self.minimal_duration = minimal_duration
 
         # Extended attributes
-        self.frame_indices: np.ndarray | None = None
-        self.sequences: list[np.ndarray] = []
         self.gaze_angular_velocity = None
 
         # Detect visual scanning sequences
         self.set_gaze_angular_velocity(data_object)
         self.detect_visual_scanning_indices(identified_indices)
-        self.detect_visual_scanning_sequences()
+        self.split_sequences()
         self.merge_sequences(data_object, identified_indices)
+        self.keep_only_sequences_long_enough(data_object)
+        self.adjust_indices_to_sequences()
 
     def set_gaze_angular_velocity(self, data_object: DataObject):
         """
@@ -57,12 +62,6 @@ class VisualScanningEvent:
         unique_visual_scanning = np.logical_and(visual_scanning, ~identified_indices)
         self.frame_indices = np.where(unique_visual_scanning)[0]
 
-    def detect_visual_scanning_sequences(self):
-        """
-        Detect the frames where there is a visual scanning.
-        """
-        self.sequences = split_sequences(self.frame_indices)
-
     def merge_sequences(self, data_object: DataObject, identified_indices: np.ndarray):
         """
         Modify the sequences detected to merge visual scanning sequences that are close in time and have a similar
@@ -77,21 +76,3 @@ class VisualScanningEvent:
             check_directionality=True,
             max_angle=30.0,  # TODO: make modulable
         )
-        if len(self.sequences) > 0:
-            self.frame_indices = np.concatenate(self.sequences)
-
-    #
-    # def compute_saccade_amplitude(self, data_object: DataObject):
-    #     """
-    #     Compute the amplitude of each saccade sequence. It is defined as the angle between the beginning and end of the
-    #     saccade in degrees.
-    #     Note that there is no check made to detect if there is a larger amplitude reached during the saccade. If you'd
-    #     prefer this option, you can open an issue on the GitHub repository.
-    #     """
-    #     saccade_amplitudes = []
-    #     for sequence in self.sequences:
-    #         vector_before = data_object.eye_direction[:, sequence[0]]
-    #         vector_after = data_object.eye_direction[:, sequence[-1]]
-    #         angle = get_angle_between_vectors(vector_before, vector_after)
-    #         saccade_amplitudes += [angle]
-    #     self.saccade_amplitudes = saccade_amplitudes

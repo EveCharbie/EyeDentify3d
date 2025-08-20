@@ -1,10 +1,10 @@
 import numpy as np
 
+from .event import Event
 from ..utils.data_utils import DataObject
-from ..utils.sequence_utils import split_sequences
 
 
-class BlinkEvent:
+class BlinkEvent(Event):
     """
     Class to detect blink sequences.
     A blink event is detected when both eye openness drop bellow the threshold (default 0.5).
@@ -18,16 +18,14 @@ class BlinkEvent:
         eye_openness_threshold: The threshold for the eye openness to consider a blink event. Default is 0.5.
         """
 
+        super().__init__()
+
         # Original attributes
         self.eye_openness_threshold = eye_openness_threshold
 
-        # Extended attributes
-        self.frame_indices: np.ndarray | None = None
-        self.sequences: list[np.ndarray] = []
-
         # Detect blink sequences
         self.detect_blink_indices(data_object)
-        self.detect_blink_sequences()
+        self.split_sequences()
 
     def detect_blink_indices(self, data_object: DataObject):
         """
@@ -39,9 +37,3 @@ class BlinkEvent:
                 data_object.left_eye_openness < self.eye_openness_threshold,
             )
         )[0]
-
-    def detect_blink_sequences(self):
-        """
-        Identify invalid sequences.
-        """
-        self.sequences = split_sequences(self.frame_indices)
