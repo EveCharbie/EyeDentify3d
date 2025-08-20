@@ -1,7 +1,11 @@
 import numpy as np
 
 from .rotation_utils import get_angle_between_vectors
+from ..time_range import TimeRange
+from ..utils.signal_utils import find_time_index
 
+
+# TODO: This could be transformed into a class that handles the sequences and their properties
 
 def split_sequences(indices: np.ndarray) -> list[np.ndarray]:
     """
@@ -204,3 +208,21 @@ def merge_sequence_lists(sequences_1: list[np.ndarray], sequences_2: list[np.nda
     all_sequences = sequences_1 + sequences_2
     # Sort by the first index of each sequence
     return sorted(all_sequences, key=lambda seq: seq[0] if len(seq) > 0 else float("inf"))
+
+def get_sequences_in_range(time_vector: np.ndarray[float], time_range: TimeRange, sequences: list[np.ndarray[int]]) -> list[np.ndarray[int]]:
+    """
+    Get the sequences before and after the timing cue.
+    Note: the event occurring during the cue is removed.
+    """
+    # If sequences is empty, return two empty sequences
+    if len(sequences) == 0 or sequences[0].shape == (0,) or sequences[0].shape == (1, 0):
+        return sequences
+
+    new_first_idx = find_time_index(time_vector, time_range.min_time, method="first")
+
+    sequences_in_range = []
+    for sequence in sequences:
+        if time_vector[sequence[-1]] <= time_range.max_time and time_vector[sequence[0]] >= time_range.min_time:
+            sequences_in_range += [sequence - new_first_idx]
+
+    return sequences_in_range

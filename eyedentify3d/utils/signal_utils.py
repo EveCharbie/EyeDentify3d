@@ -3,6 +3,39 @@ import biorbd
 from scipy import signal
 
 
+
+def find_time_index(time_vector: np.ndarray, target_time: float, method: str) -> int:
+    """
+    Find the index corresponding to a target time within specified bounds.
+
+    Parameters
+    ----------
+    time_vector: Array of time values
+    target_time: Time to find index for
+    method: Method to find index, either the first index to s ('first') or ('last')
+
+    Returns
+    -------
+        idx: The index closest to target_time
+    """
+    # To remove NaNs in the time_vector
+    valid_mask = ~np.isnan(time_vector)
+
+    if method == "first":
+        if np.all(time_vector[valid_mask] >= target_time):
+            idx = 0
+        else:
+            idx = np.where(time_vector < target_time)[0][-1]
+    elif method == "last":
+        if np.all(time_vector[valid_mask] <= target_time):
+            idx = len(time_vector) - 1
+        else:
+            idx = np.where(time_vector > target_time)[0][0]
+    else:
+        raise ValueError(f"The method should be either 'first' or 'last', got {method}.")
+    return idx
+
+
 def centered_finite_difference(time_vector: np.ndarray, data: np.ndarray) -> np.ndarray:
     """
     Compute the centered finite difference of the data with respect to the time vector.

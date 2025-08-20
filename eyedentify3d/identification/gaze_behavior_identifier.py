@@ -358,3 +358,147 @@ class GazeBehaviorIdentifier:
     def finalize(self):
         self.validate_sequences()
         self.is_finalized = True
+
+    def _get_event_at_split_timing(self,
+                                   timing: float,
+                                   time_vector: np.ndarray[float],
+                                   dt: float,
+                                   error_type: ErrorType) -> tuple[str, int, int]:
+
+        for sequence_type, sequence_list in (
+                ("Blink", self.blink.sequences),
+                ("Saccade", self.saccade.sequences),
+                ("Visual scanning", self.visual_scanning.sequences),
+                ("Fixation", self.fixation.sequences),
+                ("Smooth pursuit", self.smooth_pursuit.sequences)
+        ):
+            for sequence in sequence_list:
+                beginning_time = time_vector[sequence[0]]
+                end_time = time_vector[sequence[-1]]
+                if beginning_time <= timing <= end_time:
+                    # We found the event at the split timing
+                    event_at_split = sequence_type
+
+                    # Remove this event but write it in a file so that we know what was removed
+                    # TODO : Check that the last frame is not included
+                    # error_str = f"{sequence_type} : {np.round(end_time - beginning_time, decimals=5)} s ----"
+                    error_str = f"{sequence_type} : {np.round(end_time - beginning_time + dt, decimals=5)} s ----"
+                    error_type(error_str)
+
+                    return event_at_split, beginning_time, end_time
+
+        # There was no event happening at the split timing
+        return None, timing, timing
+
+    def _get_a_reduced_gaze_behavior_identifier(self, time_range: TimeRange) -> Self:
+
+        # Build a reduced data object based on the time range
+        reduced_data_object = ReducedData(
+            self.data_object.dt,
+            self.data_object.time_vector,
+            self.data_object.right_eye_openness,
+            self.data_object.left_eye_openness,
+            self.data_object.eye_direction,
+            self.data_object.head_angles,
+            self.data_object.gaze_direction,
+            self.data_object.head_angular_velocity,
+            self.data_object.head_velocity_norm,
+            self.data_object.data_invalidity,
+            time_range,
+        )
+
+        first_index = time_range.get_indices(self.data_object.time_vector)[0]
+
+        # Build a reduced GazeBehaviorIdentifier
+        reduced_gaze_behavior_identifier = GazeBehaviorIdentifier(reduced_data_object)
+
+        # Blink
+        reduced_gaze_behavior_identifier.blink = BlinkEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.blink.sequences)
+        )
+
+        # Invalid
+        reduced_gaze_behavior_identifier.invalid = InvalidEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.invalid.sequences)
+        )
+
+        # Saccade
+        reduced_gaze_behavior_identifier.saccade = SaccadeEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.saccade.sequences)
+        )
+
+        # Visual Scanning
+        reduced_gaze_behavior_identifier.visual_scanning = VisualScanningEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.visual_scanning.sequences)
+        )
+
+        # Inter-saccadic
+        reduced_gaze_behavior_identifier.inter_saccadic_sequences = InterSaccadicEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.inter_saccadic_sequences.sequences)
+        )
+
+        # Fixation
+        reduced_gaze_behavior_identifier.fixation = FixationEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.fixation.sequences)
+        )
+
+        # Smooth Pursuit
+        reduced_gaze_behavior_identifier.smooth_pursuit = SmoothPursuitEvent(reduced_data_object).from_sequences(
+            get_sequences_in_range(self.data_object.time_vector, time_range, self.smooth_pursuit.sequences)
+        )
+
+        # Identified indices
+        reduced_gaze_behavior_identifier.identified_indices = ~reduced_gaze_behavior_identifier.unidentified_indices
+
+        # Fast frame indices
+        fast_frame_indices = []
+        for i in self.fast_frame_indices:
+            if i in time_range.get_indices(self.data_object.time_vector):
+                fast_frame_indices += [int(i)]
+        reduced_gaze_behavior_identifier.fast_frame_indices = np.array(fast_frame_indices) - first_index
+
+        # Finalize
+        reduced_gaze_behavior_identifier.finalize()
+
+        return reduced_gaze_behavior_identifier
+
+    def split(self, split_timings: list[float], event_at_split_handling: ErrorType = ErrorType.PRINT) -> list["GazeBehaviorIdentifier"]:
+        """
+        Split the GazeBehaviorIdentifier into multiple instances based on the provided split timings.
+        Note: the event sequence happening at the splitting will be excluded from both sides of the split.
+        Please open an issue on GitHub if you want tohave the possibility to split the event to have one part of the
+        event on each side of the split.
+
+        Parameters
+        ----------
+        split_timings: A list of timestamps (in seconds) where the data should be split.
+        event_at_split_handling: How to handle the event that is happening at the split timing. Default is
+        ErrorType.PRINT, which prints the type of event and its duration.
+
+        Returns
+        -------
+        A list of GazeBehaviorIdentifier instances, each containing data from a specific time segment.
+        """
+
+        if not self.is_finalized:
+            raise RuntimeError("The GazeBehaviorIdentifier must be finalized before splitting. Please call finalize() first.")
+
+        gaze_behavior_identifiers = []
+        beginning_time = self.data_object.time_vector[0]
+        for timing in split_timings:
+            event_at_split, end_time, new_beginning_time = self._get_event_at_split_timing(
+                                                                                        timing,
+                                                                                        self.data_object.time_vector,
+                                                                                        self.data_object.dt,
+                                                                                        event_at_split_handling)
+            time_range = TimeRange(beginning_time, end_time)
+            reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
+            gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
+
+            beginning_time = new_beginning_time
+
+        time_range = TimeRange(beginning_time, self.data_object.time_vector[-1])
+        reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
+        gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
+
+        return gaze_behavior_identifiers
