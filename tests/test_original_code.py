@@ -189,21 +189,23 @@ def perform_one_file(
 
     # Other specific metrics
     mean_head_angular_velocity = np.nanmean(gaze_behavior_identifier.data_object.head_velocity_norm)
-    mean_head_angular_velocity_pre_cue = np.nanmean(
-        pre_cue_gaze_behavior_identifier.data_object.head_velocity_norm
-    )
-    mean_head_angular_velocity_post_cue = np.nanmean(
-        post_cue_gaze_behavior_identifier.data_object.head_velocity_norm
-    )
+    mean_head_angular_velocity_pre_cue = np.nanmean(pre_cue_gaze_behavior_identifier.data_object.head_velocity_norm)
+    mean_head_angular_velocity_post_cue = np.nanmean(post_cue_gaze_behavior_identifier.data_object.head_velocity_norm)
 
     mean_saccade_duration = gaze_behavior_identifier.saccade.mean_duration()
     mean_saccade_duration_pre_cue = pre_cue_gaze_behavior_identifier.saccade.mean_duration()
     mean_saccade_duration_post_cue = post_cue_gaze_behavior_identifier.saccade.mean_duration()
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
     max_saccade_amplitude = np.nanmax(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
-    mean_saccade_amplitude = np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
-    mean_saccade_amplitude_pre_cue = np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes)  if nb_saccades_pre_cue > 0 else None
-    mean_saccade_amplitude_post_cue = np.nanmean(post_cue_gaze_behavior_identifier.saccade.saccade_amplitudes)  if nb_saccades_post_cue > 0 else None
+    mean_saccade_amplitude = (
+        np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
+    )
+    mean_saccade_amplitude_pre_cue = (
+        np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_pre_cue > 0 else None
+    )
+    mean_saccade_amplitude_post_cue = (
+        np.nanmean(post_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_post_cue > 0 else None
+    )
 
     mean_visual_scanning_duration = gaze_behavior_identifier.visual_scanning.mean_duration()
     mean_visual_scanning_duration_pre_cue = pre_cue_gaze_behavior_identifier.visual_scanning.mean_duration()

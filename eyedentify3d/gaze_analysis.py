@@ -1142,9 +1142,11 @@ def compute_intermediary_metrics(
                             cut_file.write(f"{sequence_type} : {duration} s \n")
                     elif i[0] > post_cue_timing_idx:
                         durations_post_cue.append(duration)
-        return (np.array(durations, dtype=float),
-                np.array(durations_pre_cue, dtype=float),
-                np.array(durations_post_cue, dtype=float))
+        return (
+            np.array(durations, dtype=float),
+            np.array(durations_pre_cue, dtype=float),
+            np.array(durations_post_cue, dtype=float),
+        )
 
     def split_idx_before_and_after_quiet_eye(sequences, post_cue_timing_idx):
         for i in sequences:
@@ -1226,7 +1228,9 @@ def compute_intermediary_metrics(
     total_visual_scanning_duration_post_cue = np.sum(visual_scanning_duration_post_cue)
 
     # Head velocity
-    sequences = fixation_sequences + smooth_pursuit_sequences + blink_sequences + saccade_sequences + visual_scanning_sequences
+    sequences = (
+        fixation_sequences + smooth_pursuit_sequences + blink_sequences + saccade_sequences + visual_scanning_sequences
+    )
     pre_cue_last_idx, post_cue_first_idx = split_idx_before_and_after_quiet_eye(sequences, post_cue_timing_idx)
     mean_head_angular_velocity_deg = np.mean(head_angular_velocity_deg_filtered)
     mean_head_angular_velocity_deg_pre_cue = np.mean(head_angular_velocity_deg_filtered[:pre_cue_last_idx])
@@ -1640,7 +1644,6 @@ def main():
                         return pre_cue_trial_duration, post_cue_trial_duration
             return time_vector[post_cue_timing_idx - 1], time_vector[-1] - time_vector[post_cue_timing_idx]
 
-
         # Metrics
         nb_fixations = len(fixation_duration)
         nb_fixations_pre_cue = len(fixation_duration_pre_cue)
@@ -1709,16 +1712,12 @@ def main():
         nb_smooth_pursuit_pre_cue = len(smooth_pursuit_duration_pre_cue)
         nb_smooth_pursuit_post_cue = len(smooth_pursuit_duration_post_cue)
 
-        mean_smooth_pursuit_duration = (
-            np.nanmean(smooth_pursuit_duration) if len(smooth_pursuit_duration) > 0 else None
-        )
+        mean_smooth_pursuit_duration = np.nanmean(smooth_pursuit_duration) if len(smooth_pursuit_duration) > 0 else None
         mean_smooth_pursuit_duration_pre_cue = (
             np.nanmean(smooth_pursuit_duration_pre_cue) if len(smooth_pursuit_duration_pre_cue) > 0 else None
         )
         mean_smooth_pursuit_duration_post_cue = (
-            np.nanmean(smooth_pursuit_duration_post_cue)
-            if len(smooth_pursuit_duration_post_cue) > 0
-            else None
+            np.nanmean(smooth_pursuit_duration_post_cue) if len(smooth_pursuit_duration_post_cue) > 0 else None
         )
 
         max_smooth_pursuit_trajectory = (
@@ -1747,18 +1746,22 @@ def main():
             np.nanmean(visual_scanning_duration) if len(visual_scanning_duration) > 0 else None
         )
         mean_visual_scanning_duration_pre_cue = (
-            np.nanmean(visual_scanning_duration_pre_cue)
-            if len(visual_scanning_duration_pre_cue) > 0
-            else None
+            np.nanmean(visual_scanning_duration_pre_cue) if len(visual_scanning_duration_pre_cue) > 0 else None
         )
         mean_visual_scanning_duration_post_cue = (
-            np.nanmean(visual_scanning_duration_post_cue)
-            if len(visual_scanning_duration_post_cue) > 0
-            else None
+            np.nanmean(visual_scanning_duration_post_cue) if len(visual_scanning_duration_post_cue) > 0 else None
         )
 
-        sequences = blink_sequences + saccade_sequences + fixation_sequences + smooth_pursuit_sequences + visual_scanning_sequences
-        trial_duration_pre_cue, trial_duration_post_cue = get_trial_length_before_and_after_quiet_eye(sequences, post_cue_timing_idx, dt, time_vector)
+        sequences = (
+            blink_sequences
+            + saccade_sequences
+            + fixation_sequences
+            + smooth_pursuit_sequences
+            + visual_scanning_sequences
+        )
+        trial_duration_pre_cue, trial_duration_post_cue = get_trial_length_before_and_after_quiet_eye(
+            sequences, post_cue_timing_idx, dt, time_vector
+        )
 
         fixation_ratio = total_fixation_duration / time_vector[-1]
         fixation_ratio_pre_cue = total_fixation_duration_pre_cue / trial_duration_pre_cue

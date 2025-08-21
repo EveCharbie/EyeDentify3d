@@ -90,7 +90,9 @@ class ReducedData(Data):
             self._time_vector = None
         else:
             if self.indices is None:
-                raise RuntimeError("The time vector can only be set once the indices are initialized using _set_indices.")
+                raise RuntimeError(
+                    "The time vector can only be set once the indices are initialized using _set_indices."
+                )
             self._time_vector = value[self.indices]
 
     @property

@@ -234,7 +234,7 @@ class GazeBehaviorIdentifier:
             self.data_object,
             self.identified_indices,
             self.inter_saccadic_sequences.fixation_indices,
-            fixation_minimal_duration
+            fixation_minimal_duration,
         )
         self.fixation.initialize()
 
@@ -522,7 +522,7 @@ class GazeBehaviorIdentifier:
             event_at_split, end_time, new_beginning_time = self._get_event_at_split_timing(
                 timing, self.data_object.time_vector, self.data_object.dt, event_at_split_handling
             )
-            time_range = TimeRange(beginning_time, end_time+1e-6)
+            time_range = TimeRange(beginning_time, end_time + 1e-6)
             reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
             gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
 
