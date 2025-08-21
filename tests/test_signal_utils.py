@@ -98,19 +98,19 @@ def test_filter_data_values():
 def test_find_time_index_first_method():
     """Test that find_time_index returns the correct index with 'first' method."""
     time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
-    
+
     # Target time is exactly at an index
     idx = find_time_index(time_vector, 0.2, "first")
     assert idx == 1  # Index 1 is the last index where time < 0.2
-    
+
     # Target time is between indices
     idx = find_time_index(time_vector, 0.25, "first")
     assert idx == 2  # Index 2 is the last index where time < 0.25
-    
+
     # Target time is before the first element
     idx = find_time_index(time_vector, -0.1, "first")
     assert idx == 0
-    
+
     # Target time is after the last element
     idx = find_time_index(time_vector, 0.6, "first")
     assert idx == 5
@@ -119,19 +119,19 @@ def test_find_time_index_first_method():
 def test_find_time_index_last_method():
     """Test that find_time_index returns the correct index with 'last' method."""
     time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
-    
+
     # Target time is exactly at an index
     idx = find_time_index(time_vector, 0.2, "last")
     assert idx == 3  # Index 3 is the first index where time > 0.2
-    
+
     # Target time is between indices
     idx = find_time_index(time_vector, 0.25, "last")
     assert idx == 3  # Index 3 is the first index where time > 0.25
-    
+
     # Target time is before the first element
     idx = find_time_index(time_vector, -0.1, "last")
     assert idx == 0
-    
+
     # Target time is after the last element
     idx = find_time_index(time_vector, 0.6, "last")
     assert idx == 5
@@ -140,11 +140,11 @@ def test_find_time_index_last_method():
 def test_find_time_index_with_nans():
     """Test that find_time_index handles NaN values correctly."""
     time_vector = np.array([0.0, 0.1, np.nan, 0.3, 0.4, 0.5])
-    
+
     # First method
     idx = find_time_index(time_vector, 0.2, "first")
     assert idx == 1  # Index 1 is the last valid index where time < 0.2
-    
+
     # Last method
     idx = find_time_index(time_vector, 0.2, "last")
     assert idx == 3  # Index 3 is the first valid index where time > 0.2
@@ -153,6 +153,6 @@ def test_find_time_index_with_nans():
 def test_find_time_index_invalid_method():
     """Test that find_time_index raises ValueError for invalid method."""
     time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
-    
+
     with np.testing.assert_raises(ValueError):
         find_time_index(time_vector, 0.2, "invalid_method")
