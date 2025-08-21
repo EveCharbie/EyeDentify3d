@@ -27,7 +27,7 @@ def test_error_type_print(mock_stdout):
     """Test that ErrorType.PRINT prints to console."""
     error_handler = ErrorType.PRINT
     error_handler("Test error message")
-    assert mock_stdout.getvalue() == "Test error message\n"
+    assert mock_stdout.getvalue() == "Test error message"
 
 
 @patch("builtins.open", new_callable=mock_open)

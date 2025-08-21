@@ -1,4 +1,5 @@
 from .data_parsers.htc_vive_pro_data import HtcViveProData
+from .data_parsers.reduced_data import ReducedData
 from .error_type import ErrorType
 from .identification.gaze_behavior_identifier import GazeBehaviorIdentifier
 from .time_range import TimeRange
@@ -21,6 +22,7 @@ from .gaze_analysis import (
 
 __all__ = [
     "HtcViveProData",
+    "ReducedData",
     "ErrorType",
     "TimeRange",
     "GazeBehaviorIdentifier",
