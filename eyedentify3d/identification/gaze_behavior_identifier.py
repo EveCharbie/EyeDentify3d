@@ -63,21 +63,16 @@ class GazeBehaviorIdentifier:
 
     def remove_bad_frames(self, event_identifier):
         """
-        Removing the date when the eyes are closed (blink is detected) or when the data is invalid, as it does not make
-        sense to have a gaze orientation if the eyes are closed.
+        Removing the frames where the eyes are closed (blink is detected) or when the data is invalid, as it does not
+        make sense to have a gaze orientation when the eyes are closed.
         """
         if not hasattr(event_identifier, "frame_indices"):
             raise RuntimeError(
                 "The event identifier must have a 'frame_indices' attribute. This should not happen, please contact the developer."
             )
 
-        # self.data_object.time_vector[event_identifier.frame_indices] = np.nan
         self.data_object.eye_direction[:, event_identifier.frame_indices] = np.nan
-        self.data_object.head_angles[:, event_identifier.frame_indices] = np.nan
         self.data_object.gaze_direction[:, event_identifier.frame_indices] = np.nan
-        self.data_object.head_angular_velocity[:, event_identifier.frame_indices] = np.nan
-        self.data_object.head_velocity_norm[event_identifier.frame_indices] = np.nan
-        self.data_object.data_invalidity[event_identifier.frame_indices] = np.nan
 
     def set_identified_frames(self, event_identifier):
         """
@@ -166,7 +161,7 @@ class GazeBehaviorIdentifier:
         # detection of other events. Please note that these frames might not be part of a visual scanning event if the
         # velocity is not maintained for at least minimal_duration.
         self.fast_frame_indices = np.where(
-            np.abs(self.visual_scanning.gaze_angular_velocity) > self.visual_scanning.min_velocity_threshold
+            np.abs(self.data_object.gaze_angular_velocity) > self.visual_scanning.min_velocity_threshold
         )[0]
         self.identified_indices[self.fast_frame_indices] = True
 
@@ -391,15 +386,16 @@ class GazeBehaviorIdentifier:
         ):
             for sequence in sequence_list:
                 beginning_time = time_vector[sequence[0]]
-                end_time = time_vector[sequence[-1]]
+                if time_vector > sequence[-1]:
+                    end_time = time_vector[sequence[-1] + 1]
+                else:
+                    end_time = time_vector[-1] + dt
                 if beginning_time <= timing <= end_time:
                     # We found the event at the split timing
                     event_at_split = sequence_type
 
                     # Remove this event but write it in a file so that we know what was removed
-                    # TODO : Check that the last frame is not included
-                    # error_str = f"{sequence_type} : {np.round(end_time - beginning_time, decimals=5)} s ----"
-                    error_str = f"{sequence_type} : {np.round(end_time - beginning_time + dt, decimals=5)} s ----"
+                    error_str = f"{sequence_type} : {np.round(end_time - beginning_time, decimals=5)} s ----"
                     error_type(error_str)
 
                     return event_at_split, beginning_time, end_time
@@ -423,8 +419,6 @@ class GazeBehaviorIdentifier:
             self.data_object.data_invalidity,
             time_range,
         )
-
-        first_index = time_range.get_indices(self.data_object.time_vector)[0]
 
         # Build a reduced GazeBehaviorIdentifier
         reduced_gaze_behavior_identifier = GazeBehaviorIdentifier(reduced_data_object)
@@ -470,11 +464,12 @@ class GazeBehaviorIdentifier:
         reduced_gaze_behavior_identifier.identified_indices = ~reduced_gaze_behavior_identifier.unidentified_indices
 
         # Fast frame indices
+        first_index_in_old_time_vector = time_range.get_indices(self.data_object.time_vector)[0]
         fast_frame_indices = []
         for i in self.fast_frame_indices:
             if i in time_range.get_indices(self.data_object.time_vector):
                 fast_frame_indices += [int(i)]
-        reduced_gaze_behavior_identifier.fast_frame_indices = np.array(fast_frame_indices) - first_index
+        reduced_gaze_behavior_identifier.fast_frame_indices = np.array(fast_frame_indices) - first_index_in_old_time_vector
 
         # Finalize
         reduced_gaze_behavior_identifier.finalize()

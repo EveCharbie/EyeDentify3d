@@ -47,6 +47,9 @@ class HtcViveProData(Data):
         self._set_head_angular_velocity()
         self._set_data_invalidity()
 
+        # Finalize the data object
+        self.finalize()
+
     @property
     def data_file_path(self):
         return self._data_file_path

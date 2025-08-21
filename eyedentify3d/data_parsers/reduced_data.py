@@ -1,9 +1,10 @@
 import numpy as np
 
 from ..time_range import TimeRange
+from .abstract_data import Data
 
 
-class ReducedData:
+class ReducedData(Data):
     """
     Create a simple data object.
     """
@@ -22,6 +23,7 @@ class ReducedData:
         original_data_invalidity: np.ndarray[bool],
         time_range: TimeRange = TimeRange(),
     ):
+        super().__init__()
 
         # Original attributes
         self.time_range = time_range
@@ -40,6 +42,9 @@ class ReducedData:
         self.head_velocity_norm = original_head_velocity_norm
         self.data_invalidity = original_data_invalidity
 
+        # Finalize
+        self.finalize()
+
     def _set_indices(self, time_vector):
         """
         Set the indices of the data object based on the time vector and the time range.
@@ -47,6 +52,25 @@ class ReducedData:
         if time_vector is None:
             raise ValueError("The time vector must be provided.")
         self.indices = self.time_range.get_indices(time_vector)
+
+
+    # Bypass some abstract methods to skip in this edgy context
+    def _check_validity(self):
+        pass
+    def _set_time_vector(self):
+        pass
+    def _discard_data_out_of_range(self):
+        pass
+    def _set_eye_openness(self):
+        pass
+    def _set_eye_direction(self):
+        pass
+    def _set_head_angles(self):
+        pass
+    def _set_head_angular_velocity(self):
+        pass
+    def _set_data_invalidity(self):
+        pass
 
     @property
     def time_vector(self):
