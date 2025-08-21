@@ -63,3 +63,51 @@ def test_get_indices_with_inf_max():
     time_vector = np.array([1.0, 2.0, 3.0, 100.0, 1000.0])
     indices = time_range.get_indices(time_vector)
     np.testing.assert_array_equal(indices, np.array([1, 2, 3, 4]))
+
+
+def test_get_indices_with_nan_values():
+    """Test get_indices with NaN values in the time vector."""
+    time_range = TimeRange(min_time=1.0, max_time=5.0)
+    time_vector = np.array([0.5, 1.5, np.nan, 3.0, 4.5, 5.5])
+    indices = time_range.get_indices(time_vector)
+    np.testing.assert_array_equal(indices, np.array([1, 2, 3, 4]))
+
+
+def test_get_indices_with_unsorted_time_vector():
+    """Test get_indices with an unsorted time vector."""
+    time_range = TimeRange(min_time=2.0, max_time=6.0)
+    time_vector = np.array([5.0, 1.0, 3.0, 7.0, 2.0, 4.0])
+    indices = time_range.get_indices(time_vector)
+    np.testing.assert_array_equal(indices, np.array([0, 2, 4, 5]))
+
+
+def test_get_indices_with_duplicate_times():
+    """Test get_indices with duplicate time values."""
+    time_range = TimeRange(min_time=2.0, max_time=4.0)
+    time_vector = np.array([1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0])
+    indices = time_range.get_indices(time_vector)
+    np.testing.assert_array_equal(indices, np.array([1, 2, 3, 4, 5, 6]))
+
+
+def test_get_indices_with_negative_times():
+    """Test get_indices with negative time values."""
+    time_range = TimeRange(min_time=-3.0, max_time=0.0)
+    time_vector = np.array([-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0])
+    indices = time_range.get_indices(time_vector)
+    np.testing.assert_array_equal(indices, np.array([2, 3, 4, 5]))
+
+
+def test_get_indices_with_min_equals_max():
+    """Test get_indices when min_time equals max_time."""
+    time_range = TimeRange(min_time=3.0, max_time=3.0)
+    time_vector = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    indices = time_range.get_indices(time_vector)
+    np.testing.assert_array_equal(indices, np.array([]))
+
+
+def test_get_indices_with_min_greater_than_max():
+    """Test get_indices when min_time is greater than max_time."""
+    time_range = TimeRange(min_time=5.0, max_time=3.0)
+    time_vector = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    indices = time_range.get_indices(time_vector)
+    np.testing.assert_array_equal(indices, np.array([]))
