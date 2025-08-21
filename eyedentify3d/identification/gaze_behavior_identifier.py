@@ -369,8 +369,17 @@ class GazeBehaviorIdentifier:
                         "This should not happen, please contact the developer."
                     )
 
+    def compute_metrics(self):
+        """
+        The metrics are computed at the end for each event type to allow skipping the initialization of the Events.
+        """
+        self.saccade.measure_saccade_amplitude()
+        self.fixation.measure_search_rate()
+        self.smooth_pursuit.measure_smooth_pursuit_trajectory()
+
     def finalize(self):
         self.validate_sequences()
+        self.compute_metrics()
         self.is_finalized = True
 
     def _get_event_at_split_timing(
@@ -386,7 +395,7 @@ class GazeBehaviorIdentifier:
         ):
             for sequence in sequence_list:
                 beginning_time = time_vector[sequence[0]]
-                if time_vector > sequence[-1]:
+                if len(time_vector) > sequence[-1] + 1:
                     end_time = time_vector[sequence[-1] + 1]
                 else:
                     end_time = time_vector[-1] + dt

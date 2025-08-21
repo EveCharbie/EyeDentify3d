@@ -60,7 +60,6 @@ class SaccadeEvent(Event):
         self.detect_saccade_sequences()
         self.merge_sequences()
         self.adjust_indices_to_sequences()
-        self.measure_saccade_amplitude()
 
     def set_eye_angular_velocity(self):
         """

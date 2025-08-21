@@ -42,7 +42,6 @@ class SmoothPursuitEvent(Event):
         self.split_sequences()
         self.merge_sequences()
         self.adjust_indices_to_sequences()
-        self.measure_smooth_pursuit_trajectory()
 
     def merge_sequences(self):
         """

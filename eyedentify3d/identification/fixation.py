@@ -42,7 +42,6 @@ class FixationEvent(Event):
         self.split_sequences()
         self.merge_sequences()
         self.adjust_indices_to_sequences()
-        self.measure_search_rate()
 
     def merge_sequences(self):
         """

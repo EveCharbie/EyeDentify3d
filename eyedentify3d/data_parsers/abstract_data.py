@@ -201,6 +201,7 @@ class Data(ABC):
         """
         self.gaze_angular_velocity = compute_angular_velocity(self.time_vector, self.gaze_direction)
 
+
     def finalize(self):
         """
         Finalize the data object by computing some secondary quantities.

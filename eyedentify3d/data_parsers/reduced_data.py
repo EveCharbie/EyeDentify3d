@@ -23,6 +23,7 @@ class ReducedData(Data):
         original_data_invalidity: np.ndarray[bool],
         time_range: TimeRange = TimeRange(),
     ):
+
         super().__init__()
 
         # Original attributes
@@ -33,6 +34,7 @@ class ReducedData(Data):
         self.indices = None
         self._set_indices(original_time_vector)
         self.time_vector = original_time_vector
+
         self.right_eye_openness = original_right_eye_openness
         self.left_eye_openness = original_left_eye_openness
         self.eye_direction = original_eye_direction
@@ -84,9 +86,12 @@ class ReducedData(Data):
 
     @time_vector.setter
     def time_vector(self, value: np.ndarray[float]):
-        if self.indices is None:
-            raise RuntimeError("The time vector can only be set once the indices are initialized using _set_indices.")
-        self._time_vector = value[self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            if self.indices is None:
+                raise RuntimeError("The time vector can only be set once the indices are initialized using _set_indices.")
+            self._time_vector = value[self.indices]
 
     @property
     def right_eye_openness(self):
@@ -94,7 +99,10 @@ class ReducedData(Data):
 
     @right_eye_openness.setter
     def right_eye_openness(self, value: np.ndarray[float]):
-        self._right_eye_openness = value[self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._right_eye_openness = value[self.indices]
 
     @property
     def left_eye_openness(self):
@@ -102,7 +110,10 @@ class ReducedData(Data):
 
     @left_eye_openness.setter
     def left_eye_openness(self, value: np.ndarray[float]):
-        self._left_eye_openness = value[self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._left_eye_openness = value[self.indices]
 
     @property
     def eye_direction(self):
@@ -110,7 +121,10 @@ class ReducedData(Data):
 
     @eye_direction.setter
     def eye_direction(self, value: np.ndarray[float]):
-        self._eye_direction = value[:, self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._eye_direction = value[:, self.indices]
 
     @property
     def head_angles(self):
@@ -118,7 +132,10 @@ class ReducedData(Data):
 
     @head_angles.setter
     def head_angles(self, value: np.ndarray[float]):
-        self._head_angles = value[:, self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._head_angles = value[:, self.indices]
 
     @property
     def gaze_direction(self):
@@ -126,7 +143,10 @@ class ReducedData(Data):
 
     @gaze_direction.setter
     def gaze_direction(self, value: np.ndarray[float]):
-        self._gaze_direction = value[:, self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._gaze_direction = value[:, self.indices]
 
     @property
     def head_angular_velocity(self):
@@ -134,7 +154,10 @@ class ReducedData(Data):
 
     @head_angular_velocity.setter
     def head_angular_velocity(self, value: np.ndarray[float]):
-        self._head_angular_velocity = value[:, self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._head_angular_velocity = value[:, self.indices]
 
     @property
     def head_velocity_norm(self):
@@ -142,7 +165,10 @@ class ReducedData(Data):
 
     @head_velocity_norm.setter
     def head_velocity_norm(self, value: np.ndarray[float]):
-        self._head_velocity_norm = value[self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._head_velocity_norm = value[self.indices]
 
     @property
     def data_invalidity(self):
@@ -150,4 +176,7 @@ class ReducedData(Data):
 
     @data_invalidity.setter
     def data_invalidity(self, value: np.ndarray[bool]):
-        self._data_invalidity = value[self.indices]
+        if value is None:
+            self._time_vector = None
+        else:
+            self._data_invalidity = value[self.indices]

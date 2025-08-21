@@ -69,7 +69,7 @@ class Event(ABC):
         durations = []
         for sequence in self.sequences:
             beginning_time = time_vector[sequence[0]]
-            if time_vector > sequence[-1]:
+            if len(time_vector) > sequence[-1] + 1:
                 end_time = time_vector[sequence[-1] + 1]
             else:
                 end_time = time_vector[-1] + self.data_object.dt
@@ -103,4 +103,4 @@ class Event(ABC):
         if trial_length == 0:
             return None
         else:
-            return self.total_duration() / trial_length if self.nb_events() > 0 else None
+            return self.total_duration() / trial_length if self.nb_events() > 0 else 0.0
