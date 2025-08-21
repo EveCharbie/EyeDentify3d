@@ -2,7 +2,7 @@ import numpy as np
 
 from .event import Event
 from ..utils.data_utils import DataObject
-from ..utils.sequence_utils import split_sequences, merge_close_sequences
+from ..utils.sequence_utils import merge_close_sequences
 
 
 class SmoothPursuitEvent(Event):
@@ -34,11 +34,15 @@ class SmoothPursuitEvent(Event):
         self.smooth_pursuit_indices = smooth_pursuit_indices
         self.minimal_duration = minimal_duration
 
+        # Extended attributes
+        self.smooth_pursuit_trajectories: list[float] = None
+
     def initialize(self):
         self.frame_indices = self.smooth_pursuit_indices
         self.split_sequences()
         self.merge_sequences()
         self.adjust_indices_to_sequences()
+        self.measure_smooth_pursuit_trajectory()
 
     def merge_sequences(self):
         """
@@ -54,3 +58,23 @@ class SmoothPursuitEvent(Event):
             check_directionality=True,
             max_angle=30.0,  # TODO: make modulable
         )
+
+    def measure_smooth_pursuit_trajectory(self):
+        """
+        Compute the length of the smooth pursuit trajectory as the sum of the angle between two frames in degrees.
+        It can be seen as the integral of the angular velocity.
+        """
+        smooth_pursuit_trajectories = []
+        for sequence in self.sequences:
+            trajectory_this_time = 0
+            for idx in sequence:
+                time_beginning = self.data_object.time_vector[idx]
+                if idx + 1 < len(self.data_object.time_vector):
+                    time_end = self.data_object.time_vector[idx + 1]
+                else:
+                    time_end = self.data_object.time_vector[-1] + self.data_object.dt
+                d_trajectory = np.abs(self.data_object.gaze_angular_velocity[idx]) * (time_end - time_beginning)
+                if not np.isnan(d_trajectory):
+                    trajectory_this_time += d_trajectory
+            smooth_pursuit_trajectories += [trajectory_this_time]
+        self.smooth_pursuit_trajectories = smooth_pursuit_trajectories

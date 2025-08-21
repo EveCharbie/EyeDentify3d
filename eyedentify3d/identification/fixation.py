@@ -34,11 +34,15 @@ class FixationEvent(Event):
         self.fixation_indices = fixation_indices
         self.minimal_duration = minimal_duration
 
+        # Extended attributes
+        self.search_rate: float | None = None
+
     def initialize(self):
         self.frame_indices = self.fixation_indices
         self.split_sequences()
         self.merge_sequences()
         self.adjust_indices_to_sequences()
+        self.measure_search_rate()
 
     def merge_sequences(self):
         """
@@ -54,3 +58,14 @@ class FixationEvent(Event):
             check_directionality=False,
             max_angle=30.0,  # TODO: make modulable
         )
+
+    def measure_search_rate(self):
+        """
+        Compute the search rate, which is the number of fixations divided by the mean fixation duration.
+        """
+        nb_fixations = self.nb_events()
+        if nb_fixations == 0:
+            self.search_rate = None
+        else:
+            mean_fixation_duration = self.mean_duration()
+            self.search_rate = nb_fixations / mean_fixation_duration

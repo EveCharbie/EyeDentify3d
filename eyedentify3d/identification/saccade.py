@@ -60,7 +60,7 @@ class SaccadeEvent(Event):
         self.detect_saccade_sequences()
         self.merge_sequences()
         self.adjust_indices_to_sequences()
-        self.compute_saccade_amplitude()
+        self.measure_saccade_amplitude()
 
     def set_eye_angular_velocity(self):
         """
@@ -153,7 +153,7 @@ class SaccadeEvent(Event):
             max_angle=30.0,  # TODO: make modulable
         )
 
-    def compute_saccade_amplitude(self):
+    def measure_saccade_amplitude(self):
         """
         Compute the amplitude of each saccade sequence. It is defined as the angle between the beginning and end of the
         saccade in degrees.

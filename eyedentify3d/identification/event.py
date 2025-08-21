@@ -53,3 +53,54 @@ class Event(ABC):
         self.sequences = sequences
         self.frame_indices = np.concatenate(sequences) if sequences else np.array([], dtype=int)
         return self
+
+    def nb_events(self) -> int:
+        """
+        Get the number of events detected.
+        """
+        return len(self.sequences)
+
+    def duration(self) -> np.ndarray[float]:
+        """
+        Get the duration of each event detected.
+        """
+        time_vector = self.data_object.time_vector
+
+        durations = []
+        for sequence in self.sequences:
+            beginning_time = time_vector[sequence[0]]
+            if time_vector > sequence[-1]:
+                end_time = time_vector[sequence[-1] + 1]
+            else:
+                end_time = time_vector[-1] + self.data_object.dt
+
+            durations += [end_time - beginning_time]
+        return np.array(durations, dtype=float)
+
+    def mean_duration(self) -> float | None:
+        """
+        Get the mean duration of the events detected.
+        """
+        return np.mean(self.duration()) if self.nb_events() > 0 else None
+
+    def max_duration(self) -> float | None:
+        """
+        Get the maximum duration of the events detected.
+        """
+        return np.max(self.duration()) if self.nb_events() > 0 else None
+
+    def total_duration(self) -> float | None:
+        """
+        Get the total duration of all events detected.
+        """
+        return np.sum(self.duration()) if self.nb_events() > 0 else None
+
+    def ratio(self):
+        """
+        The proportion of the time spent in events compared to the total time of the data object.
+        """
+        trial_length = self.data_object.time_vector[-1] - self.data_object.time_vector[0] + self.data_object.dt
+        if trial_length == 0:
+            return None
+        else:
+            return self.total_duration() / trial_length if self.nb_events() > 0 else None
