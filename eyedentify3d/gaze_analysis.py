@@ -1091,22 +1091,23 @@ def spit_sequences(
         post_cue_timing_idx,
     )
 
+
 def compute_intermediary_metrics(
-        time_vector,
-        smooth_pursuit_sequences,
-        fixation_sequences,
-        blink_sequences,
-        saccade_sequences,
-        visual_scanning_sequences,
-        gaze_angular_velocity_rad,
-        dt,
-        cut_file,
-        fixation_duration_threshold,
-        smooth_pursuit_duration_threshold,
-        head_angular_velocity_deg_filtered,
-        post_cue_timing_idx,
-        smooth_pursuit_sequences_pre_cue,
-        smooth_pursuit_sequences_post_cue,
+    time_vector,
+    smooth_pursuit_sequences,
+    fixation_sequences,
+    blink_sequences,
+    saccade_sequences,
+    visual_scanning_sequences,
+    gaze_angular_velocity_rad,
+    dt,
+    cut_file,
+    fixation_duration_threshold,
+    smooth_pursuit_duration_threshold,
+    head_angular_velocity_deg_filtered,
+    post_cue_timing_idx,
+    smooth_pursuit_sequences_pre_cue,
+    smooth_pursuit_sequences_post_cue,
 ):
 
     def split_durations_before_and_after_quiet_eye(
@@ -1117,24 +1118,27 @@ def compute_intermediary_metrics(
         durations_post_cue = []
         for i in sequences:
             if len(i) > 0:
-                duration = time_vector[i[-1]] - time_vector[i[0]] + dt
+                if len(time_vector) > i[-1] + 1:
+                    duration = float(time_vector[i[-1] + 1] - time_vector[i[0]])
+                else:
+                    duration = float(time_vector[i[-1]] - time_vector[i[0]] + dt)
                 if duration > duration_threshold:
                     durations.append(duration)
                     if i[-1] < post_cue_timing_idx:
-                        durations_pre_cue.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
+                        durations_pre_cue.append(duration)
                     elif post_cue_timing_idx in i:
                         # Remove this event but write it in a file so that we know what was removed
                         if cut_file is None:
                             # print(
-                            #     f"{sequence_type} : {np.round(time_vector[i[-1]] - time_vector[i[0]] + dt, decimals=5)} s ----",
+                            #     f"{sequence_type} : {np.round(duration, decimals=5)} s ----",
                             #     end="",
                             # )
                             pass
                         else:
-                            cut_file.write(f"{sequence_type} : {time_vector[i[-1]] - time_vector[i[0]] + dt} s \n")
+                            cut_file.write(f"{sequence_type} : {duration} s \n")
                     elif i[0] > post_cue_timing_idx:
-                        durations_post_cue.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
-        return durations, durations_pre_cue, durations_post_cue
+                        durations_post_cue.append(duration)
+        return np.array(durations, dtype=float), np.array(durations_pre_cue, dtype=float), np.array(durations_post_cue, dtype=float)
 
     # Intermediary metrics
     smooth_pursuit_trajectories = measure_smooth_pursuit_trajectory(
@@ -1159,9 +1163,9 @@ def compute_intermediary_metrics(
             duration_threshold=fixation_duration_threshold,
         )
     )
-    total_fixation_duration = np.sum(np.array(fixation_duration))
-    total_fixation_duration_pre_cue = np.sum(np.array(fixation_duration_pre_cue))
-    total_fixation_duration_post_cue = np.sum(np.array(fixation_duration_post_cue))
+    total_fixation_duration = np.sum(fixation_duration)
+    total_fixation_duration_pre_cue = np.sum(fixation_duration_pre_cue)
+    total_fixation_duration_post_cue = np.sum(fixation_duration_post_cue)
 
     # Total time spent in smooth pursuit
     smooth_pursuit_duration, smooth_pursuit_duration_pre_cue, smooth_pursuit_duration_post_cue = (
@@ -1175,25 +1179,25 @@ def compute_intermediary_metrics(
             duration_threshold=smooth_pursuit_duration_threshold,
         )
     )
-    total_smooth_pursuit_duration = np.sum(np.array(smooth_pursuit_duration))
-    total_smooth_pursuit_duration_pre_cue = np.sum(np.array(smooth_pursuit_duration_pre_cue))
-    total_smooth_pursuit_duration_post_cue = np.sum(np.array(smooth_pursuit_duration_post_cue))
+    total_smooth_pursuit_duration = np.sum(smooth_pursuit_duration)
+    total_smooth_pursuit_duration_pre_cue = np.sum(smooth_pursuit_duration_pre_cue)
+    total_smooth_pursuit_duration_post_cue = np.sum(smooth_pursuit_duration_post_cue)
 
     # Total time spent in blinks
     blink_duration, blink_duration_pre_cue, blink_duration_post_cue = split_durations_before_and_after_quiet_eye(
         "Blink", cut_file, blink_sequences, post_cue_timing_idx, dt, time_vector
     )
-    total_blink_duration = np.sum(np.array(blink_duration))
-    total_blink_duration_pre_cue = np.sum(np.array(blink_duration_pre_cue))
-    total_blink_duration_post_cue = np.sum(np.array(blink_duration_post_cue))
+    total_blink_duration = np.sum(blink_duration)
+    total_blink_duration_pre_cue = np.sum(blink_duration_pre_cue)
+    total_blink_duration_post_cue = np.sum(blink_duration_post_cue)
 
     # Total time spent in saccades
     saccade_duration, saccade_duration_pre_cue, saccade_duration_post_cue = split_durations_before_and_after_quiet_eye(
         "Saccade", cut_file, saccade_sequences, post_cue_timing_idx, dt, time_vector
     )
-    total_saccade_duration = np.sum(np.array(saccade_duration))
-    total_saccade_duration_pre_cue = np.sum(np.array(saccade_duration_pre_cue))
-    total_saccade_duration_post_cue = np.sum(np.array(saccade_duration_post_cue))
+    total_saccade_duration = np.sum(saccade_duration)
+    total_saccade_duration_pre_cue = np.sum(saccade_duration_pre_cue)
+    total_saccade_duration_post_cue = np.sum(saccade_duration_post_cue)
 
     # Total time spent in visual scanning
     visual_scanning_duration, visual_scanning_duration_pre_cue, visual_scanning_duration_post_cue = (
@@ -1201,9 +1205,9 @@ def compute_intermediary_metrics(
             "Visual scanning", cut_file, visual_scanning_sequences, post_cue_timing_idx, dt, time_vector
         )
     )
-    total_visual_scanning_duration = np.sum(np.array(visual_scanning_duration))
-    total_visual_scanning_duration_pre_cue = np.sum(np.array(visual_scanning_duration_pre_cue))
-    total_visual_scanning_duration_post_cue = np.sum(np.array(visual_scanning_duration_post_cue))
+    total_visual_scanning_duration = np.sum(visual_scanning_duration)
+    total_visual_scanning_duration_pre_cue = np.sum(visual_scanning_duration_pre_cue)
+    total_visual_scanning_duration_post_cue = np.sum(visual_scanning_duration_post_cue)
 
     # Head velocity
     mean_head_angular_velocity_deg = np.mean(head_angular_velocity_deg_filtered)
@@ -1249,6 +1253,7 @@ def compute_intermediary_metrics(
         mean_head_angular_velocity_deg_post_cue,
         post_cue_timing_idx,
     )
+
 
 def check_if_there_is_sequence_overlap(
     fixation_sequences,
@@ -1609,12 +1614,12 @@ def main():
         nb_fixations_pre_cue = len(fixation_duration_pre_cue)
         nb_fixations_post_cue = len(fixation_duration_post_cue)
 
-        mean_fixation_duration = np.nanmean(np.array(fixation_duration)) if len(fixation_duration) > 0 else None
+        mean_fixation_duration = np.nanmean(fixation_duration) if len(fixation_duration) > 0 else None
         mean_fixation_duration_pre_cue = (
-            np.nanmean(np.array(fixation_duration_pre_cue)) if len(fixation_duration_pre_cue) > 0 else None
+            np.nanmean(fixation_duration_pre_cue) if len(fixation_duration_pre_cue) > 0 else None
         )
         mean_fixation_duration_post_cue = (
-            np.nanmean(np.array(fixation_duration_post_cue)) if len(fixation_duration_post_cue) > 0 else None
+            np.nanmean(fixation_duration_post_cue) if len(fixation_duration_post_cue) > 0 else None
         )
 
         search_rate = nb_fixations / mean_fixation_duration if mean_fixation_duration is not None else None
@@ -1642,12 +1647,12 @@ def main():
         nb_saccades_pre_cue = len(saccade_sequences_pre_cue)
         nb_saccades_post_cue = len(saccade_sequences_post_cue)
 
-        mean_saccade_duration = np.nanmean(np.array(saccade_duration)) if len(saccade_duration) > 0 else None
+        mean_saccade_duration = np.nanmean(saccade_duration) if len(saccade_duration) > 0 else None
         mean_saccade_duration_pre_cue = (
-            np.nanmean(np.array(saccade_duration_pre_cue)) if len(saccade_duration_pre_cue) > 0 else None
+            np.nanmean(saccade_duration_pre_cue) if len(saccade_duration_pre_cue) > 0 else None
         )
         mean_saccade_duration_post_cue = (
-            np.nanmean(np.array(saccade_duration_post_cue)) if len(saccade_duration_post_cue) > 0 else None
+            np.nanmean(saccade_duration_post_cue) if len(saccade_duration_post_cue) > 0 else None
         )
 
         max_saccade_amplitude = np.nanmax(np.array(saccade_amplitudes)) if len(saccade_amplitudes) > 0 else None
@@ -1673,13 +1678,13 @@ def main():
         nb_smooth_pursuit_post_cue = len(smooth_pursuit_sequences_post_cue)
 
         mean_smooth_pursuit_duration = (
-            np.nanmean(np.array(smooth_pursuit_duration)) if len(smooth_pursuit_duration) > 0 else None
+            np.nanmean(smooth_pursuit_duration) if len(smooth_pursuit_duration) > 0 else None
         )
         mean_smooth_pursuit_duration_pre_cue = (
-            np.nanmean(np.array(smooth_pursuit_duration_pre_cue)) if len(smooth_pursuit_duration_pre_cue) > 0 else None
+            np.nanmean(smooth_pursuit_duration_pre_cue) if len(smooth_pursuit_duration_pre_cue) > 0 else None
         )
         mean_smooth_pursuit_duration_post_cue = (
-            np.nanmean(np.array(smooth_pursuit_duration_post_cue))
+            np.nanmean(smooth_pursuit_duration_post_cue)
             if len(smooth_pursuit_duration_post_cue) > 0
             else None
         )
@@ -1707,15 +1712,15 @@ def main():
         nb_visual_scanning_post_cue = len(visual_scanning_sequences_post_cue)
 
         mean_visual_scanning_duration = (
-            np.nanmean(np.array(visual_scanning_duration)) if len(visual_scanning_duration) > 0 else None
+            np.nanmean(visual_scanning_duration) if len(visual_scanning_duration) > 0 else None
         )
         mean_visual_scanning_duration_pre_cue = (
-            np.nanmean(np.array(visual_scanning_duration_pre_cue))
+            np.nanmean(visual_scanning_duration_pre_cue)
             if len(visual_scanning_duration_pre_cue) > 0
             else None
         )
         mean_visual_scanning_duration_post_cue = (
-            np.nanmean(np.array(visual_scanning_duration_post_cue))
+            np.nanmean(visual_scanning_duration_post_cue)
             if len(visual_scanning_duration_post_cue) > 0
             else None
         )
