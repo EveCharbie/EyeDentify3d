@@ -186,22 +186,22 @@ def perform_one_file(
         raise ValueError("Problem: The sum of the ratios is greater than 1")
 
     # Other specific metrics
-    mean_head_angular_velocity = np.nanmean(gaze_behavior_identifier.data_object.head_angular_velocity_norm)
+    mean_head_angular_velocity = np.nanmean(gaze_behavior_identifier.data_object.head_velocity_norm)
     mean_head_angular_velocity_pre_cue = np.nanmean(
-        pre_cue_gaze_behavior_identifier.data_object.head_angular_velocity_norm
+        pre_cue_gaze_behavior_identifier.data_object.head_velocity_norm
     )
     mean_head_angular_velocity_post_cue = np.nanmean(
-        post_cue_gaze_behavior_identifier.data_object.head_angular_velocity_norm
+        post_cue_gaze_behavior_identifier.data_object.head_velocity_norm
     )
 
     mean_saccade_duration = gaze_behavior_identifier.saccade.mean_duration()
     mean_saccade_duration_pre_cue = pre_cue_gaze_behavior_identifier.saccade.mean_duration()
     mean_saccade_duration_post_cue = post_cue_gaze_behavior_identifier.saccade.mean_duration()
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
-    max_saccade_amplitude = np.nanmax(gaze_behavior_identifier.saccade.saccade_amplitudes)
-    mean_saccade_amplitude = np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes)
-    mean_saccade_amplitude_pre_cue = np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes)
-    mean_saccade_amplitude_post_cue = np.nanmean(post_cue_gaze_behavior_identifier.saccade.saccade_amplitudes)
+    max_saccade_amplitude = np.nanmax(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
+    mean_saccade_amplitude = np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
+    mean_saccade_amplitude_pre_cue = np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes)  if nb_saccades_pre_cue > 0 else None
+    mean_saccade_amplitude_post_cue = np.nanmean(post_cue_gaze_behavior_identifier.saccade.saccade_amplitudes)  if nb_saccades_post_cue > 0 else None
 
     mean_visual_scanning_duration = gaze_behavior_identifier.visual_scanning.mean_duration()
     mean_visual_scanning_duration_pre_cue = pre_cue_gaze_behavior_identifier.visual_scanning.mean_duration()
@@ -292,9 +292,9 @@ def perform_one_file(
             "Visual scanning ratio post cue": [visual_scanning_ratio_post_cue],
             "Not classified ratio full trial": [not_classified_ratio],
             "Invalid ratio full trial": [invalid_ratio],
-            "Mean head angular velocity full trial": [mean_head_angular_velocity_deg],
-            "Mean head angular velocity pre cue": [mean_head_angular_velocity_deg_pre_cue],
-            "Mean head angular velocity post cue": [mean_head_angular_velocity_deg_post_cue],
+            "Mean head angular velocity full trial": [mean_head_angular_velocity],
+            "Mean head angular velocity pre cue": [mean_head_angular_velocity_pre_cue],
+            "Mean head angular velocity post cue": [mean_head_angular_velocity_post_cue],
             "Length of the full trial [s]": [original_data_object.time_vector[-1]],
         }
     )
@@ -308,9 +308,9 @@ def test_original_code():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        # "TESTNA01_2D_Fist3": 7.180,  # s
-        # "TESTNA01_360VR_Fist3": 7.180,
-        # "TESTNA05_2D_Spread7": 5.060,
+        "TESTNA01_2D_Fist3": 7.180,  # s
+        "TESTNA01_360VR_Fist3": 7.180,
+        "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
         "TESTNA15_360VR_Pen3": 4.230,
