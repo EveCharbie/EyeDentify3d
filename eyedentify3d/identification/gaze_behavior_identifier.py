@@ -402,10 +402,7 @@ class GazeBehaviorIdentifier:
         ):
             for sequence in sequence_list:
                 beginning_time = time_vector[sequence[0]]
-                if len(time_vector) > sequence[-1] + 1:
-                    end_time = time_vector[sequence[-1] + 1]
-                else:
-                    end_time = time_vector[-1] + dt
+                end_time = time_vector[sequence[-1]]
                 if beginning_time <= timing <= end_time:
                     # We found the event at the split timing
                     event_at_split = sequence_type
@@ -525,13 +522,13 @@ class GazeBehaviorIdentifier:
             event_at_split, end_time, new_beginning_time = self._get_event_at_split_timing(
                 timing, self.data_object.time_vector, self.data_object.dt, event_at_split_handling
             )
-            time_range = TimeRange(beginning_time, end_time)
+            time_range = TimeRange(beginning_time, end_time+1e-6)
             reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
             gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
 
             beginning_time = new_beginning_time
 
-        time_range = TimeRange(beginning_time, self.data_object.time_vector[-1] + self.data_object.dt)
+        time_range = TimeRange(beginning_time, self.data_object.time_vector[-1])
         reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
         gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
 

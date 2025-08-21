@@ -69,8 +69,8 @@ class Event(ABC):
         durations = []
         for sequence in self.sequences:
             beginning_time = time_vector[sequence[0]]
-            if len(time_vector) > sequence[-1] + 1:
-                end_time = time_vector[sequence[-1] + 1]
+            if len(time_vector) > sequence[-1]:
+                end_time = time_vector[sequence[-1]]
             else:
                 end_time = time_vector[-1]
 

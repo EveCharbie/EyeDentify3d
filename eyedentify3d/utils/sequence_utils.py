@@ -221,8 +221,10 @@ def get_sequences_in_range(
     # If sequences is empty, return an empty sequences
     if len(sequences) == 0 or sequences[0].shape == (0,) or sequences[0].shape == (1, 0):
         return sequences
-
-    new_first_idx = find_time_index(time_vector, time_range.min_time + 1e-6, method="first")
+    if time_range.min_time < 1e-6:
+        new_first_idx = 0
+    else:
+        new_first_idx = find_time_index(time_vector, time_range.min_time + 1e-6, method="last")
 
     sequences_in_range = []
     for sequence in sequences:

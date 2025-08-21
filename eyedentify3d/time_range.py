@@ -28,13 +28,19 @@ class TimeRange:
         """
         # This approach is less clean but is robust no NaNs in the time_vector
         beginning_idx = np.where(time_vector >= self.min_time)[0]
-        end_idx = np.where(time_vector <= self.max_time)[0]
-        if len(beginning_idx) == 0 or len(end_idx) == 0:
-            return np.array([], dtype=int)
+        end_idx = np.where(time_vector > self.max_time)[0]
 
-        beginning_idx = beginning_idx[0]
-        end_idx = end_idx[-1]
+        if len(beginning_idx) == 0:
+            beginning_idx = 0
+        else:
+            beginning_idx = beginning_idx[0]
+
+        if len(end_idx) == 0:
+            end_idx = len(time_vector)
+        else:
+            end_idx = end_idx[0]
+
         if beginning_idx >= end_idx:
             return np.array([], dtype=int)
         else:
-            return np.arange(beginning_idx, end_idx + 1)
+            return np.arange(beginning_idx, end_idx)
