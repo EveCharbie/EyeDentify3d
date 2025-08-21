@@ -72,7 +72,7 @@ class Event(ABC):
             if len(time_vector) > sequence[-1] + 1:
                 end_time = time_vector[sequence[-1] + 1]
             else:
-                end_time = time_vector[-1] + self.data_object.dt
+                end_time = time_vector[-1]
 
             durations += [end_time - beginning_time]
         return np.array(durations, dtype=float)
@@ -99,8 +99,4 @@ class Event(ABC):
         """
         The proportion of the time spent in events compared to the total time of the data object.
         """
-        trial_length = self.data_object.time_vector[-1] - self.data_object.time_vector[0] + self.data_object.dt
-        if trial_length == 0:
-            return None
-        else:
-            return self.total_duration() / trial_length if self.nb_events() > 0 else 0.0
+        return self.total_duration() / self.data_object.trial_duration if self.nb_events() > 0 else 0.0

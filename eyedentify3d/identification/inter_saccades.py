@@ -86,6 +86,10 @@ class InterSaccadicEvent(Event):
         self.set_intersaccadic_sequences()
         self.classify_sequences()
 
+    def finalize(self, fixation_sequences: list[np.ndarray[int]], smooth_pursuit_sequences: list[np.ndarray[int]]):
+        self.sequences = merge_sequence_lists(fixation_sequences, smooth_pursuit_sequences)
+        self.frame_indices = np.concatenate(self.sequences) if self.sequences else np.array([], dtype=int)
+
     def detect_intersaccadic_indices(self):
         """
         Detect when velocity is above the threshold and if the frames are not already identified.

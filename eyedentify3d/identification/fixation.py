@@ -41,6 +41,7 @@ class FixationEvent(Event):
         self.frame_indices = self.fixation_indices
         self.split_sequences()
         self.merge_sequences()
+        self.keep_only_sequences_long_enough()
         self.adjust_indices_to_sequences()
 
     def merge_sequences(self):

@@ -87,7 +87,7 @@ class Data(ABC):
                 "The trial_duration property can only be called after the time_vector has been set "
                 "(i.e., after the data objects has been instantiated)."
             )
-        return self.time_vector[-1] - self.time_vector[0]
+        return self.time_vector[-1] - self.time_vector[0] + self.dt
 
     @destroy_on_fail
     def _set_dt(self):

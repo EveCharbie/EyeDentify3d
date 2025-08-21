@@ -218,11 +218,11 @@ def get_sequences_in_range(
     Get the sequences before and after the timing cue.
     Note: the event occurring during the cue is removed.
     """
-    # If sequences is empty, return two empty sequences
+    # If sequences is empty, return an empty sequences
     if len(sequences) == 0 or sequences[0].shape == (0,) or sequences[0].shape == (1, 0):
         return sequences
 
-    new_first_idx = find_time_index(time_vector, time_range.min_time, method="first")
+    new_first_idx = find_time_index(time_vector, time_range.min_time + 1e-6, method="first")
 
     sequences_in_range = []
     for sequence in sequences:

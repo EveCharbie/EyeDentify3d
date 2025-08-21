@@ -167,7 +167,9 @@ class GazeBehaviorIdentifier:
 
     def detect_fixation_and_smooth_pursuit_sequences(
         self,
-        minimal_duration: float = 0.04,
+        inter_saccade_minimal_duration: float = 0.04,
+        fixation_minimal_duration: float = 0.04,
+        smooth_pursuit_minimal_duration: float = 0.04,
         window_duration: float = 0.022,
         window_overlap: float = 0.006,
         eta_p: float = 0.01,
@@ -183,8 +185,9 @@ class GazeBehaviorIdentifier:
 
         Parameters
         ----------
-        minimal_duration: The minimal duration of the fixation or smooth pursuit event, in seconds. This minimal
-            duration is also applied to the inter-saccadic sequences.
+        inter_saccade_minimal_duration: The minimal duration of the intersaccadic events, in seconds.
+        fixation_minimal_duration: The minimal duration of the fixation events, in seconds.
+        smooth_pursuit_minimal_duration: The minimal duration of the smooth pursuit events, in seconds.
         window_duration: The duration of the window (in seconds) used to compute the coherence of the inter-saccadic
             sequences.
         window_overlap: The overlap between two consecutive windows (in seconds)
@@ -214,7 +217,7 @@ class GazeBehaviorIdentifier:
         self.inter_saccadic_sequences = InterSaccadicEvent(
             self.data_object,
             self.identified_indices,
-            minimal_duration,
+            inter_saccade_minimal_duration,
             window_duration,
             window_overlap,
             eta_p,
@@ -228,7 +231,10 @@ class GazeBehaviorIdentifier:
         self.inter_saccadic_sequences.initialize()
 
         self.fixation = FixationEvent(
-            self.data_object, self.identified_indices, self.inter_saccadic_sequences.fixation_indices, minimal_duration
+            self.data_object,
+            self.identified_indices,
+            self.inter_saccadic_sequences.fixation_indices,
+            fixation_minimal_duration
         )
         self.fixation.initialize()
 
@@ -236,9 +242,10 @@ class GazeBehaviorIdentifier:
             self.data_object,
             self.identified_indices,
             self.inter_saccadic_sequences.smooth_pursuit_indices,
-            minimal_duration,
+            smooth_pursuit_minimal_duration,
         )
         self.smooth_pursuit.initialize()
+        self.inter_saccadic_sequences.finalize(self.fixation.sequences, self.smooth_pursuit.sequences)
 
         self.set_identified_frames(self.fixation)
         self.set_identified_frames(self.smooth_pursuit)
@@ -407,7 +414,7 @@ class GazeBehaviorIdentifier:
                     error_str = f"{sequence_type} : {np.round(end_time - beginning_time, decimals=5)} s ----"
                     error_type(error_str)
 
-                    return event_at_split, beginning_time, end_time
+                    return event_at_split, time_vector[sequence[0]], time_vector[sequence[-1]]
 
         # There was no event happening at the split timing
         return None, timing, timing
@@ -524,7 +531,7 @@ class GazeBehaviorIdentifier:
 
             beginning_time = new_beginning_time
 
-        time_range = TimeRange(beginning_time, self.data_object.time_vector[-1])
+        time_range = TimeRange(beginning_time, self.data_object.time_vector[-1] + self.data_object.dt)
         reduced_gaze_behavior_identifier = self._get_a_reduced_gaze_behavior_identifier(time_range)
         gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
 

@@ -53,7 +53,9 @@ def perform_one_file(
         minimal_duration=0.040,  # 5 frames
     )
     gaze_behavior_identifier.detect_fixation_and_smooth_pursuit_sequences(
-        minimal_duration=0.040,  # 5 frames
+        inter_saccade_minimal_duration=0.04,  # 5 frames
+        fixation_minimal_duration=0.1,  # 100 ms
+        smooth_pursuit_minimal_duration=0.1,  # 100 ms
         window_duration=0.022 * 5,
         window_overlap=0.006 * 5,
         eta_p=0.001,
