@@ -712,10 +712,7 @@ def measure_smooth_pursuit_trajectory(time_vector, smooth_pursuit_sequences, gaz
         if (time_vector[sequence[-1]] - time_vector[sequence[0]]) >= 0.1:
             for idx in sequence:
                 time_beginning = time_vector[idx]
-                if idx + 1 < len(time_vector):
-                    time_end = time_vector[idx + 1]
-                else:
-                    time_end = time_vector[-1] + dt
+                time_end = time_vector[idx + 1]
                 d_trajectory = np.abs(gaze_angular_velocity_rad[idx] * 180 / np.pi) * (time_end - time_beginning)
                 trajectory_this_time += 0 if np.isnan(d_trajectory) else d_trajectory
             smooth_pursuit_trajectories += [trajectory_this_time]

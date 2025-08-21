@@ -69,10 +69,7 @@ class SmoothPursuitEvent(Event):
             trajectory_this_time = 0
             for idx in sequence:
                 time_beginning = self.data_object.time_vector[idx]
-                if idx + 1 < len(self.data_object.time_vector):
-                    time_end = self.data_object.time_vector[idx + 1]
-                else:
-                    time_end = self.data_object.time_vector[-1] + self.data_object.dt
+                time_end = self.data_object.time_vector[idx + 1]
                 d_trajectory = np.abs(self.data_object.gaze_angular_velocity[idx]) * (time_end - time_beginning)
                 if not np.isnan(d_trajectory):
                     trajectory_this_time += d_trajectory
