@@ -199,9 +199,7 @@ class Data(ABC):
         the time difference between them. It is computed like a centered finite difference, meaning that the frame i+1
         and i-1 are used to set the value for the frame i.
         """
-        self.gaze_angular_velocity = compute_angular_velocity(
-            self.time_vector, self.gaze_direction
-        )
+        self.gaze_angular_velocity = compute_angular_velocity(self.time_vector, self.gaze_direction)
 
     def finalize(self):
         """

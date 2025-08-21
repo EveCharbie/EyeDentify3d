@@ -188,9 +188,11 @@ def perform_one_file(
     # Other specific metrics
     mean_head_angular_velocity = np.nanmean(gaze_behavior_identifier.data_object.head_angular_velocity_norm)
     mean_head_angular_velocity_pre_cue = np.nanmean(
-        pre_cue_gaze_behavior_identifier.data_object.head_angular_velocity_norm)
+        pre_cue_gaze_behavior_identifier.data_object.head_angular_velocity_norm
+    )
     mean_head_angular_velocity_post_cue = np.nanmean(
-        post_cue_gaze_behavior_identifier.data_object.head_angular_velocity_norm)
+        post_cue_gaze_behavior_identifier.data_object.head_angular_velocity_norm
+    )
 
     mean_saccade_duration = gaze_behavior_identifier.saccade.mean_duration()
     mean_saccade_duration_pre_cue = pre_cue_gaze_behavior_identifier.saccade.mean_duration()
@@ -218,10 +220,18 @@ def perform_one_file(
     smooth_pursuit_trajectories = gaze_behavior_identifier.smooth_pursuit.smooth_pursuit_trajectories
     smooth_pursuit_trajectories_pre_cue = pre_cue_gaze_behavior_identifier.smooth_pursuit.smooth_pursuit_trajectories
     smooth_pursuit_trajectories_post_cue = post_cue_gaze_behavior_identifier.smooth_pursuit.smooth_pursuit_trajectories
-    mean_smooth_pursuit_trajectory = np.nanmean(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else None
-    mean_smooth_pursuit_trajectory_pre_cue = np.nanmean(smooth_pursuit_trajectories_pre_cue) if len(smooth_pursuit_trajectories_pre_cue) > 0 else None
-    mean_smooth_pursuit_trajectory_post_cue = np.nanmean(smooth_pursuit_trajectories_post_cue) if len(smooth_pursuit_trajectories_post_cue) > 0 else None
-    max_smooth_pursuit_trajectory = np.nanmax(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else None
+    mean_smooth_pursuit_trajectory = (
+        np.nanmean(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else None
+    )
+    mean_smooth_pursuit_trajectory_pre_cue = (
+        np.nanmean(smooth_pursuit_trajectories_pre_cue) if len(smooth_pursuit_trajectories_pre_cue) > 0 else None
+    )
+    mean_smooth_pursuit_trajectory_post_cue = (
+        np.nanmean(smooth_pursuit_trajectories_post_cue) if len(smooth_pursuit_trajectories_post_cue) > 0 else None
+    )
+    max_smooth_pursuit_trajectory = (
+        np.nanmax(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else None
+    )
 
     output = pd.DataFrame(
         {
@@ -316,9 +326,7 @@ def test_original_code():
         captured_output = io.StringIO()  # Create StringIO object
         sys.stdout = captured_output  # and redirect stdout.
 
-        output = perform_one_file(
-            file_name, file, length_before_black_screen
-        )
+        output = perform_one_file(file_name, file, length_before_black_screen)
 
         # Reset print output
         sys.stdout = sys.__stdout__  # Reset redirect.

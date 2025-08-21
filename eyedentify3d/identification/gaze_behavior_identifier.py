@@ -469,7 +469,9 @@ class GazeBehaviorIdentifier:
         for i in self.fast_frame_indices:
             if i in time_range.get_indices(self.data_object.time_vector):
                 fast_frame_indices += [int(i)]
-        reduced_gaze_behavior_identifier.fast_frame_indices = np.array(fast_frame_indices) - first_index_in_old_time_vector
+        reduced_gaze_behavior_identifier.fast_frame_indices = (
+            np.array(fast_frame_indices) - first_index_in_old_time_vector
+        )
 
         # Finalize
         reduced_gaze_behavior_identifier.finalize()
