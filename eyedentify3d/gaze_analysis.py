@@ -1153,7 +1153,7 @@ def compute_intermediary_metrics(
                     # We found an event that is happening during the cue
                     pre_cue_last_idx = i[0]
                     post_cue_first_idx = i[-1]
-                    return pre_cue_last_idx, post_cue_first_idx
+                    return pre_cue_last_idx + 1, post_cue_first_idx
         return post_cue_timing_idx, post_cue_timing_idx
 
     # Intermediary metrics
@@ -1340,9 +1340,9 @@ def main():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        "TESTNA01_2D_Fist3": 7.180,  # s
-        "TESTNA01_360VR_Fist3": 7.180,
-        "TESTNA05_2D_Spread7": 5.060,
+        # "TESTNA01_2D_Fist3": 7.180,  # s
+        # "TESTNA01_360VR_Fist3": 7.180,
+        # "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
         "TESTNA15_360VR_Pen3": 4.230,
@@ -1632,10 +1632,10 @@ def main():
                 if len(i) > 0:
                     if post_cue_timing_idx in i:
                         # We found the event happening at cue
-                        pre_cue_trial_duration = time_vector[i[0]-1]
+                        pre_cue_trial_duration = time_vector[i[0]]
                         post_cue_trial_duration = time_vector[-1] - time_vector[i[-1]]
                         return pre_cue_trial_duration, post_cue_trial_duration
-            return time_vector[post_cue_timing_idx-1], time_vector[-1] - time_vector[post_cue_timing_idx]
+            return time_vector[post_cue_timing_idx - 1], time_vector[-1] - time_vector[post_cue_timing_idx]
 
 
         # Metrics

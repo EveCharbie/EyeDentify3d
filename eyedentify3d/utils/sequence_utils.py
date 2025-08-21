@@ -224,7 +224,7 @@ def get_sequences_in_range(
     if time_range.min_time < 1e-6:
         new_first_idx = 0
     else:
-        new_first_idx = find_time_index(time_vector, time_range.min_time + 1e-6, method="last")
+        new_first_idx = find_time_index(time_vector, time_range.min_time - 1e-6, method="last")
 
     sequences_in_range = []
     for sequence in sequences:
