@@ -1032,20 +1032,14 @@ def fix_helmet_rotation(time_vector, helmet_rotation):
     return head_angular_velocity_deg_filtered, helmet_rotation_unwrapped_deg
 
 
-def compute_intermediary_metrics(
+def spit_sequences(
     time_vector,
     smooth_pursuit_sequences,
     fixation_sequences,
     blink_sequences,
     saccade_sequences,
     visual_scanning_sequences,
-    gaze_angular_velocity_rad,
-    dt,
     duration_after_cue,
-    cut_file,
-    fixation_duration_threshold,
-    smooth_pursuit_duration_threshold,
-    head_angular_velocity_deg_filtered,
 ):
 
     def split_sequences_before_and_after_quiet_eye(post_cue_timing_idx, sequences):
@@ -1064,6 +1058,56 @@ def compute_intermediary_metrics(
                 sequences_post_cue.append(i_sequence)
 
         return sequences_pre_cue, sequences_post_cue
+
+    # Instant at which the "post cue switch" is happening
+    post_cue_timing_idx = np.where(time_vector > time_vector[-1] - duration_after_cue)[0][0]
+    smooth_pursuit_sequences_pre_cue, smooth_pursuit_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, smooth_pursuit_sequences
+    )
+    fixation_sequences_pre_cue, fixation_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, fixation_sequences
+    )
+    blink_sequences_pre_cue, blink_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, blink_sequences
+    )
+    saccade_sequences_pre_cue, saccade_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, saccade_sequences
+    )
+    visual_scanning_sequences_pre_cue, visual_scanning_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
+        post_cue_timing_idx, visual_scanning_sequences
+    )
+
+    return (
+        smooth_pursuit_sequences_pre_cue,
+        smooth_pursuit_sequences_post_cue,
+        fixation_sequences_pre_cue,
+        fixation_sequences_post_cue,
+        blink_sequences_pre_cue,
+        blink_sequences_post_cue,
+        saccade_sequences_pre_cue,
+        saccade_sequences_post_cue,
+        visual_scanning_sequences_pre_cue,
+        visual_scanning_sequences_post_cue,
+        post_cue_timing_idx,
+    )
+
+def compute_intermediary_metrics(
+        time_vector,
+        smooth_pursuit_sequences,
+        fixation_sequences,
+        blink_sequences,
+        saccade_sequences,
+        visual_scanning_sequences,
+        gaze_angular_velocity_rad,
+        dt,
+        cut_file,
+        fixation_duration_threshold,
+        smooth_pursuit_duration_threshold,
+        head_angular_velocity_deg_filtered,
+        post_cue_timing_idx,
+        smooth_pursuit_sequences_pre_cue,
+        smooth_pursuit_sequences_post_cue,
+):
 
     def split_durations_before_and_after_quiet_eye(
         sequence_type, cut_file, sequences, post_cue_timing_idx, dt, time_vector, duration_threshold=0
@@ -1091,24 +1135,6 @@ def compute_intermediary_metrics(
                     elif i[0] > post_cue_timing_idx:
                         durations_post_cue.append(time_vector[i[-1]] - time_vector[i[0]] + dt)
         return durations, durations_pre_cue, durations_post_cue
-
-    # Instant at which the "post cue switch" is happening
-    post_cue_timing_idx = np.where(time_vector > time_vector[-1] - duration_after_cue)[0][0]
-    smooth_pursuit_sequences_pre_cue, smooth_pursuit_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
-        post_cue_timing_idx, smooth_pursuit_sequences
-    )
-    fixation_sequences_pre_cue, fixation_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
-        post_cue_timing_idx, fixation_sequences
-    )
-    blink_sequences_pre_cue, blink_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
-        post_cue_timing_idx, blink_sequences
-    )
-    saccade_sequences_pre_cue, saccade_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
-        post_cue_timing_idx, saccade_sequences
-    )
-    visual_scanning_sequences_pre_cue, visual_scanning_sequences_post_cue = split_sequences_before_and_after_quiet_eye(
-        post_cue_timing_idx, visual_scanning_sequences
-    )
 
     # Intermediary metrics
     smooth_pursuit_trajectories = measure_smooth_pursuit_trajectory(
@@ -1185,16 +1211,6 @@ def compute_intermediary_metrics(
     mean_head_angular_velocity_deg_post_cue = np.mean(head_angular_velocity_deg_filtered[post_cue_timing_idx:])
 
     return (
-        smooth_pursuit_sequences_pre_cue,
-        smooth_pursuit_sequences_post_cue,
-        fixation_sequences_pre_cue,
-        fixation_sequences_post_cue,
-        blink_sequences_pre_cue,
-        blink_sequences_post_cue,
-        saccade_sequences_pre_cue,
-        saccade_sequences_post_cue,
-        visual_scanning_sequences_pre_cue,
-        visual_scanning_sequences_post_cue,
         fixation_duration,
         fixation_duration_pre_cue,
         fixation_duration_post_cue,
@@ -1233,7 +1249,6 @@ def compute_intermediary_metrics(
         mean_head_angular_velocity_deg_post_cue,
         post_cue_timing_idx,
     )
-
 
 def check_if_there_is_sequence_overlap(
     fixation_sequences,
@@ -1522,6 +1537,18 @@ def main():
             saccade_sequences_post_cue,
             visual_scanning_sequences_pre_cue,
             visual_scanning_sequences_post_cue,
+            post_cue_timing_idx,
+        ) = spit_sequences(
+            time_vector,
+            smooth_pursuit_sequences,
+            fixation_sequences,
+            blink_sequences,
+            saccade_sequences,
+            visual_scanning_sequences,
+            duration_after_cue,
+        )
+
+        (
             fixation_duration,
             fixation_duration_pre_cue,
             fixation_duration_post_cue,
@@ -1568,11 +1595,13 @@ def main():
             visual_scanning_sequences,
             gaze_angular_velocity_rad,
             dt,
-            duration_after_cue,
             cut_file,
             fixation_duration_threshold,
             smooth_pursuit_duration_threshold,
             head_angular_velocity_deg_filtered,
+            post_cue_timing_idx,
+            smooth_pursuit_sequences_pre_cue,
+            smooth_pursuit_sequences_post_cue,
         )
 
         # Metrics
