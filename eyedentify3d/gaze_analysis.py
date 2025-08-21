@@ -712,7 +712,10 @@ def measure_smooth_pursuit_trajectory(time_vector, smooth_pursuit_sequences, gaz
         if (time_vector[sequence[-1]] - time_vector[sequence[0]]) >= 0.1:
             for idx in sequence:
                 time_beginning = time_vector[idx]
-                time_end = time_vector[idx + 1] if idx + 1 < len(time_vector) else time_vector[-1] + dt
+                if idx + 1 < len(time_vector):
+                    time_end = time_vector[idx + 1]
+                else:
+                    time_end = time_vector[-1] + dt
                 d_trajectory = np.abs(gaze_angular_velocity_rad[idx] * 180 / np.pi) * (time_end - time_beginning)
                 trajectory_this_time += 0 if np.isnan(d_trajectory) else d_trajectory
             smooth_pursuit_trajectories += [trajectory_this_time]
@@ -1122,10 +1125,7 @@ def compute_intermediary_metrics(
         durations_post_cue = []
         for i in sequences:
             if len(i) > 0:
-                if len(time_vector) > i[-1] + 1:
-                    duration = float(time_vector[i[-1] + 1] - time_vector[i[0]])
-                else:
-                    duration = float(time_vector[i[-1]] - time_vector[i[0]] + dt)
+                duration = float(time_vector[i[-1]] - time_vector[i[0]])
                 if duration > duration_threshold:
                     durations.append(duration)
                     if i[-1] < post_cue_timing_idx:
@@ -1632,10 +1632,10 @@ def main():
                 if len(i) > 0:
                     if post_cue_timing_idx in i:
                         # We found the event happening at cue
-                        pre_cue_trial_duration = time_vector[i[0]] + dt
-                        post_cue_trial_duration = time_vector[-1] - time_vector[i[-1]] + dt
+                        pre_cue_trial_duration = time_vector[i[0]-1]
+                        post_cue_trial_duration = time_vector[-1] - time_vector[i[-1]]
                         return pre_cue_trial_duration, post_cue_trial_duration
-            return time_vector[post_cue_timing_idx] + dt, time_vector[-1] - time_vector[post_cue_timing_idx] + dt
+            return time_vector[post_cue_timing_idx-1], time_vector[-1] - time_vector[post_cue_timing_idx]
 
 
         # Metrics
@@ -1757,23 +1757,23 @@ def main():
         sequences = blink_sequences + saccade_sequences + fixation_sequences + smooth_pursuit_sequences + visual_scanning_sequences
         trial_duration_pre_cue, trial_duration_post_cue = get_trial_length_before_and_after_quiet_eye(sequences, post_cue_timing_idx, dt, time_vector)
 
-        fixation_ratio = total_fixation_duration / (time_vector[-1] + dt)
+        fixation_ratio = total_fixation_duration / time_vector[-1]
         fixation_ratio_pre_cue = total_fixation_duration_pre_cue / trial_duration_pre_cue
         fixation_ratio_post_cue = total_fixation_duration_post_cue / trial_duration_post_cue
 
-        smooth_pursuit_ratio = total_smooth_pursuit_duration / (time_vector[-1] + dt)
+        smooth_pursuit_ratio = total_smooth_pursuit_duration / time_vector[-1]
         smooth_pursuit_ratio_pre_cue = total_smooth_pursuit_duration_pre_cue / trial_duration_pre_cue
         smooth_pursuit_ratio_post_cue = total_smooth_pursuit_duration_post_cue / trial_duration_post_cue
 
-        blinking_ratio = total_blink_duration / (time_vector[-1] + dt)
+        blinking_ratio = total_blink_duration / time_vector[-1]
         blinking_ratio_pre_cue = total_blink_duration_pre_cue / trial_duration_pre_cue
         blinking_ratio_post_cue = total_blink_duration_post_cue / trial_duration_post_cue
 
-        saccade_ratio = total_saccade_duration / (time_vector[-1] + dt)
+        saccade_ratio = total_saccade_duration / time_vector[-1]
         saccade_ratio_pre_cue = total_saccade_duration_pre_cue / trial_duration_pre_cue
         saccade_ratio_post_cue = total_saccade_duration_post_cue / trial_duration_post_cue
 
-        visual_scanning_ratio = total_visual_scanning_duration / (time_vector[-1] + dt)
+        visual_scanning_ratio = total_visual_scanning_duration / time_vector[-1]
         visual_scanning_ratio_pre_cue = total_visual_scanning_duration_pre_cue / trial_duration_pre_cue
         visual_scanning_ratio_post_cue = total_visual_scanning_duration_post_cue / trial_duration_post_cue
 
@@ -1783,9 +1783,9 @@ def main():
         if not_classified_ratio < -dt:
             raise ValueError("Problem: The sum of the ratios is greater than 1")
 
-        invalid_ratio = np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) / (len(
+        invalid_ratio = np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) / len(
             data["eye_valid_L"]
-        ) + dt)
+        )
 
         output = pd.DataFrame(
             {
