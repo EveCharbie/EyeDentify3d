@@ -1340,9 +1340,9 @@ def main():
     current_path_file = Path(__file__).parent
     data_path = f"{current_path_file}/../examples/data/HTC_Vive_Pro/"
     length_before_black_screen = {
-        # "TESTNA01_2D_Fist3": 7.180,  # s
-        # "TESTNA01_360VR_Fist3": 7.180,
-        # "TESTNA05_2D_Spread7": 5.060,
+        "TESTNA01_2D_Fist3": 7.180,  # s
+        "TESTNA01_360VR_Fist3": 7.180,
+        "TESTNA05_2D_Spread7": 5.060,
         "TESTNA05_360VR_Spread7": 5.060,
         "TESTNA15_2D_Pen3": 4.230,
         "TESTNA15_360VR_Pen3": 4.230,
@@ -1508,6 +1508,9 @@ def main():
         fixation_sequences, smooth_pursuit_sequences, uncertain_sequences = detect_fixations_and_smooth_pursuit(
             time_vector, gaze_direction, intersaccadic_gouped_sequences, identified_indices, figname, PLOT_CRITERIA_FLAG
         )
+        fixation_sequences = apply_minimal_duration(fixation_sequences, time_vector, minimal_duration=0.1)
+        smooth_pursuit_sequences = apply_minimal_duration(smooth_pursuit_sequences, time_vector, minimal_duration=0.1)
+
         for i in fixation_sequences:
             identified_indices[i] = True
         for i in smooth_pursuit_sequences:
@@ -1783,9 +1786,13 @@ def main():
         if not_classified_ratio < -dt:
             raise ValueError("Problem: The sum of the ratios is greater than 1")
 
-        invalid_ratio = np.sum(np.logical_or(data["eye_valid_L"] != 31, data["eye_valid_R"] != 31)) / len(
-            data["eye_valid_L"]
-        )
+        durations = []
+        for i in eyetracker_invalid_sequences:
+            if len(i) > 0:
+                duration = float(time_vector[i[-1]] - time_vector[i[0]])
+                durations.append(duration)
+        total_invalid_duration = np.sum(durations)
+        invalid_ratio = total_invalid_duration / time_vector[-1] if total_invalid_duration > 0 else 0.0
 
         output = pd.DataFrame(
             {
