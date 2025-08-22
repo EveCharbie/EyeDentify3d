@@ -12,8 +12,6 @@ from eyedentify3d import (
     TimeRange,
     HtcViveProData,
     ErrorType,
-    compute_intermediary_metrics,
-    check_if_there_is_sequence_overlap,
     GazeBehaviorIdentifier,
 )
 
@@ -336,32 +334,32 @@ def test_original_code():
         sys.stdout = sys.__stdout__  # Reset redirect.
         print(file_name)
 
-        # if file_name == "TESTNA01_2D_Fist3":
-        #     assert captured_output.getvalue() == r"Smooth pursuit : 1.24955 s ----"
-        # elif file_name == "TESTNA01_360VR_Fist3":
-        #     assert captured_output.getvalue() == ""
-        # elif file_name == "TESTNA05_2D_Spread7":
-        #     assert captured_output.getvalue() == "Fixation : 0.95033 s ----"
-        # elif file_name == "TESTNA05_360VR_Spread7":
-        #     assert captured_output.getvalue() == "Smooth pursuit : 0.52495 s ----"
-        # elif file_name == "TESTNA15_2D_Pen3":
-        #     assert captured_output.getvalue() == "Fixation : 0.21578 s ----"
-        # elif file_name == "TESTNA15_360VR_Pen3":
-        #     assert captured_output.getvalue() == "Smooth pursuit : 0.09211 s ----"
-        # elif file_name == "TESTVA03_2D_Spread9":
-        #     assert (
-        #         captured_output.getvalue()
-        #         == "The file TESTVA03_2D_Spread9.csv is empty. There is no element in the field 'time(100ns)'. Please check the file."
-        #     )
-        # elif file_name == "TESTNA10_360VR_Fist3":
-        #     assert (
-        #         captured_output.getvalue()
-        #         == "More than 50% of the data from file TESTNA10_360VR_Fist3.csv is declared invalid by the eye-tracker, skipping this file."
-        #     )
+        if file_name == "TESTNA01_2D_Fist3":
+            assert captured_output.getvalue() == r"Smooth pursuit : 1.24122 s ----"
+        elif file_name == "TESTNA01_360VR_Fist3":
+            assert captured_output.getvalue() == ""
+        elif file_name == "TESTNA05_2D_Spread7":
+            assert captured_output.getvalue() == "Fixation : 0.942 s ----"
+        elif file_name == "TESTNA05_360VR_Spread7":
+            assert captured_output.getvalue() == "Smooth pursuit : 0.51662 s ----"
+        elif file_name == "TESTNA15_2D_Pen3":
+            assert captured_output.getvalue() == "Fixation : 0.20745 s ----"
+        elif file_name == "TESTNA15_360VR_Pen3":
+            assert captured_output.getvalue() == ""
+        elif file_name == "TESTVA03_2D_Spread9":
+            assert (
+                captured_output.getvalue()
+                == "The file TESTVA03_2D_Spread9.csv is empty. There is no element in the field 'time(100ns)'. Please check the file."
+            )
+        elif file_name == "TESTNA10_360VR_Fist3":
+            assert (
+                captured_output.getvalue()
+                == "More than 50% of the data from file TESTNA10_360VR_Fist3.csv is declared invalid by the eye-tracker, skipping this file."
+            )
 
         # Compare the data with reference
         if file_name not in ["TESTNA10_360VR_Fist3", "TESTVA03_2D_Spread9"]:
-            with open(data_path + "/../../results/HTC_Vive_Pro/" + file_name + ".pkl", "rb") as result_file:
+            with open(f"{current_path_file}/original_results/" + file_name + ".pkl", "rb") as result_file:
                 output_reference = pickle.load(result_file)
 
             pdt.assert_frame_equal(output, output_reference, check_exact=False, rtol=1e-5)
