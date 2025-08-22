@@ -21,7 +21,7 @@ class ErrorType(Enum):
             with open("bad_data_files.txt", "a") as bad_data_file:
                 bad_data_file.write(error_str + "\n")
         elif self == ErrorType.PRINT:
-            print(error_str)
+            print(error_str, end="")
         elif self == ErrorType.SKIP:
             pass
         elif self == ErrorType.RAISE:
