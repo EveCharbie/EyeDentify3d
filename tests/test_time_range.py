@@ -16,10 +16,12 @@ def test_time_range_init_custom():
     assert time_range.min_time == 1.5
     assert time_range.max_time == 10.0
 
+
 def test_time_range_with_min_greater_than_max():
     """Test time_range when min_time is greater than max_time."""
     with pytest.raises(ValueError, match="The min_time must be less than or equal to the max_time."):
         time_range = TimeRange(min_time=5.0, max_time=3.0)
+
 
 def test_get_indices_all_in_range():
     """Test get_indices when all values are in range."""
@@ -68,12 +70,14 @@ def test_get_indices_with_inf_max():
     indices = time_range.get_indices(time_vector)
     np.testing.assert_array_equal(indices, np.array([1, 2, 3, 4]))
 
+
 def test_get_indices_with_zero_min():
     """Test get_indices with default min_time."""
     time_range = TimeRange(max_time=10.0)  # Default min_time is zero
     time_vector = np.array([1.0, 2.0, 3.0, 100.0, 1000.0])
     indices = time_range.get_indices(time_vector)
     np.testing.assert_array_equal(indices, np.array([0, 1, 2]))
+
 
 def test_get_indices_with_nan_values():
     """Test get_indices with NaN values in the time vector."""
@@ -113,4 +117,3 @@ def test_get_indices_with_min_equals_max():
     time_vector = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     indices = time_range.get_indices(time_vector)
     np.testing.assert_array_equal(indices, np.array([2.0]))
-
