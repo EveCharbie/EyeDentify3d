@@ -12,29 +12,29 @@ def sample_data():
     dt = 0.01
     time_vector = np.arange(0, 1, dt)
     n_samples = len(time_vector)
-    
+
     # Create sample eye openness data
     right_eye_openness = np.ones(n_samples) * 0.8
     left_eye_openness = np.ones(n_samples) * 0.7
-    
+
     # Create sample direction vectors (3D)
     eye_direction = np.zeros((3, n_samples))
     eye_direction[2, :] = 1.0  # Looking forward along z-axis
-    
+
     head_angles = np.zeros((3, n_samples))
     head_angles[0, :] = np.linspace(0, 0.1, n_samples)  # Small rotation around x-axis
-    
+
     gaze_direction = np.zeros((3, n_samples))
     gaze_direction[2, :] = 1.0  # Looking forward along z-axis
-    
+
     head_angular_velocity = np.zeros((3, n_samples))
     head_angular_velocity[0, :] = 0.1  # Constant angular velocity around x-axis
-    
+
     head_velocity_norm = np.ones(n_samples) * 0.1
-    
+
     data_invalidity = np.zeros(n_samples, dtype=bool)
     data_invalidity[80:85] = True  # Some invalid data
-    
+
     return {
         "dt": dt,
         "time_vector": time_vector,
@@ -64,7 +64,7 @@ def test_reduced_data_initialization(sample_data):
         original_head_velocity_norm=sample_data["head_velocity_norm"],
         original_data_invalidity=sample_data["data_invalidity"],
     )
-    
+
     # Check that all attributes are set correctly
     assert data.dt == sample_data["dt"]
     npt.assert_array_equal(data.time_vector, sample_data["time_vector"])
@@ -82,7 +82,7 @@ def test_reduced_data_with_time_range(sample_data):
     """Test that ReducedData correctly applies time range filtering."""
     # Create a time range that only includes part of the data
     time_range = TimeRange(min_time=0.3, max_time=0.7)
-    
+
     # Create a ReducedData object with the time range
     data = ReducedData(
         original_dt=sample_data["dt"],
@@ -97,10 +97,10 @@ def test_reduced_data_with_time_range(sample_data):
         original_data_invalidity=sample_data["data_invalidity"],
         time_range=time_range,
     )
-    
+
     # Get the expected indices
     expected_indices = np.arange(30, 70)
-    
+
     # Check that all attributes are filtered correctly
     npt.assert_array_equal(data.time_vector, sample_data["time_vector"][expected_indices])
     npt.assert_array_equal(data.right_eye_openness, sample_data["right_eye_openness"][expected_indices])
@@ -117,7 +117,7 @@ def test_set_indices_with_none_time_vector():
     """Test that _set_indices raises ValueError when time_vector is None."""
     data = ReducedData.__new__(ReducedData)  # Create instance without calling __init__
     data.time_range = TimeRange()
-    
+
     with pytest.raises(ValueError, match="The time vector must be provided."):
         data._set_indices(None)
 
@@ -137,32 +137,32 @@ def test_property_setters_with_none_values(sample_data):
         original_head_velocity_norm=sample_data["head_velocity_norm"],
         original_data_invalidity=sample_data["data_invalidity"],
     )
-    
+
     # Test setting properties to None
     data.time_vector = None
     assert data._time_vector is None
-    
+
     data.right_eye_openness = None
     assert data._time_vector is None
-    
+
     data.left_eye_openness = None
     assert data._time_vector is None
-    
+
     data.eye_direction = None
     assert data._time_vector is None
-    
+
     data.head_angles = None
     assert data._time_vector is None
-    
+
     data.gaze_direction = None
     assert data._time_vector is None
-    
+
     data.head_angular_velocity = None
     assert data._time_vector is None
-    
+
     data.head_velocity_norm = None
     assert data._time_vector is None
-    
+
     data.data_invalidity = None
     assert data._time_vector is None
 
@@ -171,8 +171,10 @@ def test_property_setters_without_indices():
     """Test that property setters raise RuntimeError when indices is None."""
     data = ReducedData.__new__(ReducedData)  # Create instance without calling __init__
     data.indices = None
-    
-    with pytest.raises(RuntimeError, match="The time vector can only be set once the indices are initialized using _set_indices."):
+
+    with pytest.raises(
+        RuntimeError, match="The time vector can only be set once the indices are initialized using _set_indices."
+    ):
         data.time_vector = np.array([0, 1, 2])
 
 
@@ -192,7 +194,7 @@ def test_abstract_methods_implementation():
         original_head_velocity_norm=np.ones_like(time_vector),
         original_data_invalidity=np.zeros_like(time_vector, dtype=bool),
     )
-    
+
     # Call abstract methods to ensure they don't raise exceptions
     data._check_validity()
     data._set_time_vector()
@@ -220,10 +222,10 @@ def test_error_type_property():
         original_head_velocity_norm=np.ones_like(time_vector),
         original_data_invalidity=np.zeros_like(time_vector, dtype=bool),
     )
-    
+
     # Check default error_type
     assert data.error_type == ErrorType.PRINT
-    
+
     # Set error_type and check
     data.error_type = ErrorType.RAISE
     assert data.error_type == ErrorType.RAISE

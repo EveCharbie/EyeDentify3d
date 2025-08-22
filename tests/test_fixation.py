@@ -26,7 +26,7 @@ def mock_data_object():
         np.random.seed(i)  # For reproducibility
         gaze_direction[0, i] = np.sin(np.radians(np.random.uniform(-1, 1)))
         gaze_direction[1, i] = np.sin(np.radians(np.random.uniform(-1, 1)))
-        gaze_direction[2, i] = np.sqrt(1 - gaze_direction[0, i]**2 - gaze_direction[1, i]**2)
+        gaze_direction[2, i] = np.sqrt(1 - gaze_direction[0, i] ** 2 - gaze_direction[1, i] ** 2)
 
     # Create another fixation around frame 60-70
     for i in range(60, 70):
@@ -34,7 +34,7 @@ def mock_data_object():
         np.random.seed(i + 100)  # Different seed for different pattern
         gaze_direction[0, i] = 0.1 + np.sin(np.radians(np.random.uniform(-1, 1)))
         gaze_direction[1, i] = 0.1 + np.sin(np.radians(np.random.uniform(-1, 1)))
-        gaze_direction[2, i] = np.sqrt(1 - gaze_direction[0, i]**2 - gaze_direction[1, i]**2)
+        gaze_direction[2, i] = np.sqrt(1 - gaze_direction[0, i] ** 2 - gaze_direction[1, i] ** 2)
 
     # Create sample eye openness data
     right_eye_openness = np.ones(n_samples) * 0.8
@@ -96,13 +96,8 @@ def fixation_indices():
 def test_fixation_event_initialization(identified_indices, fixation_indices):
     """Test that FixationEvent initializes correctly."""
     mock_data = mock_data_object()
-    event = FixationEvent(
-        mock_data,
-        identified_indices,
-        fixation_indices,
-        minimal_duration=0.05
-    )
-    
+    event = FixationEvent(mock_data, identified_indices, fixation_indices, minimal_duration=0.05)
+
     assert event.data_object is mock_data
     assert event.identified_indices is identified_indices
     assert event.fixation_indices is fixation_indices
@@ -116,24 +111,21 @@ def test_initialize(identified_indices, fixation_indices):
     """Test that initialize correctly sets up the event."""
     mock_data = mock_data_object()
 
-    event = FixationEvent(
-        mock_data,
-        identified_indices,
-        fixation_indices,
-        minimal_duration=0.05
-    )
-    
+    event = FixationEvent(mock_data, identified_indices, fixation_indices, minimal_duration=0.05)
+
     # Mock the methods called in initialize
-    with patch.object(event, 'split_sequences') as mock_split, \
-         patch.object(event, 'merge_sequences') as mock_merge, \
-         patch.object(event, 'keep_only_sequences_long_enough') as mock_keep, \
-         patch.object(event, 'adjust_indices_to_sequences') as mock_adjust:
-        
+    with (
+        patch.object(event, "split_sequences") as mock_split,
+        patch.object(event, "merge_sequences") as mock_merge,
+        patch.object(event, "keep_only_sequences_long_enough") as mock_keep,
+        patch.object(event, "adjust_indices_to_sequences") as mock_adjust,
+    ):
+
         event.initialize()
-        
+
         # Check that frame_indices is set to fixation_indices
         np.testing.assert_array_equal(event.frame_indices, fixation_indices)
-        
+
         # Check that all methods were called in the correct order
         mock_split.assert_called_once()
         mock_merge.assert_called_once()
@@ -149,9 +141,9 @@ def test_merge_sequences(identified_indices, fixation_indices):
         mock_data,
         identified_indices,
         fixation_indices,
-        minimal_duration = 0.01,
+        minimal_duration=0.01,
     )
-    
+
     # Set sequences
     event.sequences = [np.arange(30, 40), np.arange(41, 46), np.arange(60, 70)]
 
@@ -167,20 +159,16 @@ def test_measure_search_rate(identified_indices, fixation_indices):
     """Test that measure_search_rate correctly computes search rate."""
     mock_data = mock_data_object()
 
-    event = FixationEvent(
-        mock_data,
-        identified_indices,
-        fixation_indices
-    )
-    
+    event = FixationEvent(mock_data, identified_indices, fixation_indices)
+
     # Set sequences and frame_indices
     event.sequences = [np.arange(30, 40), np.arange(60, 70)]
     event.frame_indices = fixation_indices
-    
+
     # Mock duration method to return a known value
-    with patch.object(event, 'mean_duration', return_value=0.1):
+    with patch.object(event, "mean_duration", return_value=0.1):
         event.measure_search_rate()
-        
+
         # Check that search_rate is computed correctly
         # nb_events = 2, mean_duration = 0.1, so search_rate = 2 / 0.1 = 20
         assert event.search_rate == 20.0
@@ -190,17 +178,13 @@ def test_measure_search_rate_with_no_events(identified_indices):
     """Test that measure_search_rate handles the case with no events."""
     mock_data = mock_data_object()
 
-    event = FixationEvent(
-        mock_data,
-        identified_indices,
-        np.array([])  # No fixation indices
-    )
-    
+    event = FixationEvent(mock_data, identified_indices, np.array([]))  # No fixation indices
+
     # Set empty sequences
     event.sequences = []
-    
+
     event.measure_search_rate()
-    
+
     # Check that search_rate is None when there are no events
     assert event.search_rate is None
 
@@ -210,27 +194,24 @@ def test_end_to_end_fixation_detection(identified_indices, fixation_indices):
     mock_data = mock_data_object()
 
     event = FixationEvent(
-        mock_data,
-        identified_indices,
-        fixation_indices,
-        minimal_duration=0.05  # 5 frames at 0.01s per frame
+        mock_data, identified_indices, fixation_indices, minimal_duration=0.05  # 5 frames at 0.01s per frame
     )
-    
+
     # Run the complete initialization process
     event.initialize()
-    
+
     # Check that sequences contains the expected sequences
     assert len(event.sequences) == 2
     np.testing.assert_array_equal(event.sequences[0], np.arange(30, 40))
     np.testing.assert_array_equal(event.sequences[1], np.arange(60, 70))
-    
+
     # Check that frame_indices contains all frames from all sequences
     expected_indices = np.concatenate([np.arange(30, 40), np.arange(60, 70)])
     np.testing.assert_array_equal(event.frame_indices, expected_indices)
-    
+
     # Measure search rate
     event.measure_search_rate()
-    
+
     # Check that search_rate is computed
     assert event.search_rate is not None
 
@@ -241,22 +222,19 @@ def test_fixation_with_short_sequences(identified_indices):
 
     # Create fixation indices with one short sequence
     fixation_indices = np.concatenate([np.arange(30, 32), np.arange(60, 70)])
-    
+
     # Create a FixationEvent with a minimal_duration that filters out the short sequence
     event = FixationEvent(
-        mock_data,
-        identified_indices,
-        fixation_indices,
-        minimal_duration=0.05  # 5 frames at 0.01s per frame
+        mock_data, identified_indices, fixation_indices, minimal_duration=0.05  # 5 frames at 0.01s per frame
     )
-    
+
     # Set frame_indices and split into sequences
     event.frame_indices = fixation_indices
     event.split_sequences()
-    
+
     # Apply minimal duration filter
     event.keep_only_sequences_long_enough()
-    
+
     # The first sequence (30-32) is only 2 frames (0.02s) which is less than minimal_duration (0.05s)
     # So it should be filtered out
     assert len(event.sequences) == 1
