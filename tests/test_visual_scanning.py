@@ -139,10 +139,11 @@ def test_merge_sequences():
 
     event.merge_sequences()
 
-    # Check that sequences is updated with merged sequences
-    assert len(event.sequences) == 2
-    npt.assert_almost_equal(event.sequences[0], np.arange(30, 35))
-    npt.assert_almost_equal(event.sequences[1], np.arange(70, 75))
+    # Check that sequences were not merged because the directionality criteria was not met
+    assert len(event.sequences) == 3
+    npt.assert_almost_equal(event.sequences[0], np.arange(30, 33))
+    npt.assert_almost_equal(event.sequences[1], np.arange(33, 35))
+    npt.assert_almost_equal(event.sequences[2], np.arange(70, 75))
 
 
 def test_initialize():
