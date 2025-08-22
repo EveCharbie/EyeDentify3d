@@ -359,7 +359,7 @@ def test_original_code():
 
         # Compare the data with reference
         if file_name not in ["TESTNA10_360VR_Fist3", "TESTVA03_2D_Spread9"]:
-            with open("original_results/" + file_name + ".pkl", "rb") as result_file:
+            with open(f"{current_path_file}/original_results/" + file_name + ".pkl", "rb") as result_file:
                 output_reference = pickle.load(result_file)
 
             pdt.assert_frame_equal(output, output_reference, check_exact=False, rtol=1e-5)
