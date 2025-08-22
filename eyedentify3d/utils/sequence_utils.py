@@ -84,10 +84,15 @@ def _check_direction_alignment(
         movement during the sequences is smaller than this threshold, the sequences are considered to be similarly
         aligned.
     """
+    # The direction vectors are not supposed to be unitary, but we normalize them anyway as they would have been
+    # normalized at the angle determination step anyway
 
     # Calculate direction in which the gaze is moving throughout the sequences
     direction1 = gaze_direction[:, sequence1[-1]] - gaze_direction[:, sequence1[0]]
+    direction1 /= np.linalg.norm(direction1)
+
     direction2 = gaze_direction[:, sequence2[-1]] - gaze_direction[:, sequence2[0]]
+    direction2 /= np.linalg.norm(direction2)
 
     # Calculate angle between directions
     angle = get_angle_between_vectors(direction1, direction2)
