@@ -366,7 +366,5 @@ def test_original_code():
 
 
 """
-TODO:
-    1. unit-tests
-    3. test the plots pixels
+TODO: test the plots pixels
 """

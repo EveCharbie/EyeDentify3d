@@ -1,0 +1,25 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: intro
+chapters:
+- file: data_parsing/index
+  sections:
+  - file: data_parsing/htc_vive_pro
+  - file: data_parsing/pupil_invisible
+- file: behavior_identification/index
+  sections:
+  - file: behavior_identification/blink
+  - file: behavior_identification/saccade
+  - file: behavior_identification/visual_scanning
+  - file: behavior_identification/inter_saccadic_movement
+    sections:
+    - file: behavior_identification/fixation
+    - file: behavior_identification/smooth_pursuit
+- file: examples/index
+  sections:
+  - file: examples/data_parsers
+  - file: examples/gaze_behavior_identification
+  - file: examples/metrics_extraction
+  - file: examples/plotting

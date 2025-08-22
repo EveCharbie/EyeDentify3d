@@ -84,8 +84,8 @@ All behaviors are mutually exclusive (except for invalid and blink that can happ
 cannot be classified as both a saccade and a fixation. Thus, the order of the identification is important as the first 
 behavior identified will take precedence over the others. 
 
-More details on the definition of events and how they are identified can be found in the documentation. (TODO: add link 
-to documentation here !!!!!!!!!!!!!!!!!!!)
+More details on the definition of events and how they are identified can be found in the 
+[documentation](https://evecharbie.github.io/EyeDentify3d).
 
 Finally, `EyeDentify3D` enables visualisation of the classified gaze data and extraction/export of metrics related to 
 the behaviors (e.g., duration, time ratio spent in each behavior, number of occurrences, saccade amplitude, smooth 
