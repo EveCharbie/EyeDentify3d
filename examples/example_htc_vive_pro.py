@@ -47,7 +47,6 @@ def main():
     )
     gaze_behavior_identifier.finalize()  # This is mandatory
 
-
     # For this example, we will remove all files generated, but in a real case, they should be kept
     if os.path.exists("bad_data_files.txt"):
         os.remove("bad_data_files.txt")
