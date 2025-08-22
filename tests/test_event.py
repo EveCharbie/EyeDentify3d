@@ -1,6 +1,7 @@
 import numpy as np
+import numpy.testing as npt
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from eyedentify3d.identification.event import Event
 
@@ -205,7 +206,7 @@ def test_mean_duration(mock_data_object):
     ]
     
     # Check mean duration
-    assert event.mean_duration() == 0.13333333333333333  # (0.1 + 0.2 + 0.1) / 3
+    npt.assert_almost_equal(event.mean_duration(), 0.13333333333333333)  # (0.1 + 0.2 + 0.1) / 3
 
 
 def test_mean_duration_empty():
@@ -231,7 +232,7 @@ def test_max_duration(mock_data_object):
     ]
     
     # Check max duration
-    assert event.max_duration() == 0.2
+    npt.assert_almost_equal(event.max_duration(), 0.2)
 
 
 def test_max_duration_empty():
@@ -257,7 +258,7 @@ def test_total_duration(mock_data_object):
     ]
     
     # Check total duration
-    assert event.total_duration() == 0.4  # 0.1 + 0.2 + 0.1
+    npt.assert_almost_equal(event.total_duration(), 0.4)  # 0.1 + 0.2 + 0.1
 
 
 def test_total_duration_empty():
@@ -283,15 +284,15 @@ def test_ratio(mock_data_object):
     ]
     
     # Check ratio (total duration / trial duration)
-    assert event.ratio() == 0.4444444444444444  # 0.4 / 0.9
+    npt.assert_almost_equal(event.ratio(), 0.4444444444444444)  # 0.4 / 0.9
 
 
-def test_ratio_empty():
+def test_ratio_empty(mock_data_object):
     """Test that ratio returns 0.0 for empty sequences."""
-    event = MockEvent(mock_data_object())
+    event = MockEvent(data_object=mock_data_object)
     
     # Set empty sequences
     event.sequences = []
     
     # Check ratio
-    assert event.ratio() == 0.0
+    npt.assert_almost_equal(event.ratio(), 0.0)
