@@ -12,8 +12,6 @@ from eyedentify3d import (
     TimeRange,
     HtcViveProData,
     ErrorType,
-    compute_intermediary_metrics,
-    check_if_there_is_sequence_overlap,
     GazeBehaviorIdentifier,
 )
 

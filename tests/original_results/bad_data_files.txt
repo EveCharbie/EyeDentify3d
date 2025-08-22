@@ -1,0 +1,4 @@
+The following files were excluded because more than 50% of the points were excluded by the eye-tracker : 
+
+/Users/evecharbonneau/Documents/Programmation/EyeDentify3d/tests/../examples/data/HTC_Vive_Pro/TESTVA03_2D_Spread9.csv 
+/Users/evecharbonneau/Documents/Programmation/EyeDentify3d/tests/../examples/data/HTC_Vive_Pro/TESTNA10_360VR_Fist3.csv 

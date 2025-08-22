@@ -1,7 +1,11 @@
 """
-This code aims to identify visual behavior sequences, namely blink, fixations, saccades, smooth pursuit, and visual scanning.
-We consider that when the head rotates, the image in the VR helmet (eye-tracker) rotates by the same amount, making it
-as if the head was rotating around the subjects eyes instead of the neck joint center.
+This code is kept only as an archive, it is the original implementation of EyeDentify3D (with small adjustments).
+This code was used to generate the reference data in the original_code folder, test_original_code.py ensures that the
+old and new versions give the same results.
+_______________________________________________________________________________________________________________________
+This code aims to identify visual behavior sequences, namely blink, fixations, saccades, smooth pursuit, and visual
+scanning. We consider that when the head rotates, the image in the VR helmet (eye-tracker) rotates by the same amount,
+making it as if the head was rotating around the subjects eyes instead of the neck joint center.
 """
 
 from pathlib import Path
@@ -14,6 +18,7 @@ import biorbd
 import pingouin as pg
 from scipy import signal
 
+# This was added afterward as the original implementation (commented bellow) was buggy
 from eyedentify3d.utils.sequence_utils import apply_minimal_duration, apply_minimal_number_of_frames
 
 """
@@ -1319,14 +1324,14 @@ def main():
 
     # ----------------------------------------------------------------
     # Create a file with the name of the data files that were excluded for poor quality
-    bad_data_file = open("bad_data_files.txt", "w")
+    bad_data_file = open("original_results/bad_data_files.txt", "w")
     bad_data_file.write(
         "The following files were excluded because more than 50% of the points were excluded by the eye-tracker : \n\n"
     )
 
     # ----------------------------------------------------------------
     # Create a file with the length of the event happening at the 2s cut
-    cut_file = open("event_excluded_at_cut_off.txt", "w")
+    cut_file = open("original_results/event_excluded_at_cut_off.txt", "w")
     cut_file.write("The following events were excluded because they happened at the moment of the 2s cut : \n\n")
 
     # ----------------------------------------------------------------
@@ -1865,7 +1870,7 @@ def main():
         )
 
         # Generate the data for tests
-        with open(data_path + "/../../results/HTC_Vive_Pro/" + file_name + ".pkl", "wb") as result_file:
+        with open("original_results/" + file_name + ".pkl", "wb") as result_file:
             pickle.dump(output, result_file)
 
         output_metrics_dataframe = (
@@ -1874,10 +1879,10 @@ def main():
             else pd.concat([output_metrics_dataframe, output], ignore_index=True)
         )
 
-    with open("output_metrics.pkl", "wb") as f:
+    with open("original_results/output_metrics.pkl", "wb") as f:
         pickle.dump(output_metrics_dataframe, f)
 
-    with open("output_log.txt", "w") as f:
+    with open("original_results/output_log.txt", "w") as f:
         f.write(f"Variable: Mean [Min ; Max] \n\n")
         for key in output_metrics_dataframe.keys():
             if key in ["File name", "Figure name", "Participant ID", "Mode", "Trial name", "Trial number"]:
@@ -1887,7 +1892,7 @@ def main():
             )
 
     # Write a csv file that can be sed for statistical analysis later
-    output_metrics_dataframe.to_csv("output_metrics.csv", index=False)
+    output_metrics_dataframe.to_csv("original_results/output_metrics.csv", index=False)
 
     bad_data_file.close()
 
