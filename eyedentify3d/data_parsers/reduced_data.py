@@ -1,6 +1,7 @@
 import numpy as np
 
 from ..time_range import TimeRange
+from ..error_type import ErrorType
 from .abstract_data import Data
 
 
@@ -22,9 +23,10 @@ class ReducedData(Data):
         original_head_velocity_norm: np.ndarray[float],
         original_data_invalidity: np.ndarray[bool],
         time_range: TimeRange = TimeRange(),
+        error_type: ErrorType = ErrorType.PRINT,
     ):
 
-        super().__init__()
+        super().__init__(error_type=error_type)  # Dot not put time_range here, as it does not have the same meaning
 
         # Original attributes
         self.time_range = time_range

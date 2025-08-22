@@ -172,7 +172,7 @@ class GazeBehaviorIdentifier:
         smooth_pursuit_minimal_duration: float = 0.04,
         window_duration: float = 0.022,
         window_overlap: float = 0.006,
-        eta_p: float = 0.01,
+        eta_p: float = 0.001,
         eta_d: float = 0.45,
         eta_cd: float = 0.5,
         eta_pd: float = 0.2,
@@ -204,7 +204,7 @@ class GazeBehaviorIdentifier:
             `minimal_duration` = 40 ms
             `window_duration` = 22 ms
             `window_overlap` = 6 ms
-            `eta_p` = 0.01
+            `eta_p` = 0.01 -> in 3D we rather recommend to use 0.001
             `eta_d` = 0.45
             `eta_cd` = 0.5
             `eta_pd` = 0.2

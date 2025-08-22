@@ -1,5 +1,4 @@
-# Gaze classification algorithm
-
+# EyeDentify3D: A Python package for gaze behavior classification of 3D eye-tracking data
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a>
 [![Build status](https://github.com/EveCharbie/EyeDentify3d/actions/workflows/run_tests.yml/badge.svg)](https://github.com/EveCharbie/EyeDentify3d/actions)
@@ -7,15 +6,25 @@
 [![DOI](https://zenodo.org/badge/821504006.svg)](https://doi.org/10.5281/zenodo.14718072)
 [![Maintainability](https://qlty.sh/gh/EveCharbie/projects/EyeDentify3d/maintainability.svg)](https://qlty.sh/gh/EveCharbie/projects/EyeDentify3d)
 
-This repo is a modified implementation of the gaze classification algorithm presented in [Larsson et al., 2015](https://doi.org/10.1016/j.bspc.2014.12.008).
-It allows to classify the 3D gaze behavior (head + eye movements) into blinks, fixations, saccades, smooth pursuit, and visual scanning events.
-
-This code was developed to treat data from the Tobii eye-tracker embedded in the HTC Vise Pro VR headset.
-It was originally used to analyze the gaze behavior of basket players using an occlusion paradigm.
-
 ## Installation
-You can use the "environment.yml" file to create a conda environment with all the necessary packages.
+The easiest way to install `EyeDentify3D` is to use pip:
+```bash
+pip install eyedentify3d
+```
+or conda-forge:
+```bash
+conda install -c conda-forge eyedentify3d
+```
+
+If you prefer to install from source, you can clone the repository and create a conda environment with the required dependencies:
 ```bash
 conda env create -f environment.yml
 ```
-If you intend on using this code, please do not hesitate to contact [eve.charbonneau.1@umontreal.ca](mailto:eve.charbonneau.1@umontreal.ca) for any questions or comments.
+
+## Documentation
+you can find the paper accompanying our JOSS submission [here](paper/paper.pdf) and a deeper documentation of the 
+package features and underlying mathematical choices TODO: ADD A LINK HERE !!!!!!!!!.
+
+## Examples
+Examples of usage can be found in the [examples](examples/) directory.
+
