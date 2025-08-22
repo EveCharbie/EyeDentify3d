@@ -2,9 +2,7 @@ import numpy as np
 import pytest
 from numpy import testing as npt
 
-from eyedentify3d.data_parsers.reduced_data import ReducedData
-from eyedentify3d.error_type import ErrorType
-from eyedentify3d.time_range import TimeRange
+from eyedentify3d import ReducedData, ErrorType, TimeRange
 
 
 @pytest.fixture
@@ -101,7 +99,7 @@ def test_reduced_data_with_time_range(sample_data):
     )
     
     # Get the expected indices
-    expected_indices = time_range.get_indices(sample_data["time_vector"])
+    expected_indices = np.arange(30, 70)
     
     # Check that all attributes are filtered correctly
     npt.assert_array_equal(data.time_vector, sample_data["time_vector"][expected_indices])
@@ -224,8 +222,8 @@ def test_error_type_property():
     )
     
     # Check default error_type
-    assert data.error_type == ErrorType.RAISE
+    assert data.error_type == ErrorType.PRINT
     
     # Set error_type and check
-    data.error_type = ErrorType.PRINT
-    assert data.error_type == ErrorType.PRINT
+    data.error_type = ErrorType.RAISE
+    assert data.error_type == ErrorType.RAISE
