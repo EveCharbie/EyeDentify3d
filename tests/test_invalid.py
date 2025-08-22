@@ -19,6 +19,19 @@ def mock_data_object():
     return mock_data
 
 
+@pytest.fixture
+def mock_data_object_two_sequences():
+    """Create a mock data object with two sequences for testing."""
+    mock_data = MagicMock()
+    mock_data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+
+    # Create data_invalidity with some invalid frames
+    data_invalidity = np.zeros(10, dtype=bool)
+    data_invalidity[[2, 3, 6, 7, 8]] = True  # Frames 2, 3, 6, and 8 are invalid
+    mock_data.data_invalidity = data_invalidity
+
+    return mock_data
+
 def test_invalid_event_initialization():
     """Test that InvalidEvent initializes correctly."""
     mock_data = MagicMock()
@@ -49,11 +62,25 @@ def test_initialize(mock_data_object):
     np.testing.assert_array_equal(event.frame_indices, np.array([2, 3, 6, 8]))
     
     # Check that sequences are correctly split
-    assert len(event.sequences) == 3
+    assert len(event.sequences) == 1
+    # Only one sequence because the other two are too short (only one frame)
     np.testing.assert_array_equal(event.sequences[0], np.array([2, 3]))
-    np.testing.assert_array_equal(event.sequences[1], np.array([6]))
-    np.testing.assert_array_equal(event.sequences[2], np.array([8]))
 
+
+def test_initialize_two_sequences(mock_data_object_two_sequences):
+    """Test that initialize correctly sets up the event."""
+    event = InvalidEvent(mock_data_object_two_sequences)
+
+    event.initialize()
+
+    # Check that frame_indices contains the invalid frames
+    np.testing.assert_array_equal(event.frame_indices, np.array([2, 3, 6, 7, 8]))
+
+    # Check that sequences are correctly split
+    assert len(event.sequences) == 2
+    # Only one sequence because the other two are too short (only one frame)
+    np.testing.assert_array_equal(event.sequences[0], np.array([2, 3]))
+    np.testing.assert_array_equal(event.sequences[1], np.array([6, 7, 8]))
 
 def test_initialize_with_no_invalid_frames():
     """Test that initialize handles the case where there are no invalid frames."""
