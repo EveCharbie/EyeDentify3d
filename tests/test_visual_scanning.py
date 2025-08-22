@@ -1,15 +1,15 @@
 import numpy as np
-import pytest
-from unittest.mock import MagicMock, patch
+import numpy.testing as npt
+from unittest.mock import patch
 
+from eyedentify3d import ReducedData
 from eyedentify3d.identification.visual_scanning import VisualScanningEvent
 
 
-@pytest.fixture
 def mock_data_object():
-    """Create a mock data object for testing."""
-    mock_data = MagicMock()
-    
+    """Create mock data object for testing."""
+    np.random.seed(42)  # For reproducibility
+
     # Create time vector
     dt = 0.01
     time_vector = np.arange(0, 1, dt)
@@ -38,22 +38,57 @@ def mock_data_object():
         # Rotate around x-axis
         gaze_direction[1, i] = np.sin(np.radians(angle))
         gaze_direction[2, i] = np.cos(np.radians(angle))
-    
-    # Set up the mock data object
-    mock_data.time_vector = time_vector
-    mock_data.dt = dt
-    mock_data.gaze_angular_velocity = gaze_angular_velocity
-    mock_data.gaze_direction = gaze_direction
+
+    # Create sample eye openness data
+    right_eye_openness = np.ones(n_samples) * 0.8
+    left_eye_openness = np.ones(n_samples) * 0.7
+
+    # Create sample direction vectors (3D)
+    eye_direction = np.zeros((3, n_samples))
+    eye_direction[2, :] = 1.0  # Looking forward along z-axis
+
+    head_angles = np.zeros((3, n_samples))
+    head_angles[0, :] = np.linspace(0, 0.1, n_samples)  # Small rotation around x-axis
+
+    gaze_direction = np.zeros((3, n_samples))
+    gaze_direction[2, :] = 1.0  # Looking forward along z-axis
+
+    gaze_angular_velocity = np.zeros((n_samples, ))
+    gaze_angular_velocity[30:35] = 150  # Large angular velocity
+    gaze_angular_velocity[70:75] = 150  # Large angular velocity
+    gaze_angular_velocity += np.random.normal(0, 5, n_samples)  # Add some noise
+
+    head_angular_velocity = np.zeros((3, n_samples))
+    head_angular_velocity[0, :] = 0.1  # Constant angular velocity around x-axis
+
+    head_velocity_norm = np.ones(n_samples) * 0.1
+
+    data_invalidity = np.zeros(n_samples, dtype=bool)
+    data_invalidity[80:85] = True  # Some invalid data
+
+    data_object = ReducedData(
+        original_dt=dt,
+        original_time_vector=time_vector,
+        original_right_eye_openness=right_eye_openness,
+        original_left_eye_openness=left_eye_openness,
+        original_eye_direction=eye_direction,
+        original_head_angles=head_angles,
+        original_gaze_direction=gaze_direction,
+        original_head_angular_velocity=head_angular_velocity,
+        original_head_velocity_norm=head_velocity_norm,
+        original_data_invalidity=data_invalidity,
+    )
+    data_object.gaze_angular_velocity = gaze_angular_velocity
     
     # Create identified_indices (none identified yet)
     identified_indices = np.zeros(n_samples, dtype=bool)
     
-    return mock_data, identified_indices
+    return data_object, identified_indices
 
 
 def test_visual_scanning_event_initialization():
     """Test that VisualScanningEvent initializes correctly."""
-    mock_data = MagicMock()
+    mock_data, mock_indices = mock_data_object()
     identified_indices = np.zeros(10, dtype=bool)
     
     event = VisualScanningEvent(
@@ -71,9 +106,9 @@ def test_visual_scanning_event_initialization():
     assert event.sequences == []
 
 
-def test_detect_visual_scanning_indices(mock_data_object):
+def test_detect_visual_scanning_indices():
     """Test that detect_visual_scanning_indices correctly identifies visual scanning frames."""
-    mock_data, identified_indices = mock_data_object
+    mock_data, identified_indices = mock_data_object()
     
     event = VisualScanningEvent(
         mock_data,
@@ -88,9 +123,9 @@ def test_detect_visual_scanning_indices(mock_data_object):
     np.testing.assert_array_equal(event.frame_indices, expected_indices)
 
 
-def test_detect_visual_scanning_indices_with_identified_frames(mock_data_object):
+def test_detect_visual_scanning_indices_with_identified_frames():
     """Test that detect_visual_scanning_indices excludes already identified frames."""
-    mock_data, identified_indices = mock_data_object
+    mock_data, identified_indices = mock_data_object()
     
     # Mark some frames as already identified
     identified_indices[30:32] = True
@@ -108,39 +143,25 @@ def test_detect_visual_scanning_indices_with_identified_frames(mock_data_object)
     np.testing.assert_array_equal(event.frame_indices, expected_indices)
 
 
-@patch('eyedentify3d.identification.visual_scanning.merge_close_sequences')
-def test_merge_sequences(mock_merge_close_sequences, mock_data_object):
+def test_merge_sequences():
     """Test that merge_sequences correctly merges close visual scanning sequences."""
-    mock_data, identified_indices = mock_data_object
-    
-    # Mock the merge_close_sequences function
-    mock_merged_sequences = [np.arange(30, 35), np.arange(70, 75)]
-    mock_merge_close_sequences.return_value = mock_merged_sequences
-    
+    mock_data, identified_indices = mock_data_object()
+
     event = VisualScanningEvent(mock_data, identified_indices)
     event.sequences = [np.arange(30, 33), np.arange(33, 35), np.arange(70, 75)]
     
     event.merge_sequences()
-    
-    # Check that merge_close_sequences was called with correct arguments
-    mock_merge_close_sequences.assert_called_once_with(
-        event.sequences,
-        mock_data.time_vector,
-        mock_data.gaze_direction,
-        identified_indices,
-        max_gap=0.040,
-        check_directionality=True,
-        max_angle=30.0
-    )
-    
+
     # Check that sequences is updated with merged sequences
-    assert event.sequences == mock_merged_sequences
+    assert len(event.sequences) == 2
+    npt.assert_almost_equal(event.sequences[0], np.arange(30, 35))
+    npt.assert_almost_equal(event.sequences[1], np.arange(70, 75))
 
 
-def test_initialize(mock_data_object):
+def test_initialize():
     """Test that initialize correctly sets up the event."""
-    mock_data, identified_indices = mock_data_object
-    
+    mock_data, identified_indices = mock_data_object()
+
     # Create a VisualScanningEvent with mocked methods
     event = VisualScanningEvent(
         mock_data,
@@ -166,9 +187,9 @@ def test_initialize(mock_data_object):
         mock_adjust.assert_called_once()
 
 
-def test_end_to_end_visual_scanning_detection(mock_data_object):
+def test_end_to_end_visual_scanning_detection():
     """Test the complete visual scanning detection process."""
-    mock_data, identified_indices = mock_data_object
+    mock_data, identified_indices = mock_data_object()
     
     # Create a VisualScanningEvent
     event = VisualScanningEvent(
@@ -191,9 +212,9 @@ def test_end_to_end_visual_scanning_detection(mock_data_object):
     np.testing.assert_array_equal(event.frame_indices, expected_indices)
 
 
-def test_visual_scanning_with_short_sequences(mock_data_object):
+def test_visual_scanning_with_short_sequences():
     """Test that short sequences are filtered out when minimal_duration is set."""
-    mock_data, identified_indices = mock_data_object
+    mock_data, identified_indices = mock_data_object()
     
     # Create a VisualScanningEvent with a high minimal_duration
     event = VisualScanningEvent(
