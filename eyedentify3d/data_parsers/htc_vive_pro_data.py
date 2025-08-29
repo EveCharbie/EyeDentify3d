@@ -25,6 +25,7 @@ class HtcViveProData(Data):
         Parameters
         ----------
         data_file_path: The path to the HTC Vive Pro data file.
+        error_type: The error handling method to use.
         time_range: The time range to consider in the trial.
         """
         # Initial attributes
