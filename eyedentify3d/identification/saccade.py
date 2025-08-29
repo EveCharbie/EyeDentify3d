@@ -1,10 +1,13 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 from .event import Event
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import split_sequences, merge_close_sequences
 from ..utils.rotation_utils import get_angle_between_vectors, compute_angular_velocity
 from ..utils.signal_utils import centered_finite_difference
+from ..utils.check_utils import check_save_name
 
 
 class SaccadeEvent(Event):
@@ -166,3 +169,88 @@ class SaccadeEvent(Event):
             angle = get_angle_between_vectors(vector_before, vector_after)
             saccade_amplitudes += [angle]
         self.saccade_amplitudes = saccade_amplitudes
+
+    def add_sequence_to_plot(self, ax: Axes):
+        """
+        Plot the detected saccade events on the provided axis.
+
+        Parameters:
+        ax: The matplotlib axis to plot on.
+        """
+        for sequence in self.sequences:
+            start = sequence[0]
+            end = sequence[-1]
+            ax.axvspan(
+                self.data_object.time_vector[start],
+                self.data_object.time_vector[end],
+                color="tab:blue",
+                alpha=0.5,
+                edgecolor=None,
+            )
+        ax.axvspan(
+            0,
+            0,
+            color="tab:blue",
+            alpha=0.5,
+            edgecolor=None,
+            label="Saccades",
+        )
+
+    def plot(self, save_name: str = None) -> None:
+        """
+        Plot the eye velocity, eye acceleration and detected saccade events.
+
+        Parameters
+        ----------
+        save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        """
+
+        fig, axs = plt.subplots(3, 1, figsize=(10, 8), gridspec_kw={"height_ratios": [2, 1, 1]})
+        axs[0].set_title("Detected saccade events")
+
+        # Plot the gaze vector and the identified saccades
+        self.data_object.plot_gaze_vector(ax=axs[0])
+        self.add_sequence_to_plot(axs[0])
+        axs[0].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        axs[0].set_ylabel("Gaze orientation [without units]")
+        axs[0].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
+
+        # Plot the eye velocity
+        axs[1].plot(self.data_object.time_vector, np.abs(self.eye_angular_velocity), color="tab:blue",
+                    label="Eye velocity")
+        axs[1].plot(
+            self.data_object.time_vector,
+            self.velocity_threshold,
+            "--",
+            color="k",
+            label=f"Velocity threshold \n({self.velocity_factor} * medians over \n{self.velocity_window_size}s sliding window)",
+        )
+        axs[1].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        axs[1].set_ylabel(r"Eye velocity [$^\circ/s$]")
+        axs[1].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
+
+        # Plot the eye acceleration
+        axs[2].plot(
+            self.data_object.time_vector,
+            self.eye_angular_acceleration,
+            color="tab:blue",
+            label="Eye acceleration"
+        )
+        axs[2].axhline(
+            self.min_acceleration_threshold,
+            color="k",
+            linestyle="--",
+            label=f"Acceleration threshold",
+        )
+        axs[2].set_ylabel(r"Eye acceleration [$^\circ/s^2$]")
+        axs[2].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        axs[2].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
+        axs[2].set_xlabel("Time [s]")
+
+        plt.subplots_adjust(bottom=0.07, top=0.95, left=0.1, right=0.7, hspace=0.15)
+
+        # If wanted, save the figure
+        if save_name is not None:
+            extension = check_save_name(save_name)
+            plt.savefig(save_name, format=extension)
+        plt.show()

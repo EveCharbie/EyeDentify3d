@@ -1,8 +1,11 @@
 from typing import Self
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import get_sequences_in_range
+from ..utils.check_utils import check_save_name
 from ..time_range import TimeRange
 from ..data_parsers.reduced_data import ReducedData
 from ..error_type import ErrorType
@@ -533,3 +536,43 @@ class GazeBehaviorIdentifier:
         gaze_behavior_identifiers += [reduced_gaze_behavior_identifier]
 
         return gaze_behavior_identifiers
+
+    def plot(self, save_name: str = None) -> None:
+        """
+        Plot all the detected gaze behaviors.
+
+        Parameters
+        ----------
+        save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        """
+
+        fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+        ax.set_title("Detected gaze behaviors")
+
+        # Plot the gaze vector and the identified sequences
+        self.data_object.plot_gaze_vector(ax=ax)
+        if self.invalid is not None:
+            self.invalid.add_sequence_to_plot(ax=ax)
+        if self.blink is not None:
+            self.blink.add_sequence_to_plot(ax=ax)
+        if self.saccade is not None:
+            self.saccade.add_sequence_to_plot(ax=ax)
+        if self.visual_scanning is not None:
+            self.visual_scanning.add_sequence_to_plot(ax=ax)
+        if self.fixation is not None:
+            self.fixation.add_sequence_to_plot(ax=ax)
+        if self.smooth_pursuit is not None:
+            self.smooth_pursuit.add_sequence_to_plot(ax=ax)
+
+        ax.set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        ax.set_ylabel("Gaze orientation [without units]")
+        ax.legend(bbox_to_anchor=(1.02, 0.7))
+        ax.set_xlabel("Time [s]")
+
+        plt.subplots_adjust(bottom=0.15, top=0.90, left=0.1, right=0.7, hspace=0.15)
+
+        # If wanted, save the figure
+        if save_name is not None:
+            extension = check_save_name(save_name)
+            plt.savefig(save_name, format=extension)
+        plt.show()

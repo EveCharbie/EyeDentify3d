@@ -1,8 +1,11 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 from .event import Event
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import merge_close_sequences
+from ..utils.check_utils import check_save_name
 
 
 class SmoothPursuitEvent(Event):
@@ -75,3 +78,56 @@ class SmoothPursuitEvent(Event):
                     trajectory_this_time += d_trajectory
             smooth_pursuit_trajectories += [trajectory_this_time]
         self.smooth_pursuit_trajectories = smooth_pursuit_trajectories
+
+    def add_sequence_to_plot(self, ax: Axes):
+        """
+        Plot the detected smooth pursuit events on the provided axis.
+
+        Parameters:
+        ax: The matplotlib axis to plot on.
+        """
+        for sequence in self.sequences:
+            start = sequence[0]
+            end = sequence[-1]
+            ax.axvspan(
+                self.data_object.time_vector[start],
+                self.data_object.time_vector[end],
+                color="tab:orange",
+                alpha=0.5,
+                edgecolor=None,
+            )
+        ax.axvspan(
+            0,
+            0,
+            color="tab:orange",
+            alpha=0.5,
+            edgecolor=None,
+            label="Smooth pursuits",
+        )
+
+    def plot(self, save_name: str = None) -> None:
+        """
+        Plot the detected smooth pursuit events.
+
+        Parameters
+        ----------
+        save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        """
+
+        fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+        ax.set_title("Detected smooth pursuit events")
+
+        # Plot the gaze vector and the identified smooth pursuit
+        self.data_object.plot_gaze_vector(ax=ax)
+        self.add_sequence_to_plot(ax)
+        ax.set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        ax.set_ylabel("Gaze orientation [without units]")
+        ax.legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
+
+        plt.subplots_adjust(bottom=0.15, top=0.90, left=0.1, right=0.7, hspace=0.15)
+
+        # If wanted, save the figure
+        if save_name is not None:
+            extension = check_save_name(save_name)
+            plt.savefig(save_name, format=extension)
+        plt.show()
