@@ -44,7 +44,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          conda install -c conda-forge pytest pytest-cov codecov black
+          conda install -c conda-forge pytest pytest-cov codecov black biorbd=1.11.2
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=eyedentify3d tests

@@ -180,3 +180,138 @@ def compute_angular_velocity(time_vector: np.ndarray, direction_vector: np.ndarr
     angular_velocity[-1] = last_angle / (time_vector[-1] - time_vector[-2])
 
     return angular_velocity
+
+def angles_from_imu_fusion(time_vector: np.ndarray[float], acceleration: np.ndarray[float], gyroscope: np.ndarray[float]) -> tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
+    """
+    Computes the Euler angles from the accelerometer and gyroscope data using the Madgwick filter algorithm.
+    Code adapted from https://github.com/pupil-labs/pupil/blob/7a3cd9e8d2e54ac123ab0ed292d741732db899a2/pupil_src/shared_modules/imu_timeline.py
+    Note: The initial head orientation is assumed to be pitch=0, roll=0, yaw=0.
+    """
+    # Parameters
+    nb_frames = time_vector.shape[0]
+    gyroscope_error = 50 * np.pi / 180 # Default in Pupil Invisible code
+    beta = (
+            np.sqrt(3.0 / 4.0) * gyroscope_error
+    )  # compute beta (see README in original GitHub page: https://github.com/micropython-IMU/micropython-fusion)
+
+    # Initialize orientation
+    quaternion = np.zeros((4, nb_frames)) * np.nan
+    quaternion[:, 0] = [1.0, 0.0, 0.0, 0.0]
+    pitch = np.zeros((nb_frames,)) * np.nan
+    roll = np.zeros((nb_frames,)) * np.nan
+    yaw = np.zeros((nb_frames,)) * np.nan
+    pitch[0] = 0.0
+    roll[0] = 0.0
+    yaw[0] = 0.0
+
+    for i_frame in range(nb_frames - 1):
+        dt = time_vector[i_frame+1] - time_vector[i_frame]
+        ax, ay, az = acceleration[:, i_frame]  # Units G (but later normalised)
+        gx, gy, gz = (np.radians(x) for x in gyroscope[:, i_frame])  # Units deg/s
+        q1, q2, q3, q4 = (
+            quaternion[x, i_frame] for x in range(4)
+        )  # short name local variable for readability
+        # Auxiliary variables to avoid repeated arithmetic
+        _2q1 = 2 * q1
+        _2q2 = 2 * q2
+        _2q3 = 2 * q3
+        _2q4 = 2 * q4
+        _4q1 = 4 * q1
+        _4q2 = 4 * q2
+        _4q3 = 4 * q3
+        _8q2 = 8 * q2
+        _8q3 = 8 * q3
+        q1q1 = q1 * q1
+        q2q2 = q2 * q2
+        q3q3 = q3 * q3
+        q4q4 = q4 * q4
+
+        # Normalise accelerometer measurement
+        norm = np.sqrt(ax * ax + ay * ay + az * az)
+        if norm == 0:
+            return  # handle NaN
+        norm = 1 / norm  # use reciprocal for division
+        ax *= norm
+        ay *= norm
+        az *= norm
+
+        # Gradient decent algorithm corrective step
+        s1 = _4q1 * q3q3 + _2q3 * ax + _4q1 * q2q2 - _2q2 * ay
+        s2 = (
+            _4q2 * q4q4
+            - _2q4 * ax
+            + 4 * q1q1 * q2
+            - _2q1 * ay
+            - _4q2
+            + _8q2 * q2q2
+            + _8q2 * q3q3
+            + _4q2 * az
+        )
+        s3 = (
+            4 * q1q1 * q3
+            + _2q1 * ax
+            + _4q3 * q4q4
+            - _2q4 * ay
+            - _4q3
+            + _8q3 * q2q2
+            + _8q3 * q3q3
+            + _4q3 * az
+        )
+        s4 = 4 * q2q2 * q4 - _2q2 * ax + 4 * q3q3 * q4 - _2q3 * ay
+        norm = 1 / np.sqrt(
+            s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4
+        )  # normalise step magnitude
+        s1 *= norm
+        s2 *= norm
+        s3 *= norm
+        s4 *= norm
+
+        # Compute rate of change of quaternion
+        q_dot1 = 0.5 * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1
+        q_dot2 = 0.5 * (q1 * gx + q3 * gz - q4 * gy) - beta * s2
+        q_dot3 = 0.5 * (q1 * gy - q2 * gz + q4 * gx) - beta * s3
+        q_dot4 = 0.5 * (q1 * gz + q2 * gy - q3 * gx) - beta * s4
+
+        # Integrate to yield quaternion
+        q1 += q_dot1 * dt
+        q2 += q_dot2 * dt
+        q3 += q_dot3 * dt
+        q4 += q_dot4 * dt
+        norm = 1 / np.sqrt(
+            q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4
+        )  # normalise quaternion
+        this_quaternion = q1 * norm, q2 * norm, q3 * norm, q4 * norm
+        quaternion[:, i_frame+1] = this_quaternion
+
+        # These are modified to account for Invisible IMU coordinate system and positioning of
+        # the IMU within the invisible headset
+        this_roll = (
+            np.degrees(
+                -np.arcsin(2.0 * (this_quaternion[1] * this_quaternion[3] - this_quaternion[0] * this_quaternion[2]))
+            )
+            + 7
+        )
+        # bring to range [-180, 180]
+        roll[i_frame + 1] = ((this_roll + 180) % 360) - 180
+
+        this_pitch = (
+            np.degrees(
+                np.arctan2(
+                    2.0 * (this_quaternion[0] * this_quaternion[1] + this_quaternion[2] * this_quaternion[3]),
+                    this_quaternion[0] * this_quaternion[0]
+                    - this_quaternion[1] * this_quaternion[1]
+                    - this_quaternion[2] * this_quaternion[2]
+                    + this_quaternion[3] * this_quaternion[3],
+                )
+            )
+            + 90
+        )
+        # bring to range [-180, 180]
+        pitch[i_frame+1] = ((this_pitch + 180) % 360) - 180
+
+        this_yaw = np.degrees(np.atan2(2.0 * (this_quaternion[1] * this_quaternion[2] + this_quaternion[0] * this_quaternion[3]),
+                                                        this_quaternion[0] * this_quaternion[0] + this_quaternion[1] * this_quaternion[1] - this_quaternion[2] *
+                                                        this_quaternion[2] - this_quaternion[3] * this_quaternion[3]))
+        yaw[i_frame+1] = ((this_yaw + 180) % 360) - 180
+
+    return pitch, roll, yaw

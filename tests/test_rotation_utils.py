@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+import biorbd
 
 from eyedentify3d.utils.rotation_utils import (
     unwrap_rotation,
@@ -107,6 +108,20 @@ def test_rotation_matrices():
     rotated = rot_z @ v
     npt.assert_almost_equal(rotated, np.array([0, 1, 0]))  # Should rotate to y-axis
 
+def test_rotation_matrix_againt_biorbd():
+    """ Compare the rotation matrix building with biorbd's implementation."""
+    np.random.seed(42)
+    nb_frames = 100
+    azimuth = np.random.uniform(-np.pi, np.pi, nb_frames)
+    elevation = np.random.uniform(-np.pi, np.pi, nb_frames)
+    angles = np.array([azimuth, elevation])
+
+    rot_mat = np.zeros((3, 3, nb_frames))
+    rotation_matrix = np.zeros((3, 3, nb_frames))
+    for i_frame in range(nb_frames):
+        rot_mat[:, :, i_frame] = biorbd.Rotation.fromEulerAngles(angles[:, i_frame], "xy").to_array()
+        rotation_matrix[:, :, i_frame] = rotation_matrix_from_euler_angles("xy", angles[:, i_frame])
+    npt.assert_almost_equal(rot_mat, rotation_matrix)
 
 def test_rotation_matrix_from_euler_angles():
     """Test creating rotation matrix from Euler angles."""
