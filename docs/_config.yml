@@ -3,7 +3,7 @@
 
 title: EyeDentify3D
 author: Eve Charbonneau
-# logo: logo.png
+logo: EyeDentify3D_logo.png
 copyright: "2025"
 
 # Force re-execution of notebooks on each build.
