@@ -1,11 +1,11 @@
 # Inter-saccadic sequences detection
 
-```{note}
-Inter-saccadic sequence definition: An inter-saccadic sequence is not a gaze behavior. The remaining frames between 
+```{admonition} Inter-saccadic sequence definition
+An inter-saccadic sequence is not a gaze behavior. The remaining frames between 
 previously identified gaze behaviors are split into coherent or incoherent inter_saccadic sequences.
 ```
 
-Implementation:
+## Implementation
 All frames that have not been identified yet are split into windows that are overlapping a little bit at the beginning and end.
 The coherence of the gaze movements inside each window is assessed using a Rayleigh z-test. 
 First, the gaze movement is extracted by computing the gaze endpoint displacement vector between consecutive frames.
@@ -20,11 +20,14 @@ These sequences are then each analyzed to determine if they should be identified
     4) Spatial range: # TODO: add the definition from Larsson
 See the sections [fixation](fixation.md) and [smooth_pursuit](smooth_pursuit.md) detection sections for their interpretation.
 
-Limitation:
+![inter_saccade_detection.png](../figures/inter_saccade_detection.png)
+Figure 1 - Plot obtained using `gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name)`.
+
+## Limitation
 The computation of the gaze movement angle only works if it is possible to predict on which axis the gaze will move during the trial (e.g., when following a freeze-bee the gaze movement should be mainly horizontal).
 If you need to extract intersaccadic sequences, fixations, or saccades from your trials and you cannot predict the axis on which the gaze will be moving the most, please notify the developer by opening an issue on [GitHub](https://github.com/EveCharbie/EyeDentify3d/issues).
 
-Parameters:
+## Parameters
 - `window_duration (float)`: The length of the windows. The default is `0.022` s.
 - `window_overlap (float)`: The duration by which the windows must overlap at their extremities. The default is `0.006` s.
 - `minimal_duration (float)`: The minimal duration for which the gaze behavior must be consistent or inconsistent to consider the inter-saccadic interval. The default is `0.04` s.
@@ -37,11 +40,7 @@ Parameters:
 - `eta_min_smooth_pursuit (float)`: The minimal smooth pursuit spatial range. The default is `1.7`°.
 - `phi (float)`: The maximal angular difference to consider two sequences to have a displacement in the same direction. The default is `45`°.
 
-![inter_saccade_detection.png](../figures/inter_saccade_detection.png)
-Figure 1 - Plot obtained using `gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name)`.
-
-
-Available inter-saccadic sequences: 
+## Available inter-saccadic sequences
 - `gaze_behavior_identifier.inter_saccadic_sequences.sequences`: The coherent and incoherent sequences present in the trial.
 - `gaze_behavior_identifier.inter_saccadic_sequences.coherent_sequences`: The coherent sequences present in the trial.
 - `gaze_behavior_identifier.inter_saccadic_sequences.incoherent_sequences`: The incoherent sequences present in the trial.
