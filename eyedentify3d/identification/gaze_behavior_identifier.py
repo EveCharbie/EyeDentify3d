@@ -1,6 +1,7 @@
 from typing import Self
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 
 
 from ..utils.data_utils import DataObject
@@ -274,6 +275,35 @@ class GazeBehaviorIdentifier:
                 unidentified_indices[sequence] = False  # Mark identified frames as False
 
         return unidentified_indices
+
+    def identified_ratio(self):
+        """
+        Get the proportion of the trail when it was possible to identify a gaze behavior.
+        """
+        identified_ratio = 0
+        if self.blink is not None:
+            identified_ratio += self.blink.ratio
+        if self.saccade is not None:
+            identified_ratio += self.saccade.ratio
+        if self.visual_scanning is not None:
+            identified_ratio += self.visual_scanning.ratio
+        if self.fixation is not None:
+            identified_ratio += self.fixation.ratio
+        if self.smooth_pursuit is not None:
+            identified_ratio += self.smooth_pursuit.ratio
+        return identified_ratio
+
+    def unidentified_ratio(self):
+        """
+        Get the proportion of the trail when it was not possible to identify a gaze behavior.
+        """
+        delta_time = np.hstack((self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt))
+        unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
+        not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
+
+        if not_identified_ratio != (1 - self.identified_ratio()):
+            raise RuntimeError("The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer.")
+        return not_identified_ratio
 
     def validate_sequences(self):
         """
@@ -576,3 +606,58 @@ class GazeBehaviorIdentifier:
             extension = check_save_name(save_name)
             plt.savefig(save_name, format=extension)
         plt.show()
+
+    def animate(self) -> None:
+        """
+        Animate the head (3 rotations) and eye (2 rotations) movements.
+        """
+
+        try:
+            import pyorerun
+        except ImportError:
+            raise ImportError(
+                "The pyorerun package is required to animate the gaze behaviors. Please install it using "
+                "'conda install -c conda-forge pyorerun'."
+            )
+
+        # Setting the gaze end point color based on the identified event in progress
+        colors = np.zeros((self.data_object.nb_frames, ))
+        colors[:] = mcolors.CSS4_COLORS["black"]
+        for sequence in self.blink.sequences:
+            colors[sequence] = mcolors.TABLEAU_COLORS['tab:green']
+        for sequence in self.saccade.sequences:
+            colors[sequence] = mcolors.TABLEAU_COLORS['tab:blue']
+        for sequence in self.visual_scanning.sequences:
+            colors[sequence] = mcolors.TABLEAU_COLORS['tab:pink']
+        for sequence in self.fixation.sequences:
+            colors[sequence] = mcolors.TABLEAU_COLORS['tab:purple']
+        for sequence in self.smooth_pursuit.sequences:
+            colors[sequence] = mcolors.TABLEAU_COLORS['tab:orange']
+
+        # loading biorbd model
+        biorbd_model = pyorerun.BiorbdModel("../model/head_model.bioMod")
+        rerun_biorbd = pyorerun.PhaseRerun(self.data_object.time_vector)
+
+        rerun_biorbd.add_animated_model(biorbd_model, self.data_object.head_angles)
+
+        markers = pyorerun.PyoMarkers(
+            data=self.data_object.gaze_direction,
+            marker_names=["gaze"],
+            # color=colors,
+        )
+        rerun_biorbd.add_xp_markers(
+            name="gaze_endpoint",
+            markers=markers,
+            # show_older_frames=True
+        )
+        # vectors = pyorerun.VectorXp(
+        #     name="gaze",
+        #     num=0,
+        #     vector_origins=np.zeros((3, self.data_object.nb_frames)),
+        #     vector_endpoints=self.data_object.gaze_direction,
+        # )
+        # rerun_biorbd.add_xp_vectors(
+        #     name="gaze_endpoint",
+        #     vectors=vectors,
+        # )
+        rerun_biorbd.rerun("animation")

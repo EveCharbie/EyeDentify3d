@@ -11,7 +11,7 @@ from ..utils.check_utils import check_save_name
 class VisualScanningEvent(Event):
     """
     Class to detect visual scanning sequences.
-    A visual scanning event is detected when the gaze velocity is larger than 100 deg/s, but which are not saccades.
+    A visual scanning event is detected when the gaze velocity is larger than min_velocity_threshold deg/s, but which are not saccades.
     Please note that the gaze (head + eyes) movements were used to identify visual scanning.
     """
 
