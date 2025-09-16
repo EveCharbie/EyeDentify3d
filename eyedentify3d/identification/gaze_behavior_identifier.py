@@ -537,13 +537,14 @@ class GazeBehaviorIdentifier:
 
         return gaze_behavior_identifiers
 
-    def plot(self, save_name: str = None) -> None:
+    def plot(self, save_name: str = None, live_show: bool = True) -> plt.Figure:
         """
         Plot all the detected gaze behaviors.
 
         Parameters
         ----------
         save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        live_show: If the figure should be shown immediately. Please note that showing the figure is blocking.
         """
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 4))
@@ -575,4 +576,8 @@ class GazeBehaviorIdentifier:
         if save_name is not None:
             extension = check_save_name(save_name)
             plt.savefig(save_name, format=extension)
-        plt.show()
+
+        if live_show:
+            plt.show()
+
+        return fig # for plot tests
