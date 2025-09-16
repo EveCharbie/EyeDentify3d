@@ -1,0 +1,7 @@
+version 4
+
+segment	Head
+	RT 0 0 0	xyz 0.0 0.0 0.0
+	rotations xyz
+	meshfile	mesh/head.stl
+endsegment

@@ -650,14 +650,10 @@ class GazeBehaviorIdentifier:
             markers=markers,
             # show_older_frames=True
         )
-        # vectors = pyorerun.VectorXp(
-        #     name="gaze",
-        #     num=0,
-        #     vector_origins=np.zeros((3, self.data_object.nb_frames)),
-        #     vector_endpoints=self.data_object.gaze_direction,
-        # )
-        # rerun_biorbd.add_xp_vectors(
-        #     name="gaze_endpoint",
-        #     vectors=vectors,
-        # )
+        rerun_biorbd.add_xp_vectors(
+            name="gaze",
+            num=0,
+            vector_origins=np.zeros((3, self.data_object.nb_frames)),
+            vector_endpoints=self.data_object.gaze_direction,
+        )
         rerun_biorbd.rerun("animation")
