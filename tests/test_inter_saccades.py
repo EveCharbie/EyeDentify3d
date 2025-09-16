@@ -162,7 +162,9 @@ def test_detect_directionality_coherence_on_axis():
         gaze_direction[:, i] = gaze_direction[:, i] / np.linalg.norm(gaze_direction[:, i])
 
     # Test coherence on x-axis (should be coherent, low p-value)
-    p_value, gaze_displacement_angle = InterSaccadicEvent.detect_directionality_coherence_on_axis(gaze_direction, component_to_keep=0)
+    p_value, gaze_displacement_angle = InterSaccadicEvent.detect_directionality_coherence_on_axis(
+        gaze_direction, component_to_keep=0
+    )
     assert p_value < 1e-4  # Coherent movement should have low p-value
 
     # Create an incoherent movement
@@ -182,7 +184,9 @@ def test_detect_directionality_coherence_on_axis():
         )
 
     # Test coherence on x-axis (should be incoherent, high p-value)
-    p_value, gaze_displacement_angle = InterSaccadicEvent.detect_directionality_coherence_on_axis(gaze_direction_incoherent, component_to_keep=0)
+    p_value, gaze_displacement_angle = InterSaccadicEvent.detect_directionality_coherence_on_axis(
+        gaze_direction_incoherent, component_to_keep=0
+    )
     assert p_value > 0.008  # Incoherent movement should have high p-value
 
 

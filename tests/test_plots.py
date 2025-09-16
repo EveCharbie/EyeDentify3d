@@ -9,6 +9,7 @@ from eyedentify3d import (
     GazeBehaviorIdentifier,
 )
 
+
 @pytest.fixture(scope="module")
 def initialize_plots():
 
@@ -57,41 +58,47 @@ def initialize_plots():
     return gaze_behavior_identifier
 
 
-
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_blink_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.blink.plot(live_show=False)
+
 
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_invalid_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.invalid.plot(live_show=False)
 
+
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_saccade_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.saccade.plot(live_show=False)
+
 
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_visual_scanning_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.visual_scanning.plot(live_show=False)
 
+
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_inter_saccadic_sequences_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.inter_saccadic_sequences.plot(live_show=False)
+
 
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_fixation_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.fixation.plot(live_show=False)
 
+
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_smooth_pursuit_plotting(initialize_plots):
     gaze_behavior_identifier = initialize_plots
     return gaze_behavior_identifier.smooth_pursuit.plot(live_show=False)
+
 
 @pytest.mark.mpl_image_compare(savefig_kwargs={"dpi": 100})
 def test_all_gaze_behaviors_plotting(initialize_plots):
