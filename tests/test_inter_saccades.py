@@ -162,7 +162,9 @@ def test_detect_directionality_coherence_on_axis():
         gaze_direction[:, i] = gaze_direction[:, i] / np.linalg.norm(gaze_direction[:, i])
 
     # Test coherence on x-axis (should be coherent, low p-value)
-    p_value = InterSaccadicEvent.detect_directionality_coherence_on_axis(gaze_direction, component_to_keep=0)
+    p_value, gaze_displacement_angle = InterSaccadicEvent.detect_directionality_coherence_on_axis(
+        gaze_direction, component_to_keep=0
+    )
     assert p_value < 1e-4  # Coherent movement should have low p-value
 
     # Create an incoherent movement
@@ -182,7 +184,9 @@ def test_detect_directionality_coherence_on_axis():
         )
 
     # Test coherence on x-axis (should be incoherent, high p-value)
-    p_value = InterSaccadicEvent.detect_directionality_coherence_on_axis(gaze_direction_incoherent, component_to_keep=0)
+    p_value, gaze_displacement_angle = InterSaccadicEvent.detect_directionality_coherence_on_axis(
+        gaze_direction_incoherent, component_to_keep=0
+    )
     assert p_value > 0.008  # Incoherent movement should have high p-value
 
 
@@ -295,7 +299,7 @@ def test_compute_larsson_parameters():
     npt.assert_almost_equal(parameter_D, 0.7117307016032802)
     npt.assert_almost_equal(parameter_CD, 0.12052426548425645)
     npt.assert_almost_equal(parameter_PD, 0.004991590634662587)
-    npt.assert_almost_equal(parameter_R, 0.6368709148754008)
+    npt.assert_almost_equal(parameter_R, 0.6368709148754008 * 180 / np.pi)
 
     # TODO: test the actual values against known good values or expected ranges
 
@@ -343,7 +347,11 @@ def test_set_coherent_and_incoherent_sequences():
             "get_window_sequences",
             return_value=[np.arange(10, 20), np.arange(20, 30), np.arange(50, 60), np.arange(60, 70)],
         ),
-        patch.object(event, "detect_directionality_coherence_on_axis", side_effect=[0.01, 0.1, 0.01, 0.1]),
+        patch.object(
+            event,
+            "detect_directionality_coherence_on_axis",
+            side_effect=[[0.01, 0.01], [0.1, 0.1], [0.01, 0.01], [0.1, 0.1]],
+        ),
     ):
 
         event.set_coherent_and_incoherent_sequences()
@@ -377,9 +385,9 @@ def test_classify_obvious_sequences():
         event,
         "compute_larsson_parameters",
         side_effect=[
-            (0.6, 0.6, 0.6, np.radians(1.0)),  # Fixation
-            (0.4, 0.8, 0.8, np.radians(3.0)),  # Smooth pursuit
-            (0.4, 0.6, 0.8, np.radians(1.0)),  # Ambiguous
+            (0.6, 0.6, 0.6, 1.0),  # Fixation
+            (0.4, 0.8, 0.8, 3.0),  # Smooth pursuit
+            (0.4, 0.6, 0.8, 1.0),  # Ambiguous
         ],
     ):
 
@@ -410,7 +418,7 @@ def test_classify_ambiguous_sequences():
     # Mock methods used in classify_ambiguous_sequences
     # Fixation criteria_3 false and criteria_4 false
     with (
-        patch.object(event, "compute_larsson_parameters", return_value=(0.6, 0.6, 0.3, np.radians(1.0))),
+        patch.object(event, "compute_larsson_parameters", return_value=(0.6, 0.6, 0.3, 1.0)),
         patch.object(event, "_find_mergeable_segment_range", return_value=None),
     ):
 
@@ -426,7 +434,7 @@ def test_classify_ambiguous_sequences():
 
     # Fixation criteria_3 false and criteria_4 false
     with (
-        patch.object(event, "compute_larsson_parameters", return_value=(0.6, 0.6, 0.3, np.radians(30.0))),
+        patch.object(event, "compute_larsson_parameters", return_value=(0.6, 0.6, 0.3, 30.0)),
         patch.object(event, "_find_mergeable_segment_range", return_value=None),
     ):
         new_fixation_indices, new_smooth_pursuit_indices, uncertain_sequences = event.classify_ambiguous_sequences(
@@ -441,7 +449,7 @@ def test_classify_ambiguous_sequences():
 
     # Fixation criteria_3 true and the mergable criteria si not met, so the sequence is unidentified
     with (
-        patch.object(event, "compute_larsson_parameters", return_value=(0.6, 0.6, 0.8, np.radians(30.0))),
+        patch.object(event, "compute_larsson_parameters", return_value=(0.6, 0.6, 0.8, 30.0)),
         patch.object(event, "_find_mergeable_segment_range", return_value=None),
     ):
         new_fixation_indices, new_smooth_pursuit_indices, uncertain_sequences = event.classify_ambiguous_sequences(

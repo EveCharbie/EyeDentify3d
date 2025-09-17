@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from functools import wraps
 from datetime import datetime
 import numpy as np
+import matplotlib
+from matplotlib.axes import Axes
 
 from ..error_type import ErrorType
 from ..time_range import TimeRange
@@ -55,6 +57,7 @@ class Data(ABC):
         self.data_invalidity: np.ndarray[bool] | None = None
         # These will be set by finalize
         self.gaze_angular_velocity: np.ndarray[float] | None = None
+        self.is_finalized = False
 
     @property
     def error_type(self):
@@ -118,12 +121,14 @@ class Data(ABC):
     @property
     def file_name(self):
         """
-        Get the name of the data file.
+        Get the name of the data file or folder name.
         """
         if hasattr(self, "data_file_path"):
             return self.data_file_path.split("/")[-1]
+        elif hasattr(self, "data_folder_path"):
+            return self.data_folder_path.split("/")[-1]
         else:
-            raise AttributeError("The data file path is not set.")
+            raise AttributeError("The data file or folder path is not set.")
 
     @property
     def nb_frames(self):
@@ -213,6 +218,15 @@ class Data(ABC):
                 "(i.e., after the data objects has been instantiated)."
             )
         self.set_gaze_angular_velocity()
+        self.is_finalized = True
+
+    def plot_gaze_vector(self, ax: Axes):
+        if not self.is_finalized:
+            raise RuntimeError("Please call .finalize() before calling plot functions.")
+
+        ax.plot(self.time_vector, self.gaze_direction[0, :], "-k", label="Gaze X")
+        ax.plot(self.time_vector, self.gaze_direction[1, :], "--k", label="Gaze Y")
+        ax.plot(self.time_vector, self.gaze_direction[2, :], ":k", label="Gaze Z")
 
     def destroy_on_error(self):
         """

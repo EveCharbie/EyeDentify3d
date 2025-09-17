@@ -10,10 +10,10 @@ from eyedentify3d import HtcViveProData, TimeRange, ErrorType, GazeBehaviorIdent
 def main():
 
     # Cut the data after the end of the trial (black screen happening at 7.180 seconds)
-    time_range = TimeRange(min_time=0, max_time=7.180)
+    time_range = TimeRange(min_time=0, max_time=5.06)
 
     # Load the data from the HTC Vive Pro
-    data_file_path = "data/HTC_Vive_Pro/TESTNA01_2D_Fist3.csv"
+    data_file_path = "data/HTC_Vive_Pro/TESTNA05_360VR_Spread7.csv"
     data_object = HtcViveProData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
 
     # Create a GazeBehaviorIdentifier object
@@ -46,6 +46,16 @@ def main():
         phi=45,
     )
     gaze_behavior_identifier.finalize()  # This is mandatory
+
+    # Plot the results
+    gaze_behavior_identifier.blink.plot(save_name="blink_detection.png")
+    gaze_behavior_identifier.invalid.plot(save_name="invalid_detection.png")
+    gaze_behavior_identifier.saccade.plot(save_name="saccade_detection.png")
+    gaze_behavior_identifier.visual_scanning.plot(save_name="visual_scanning_detection.png")
+    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="fixation_detection.png")
+    gaze_behavior_identifier.fixation.plot(save_name="fixation_detection.png")
+    gaze_behavior_identifier.smooth_pursuit.plot(save_name="fixation_detection.png")
+    gaze_behavior_identifier.plot(save_name="all_gaze_behaviors.png")
 
     # For this example, we will remove all files generated, but in a real case, they should be kept
     if os.path.exists("bad_data_files.txt"):
