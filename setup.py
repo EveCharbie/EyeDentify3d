@@ -21,8 +21,15 @@ setuptools.setup(
 )
 
 # Publish on pip manually
-
-# 1) change version in version.py and in setup.py
+# 1) change version in version.py, setup.py, and pyproject.toml
 # 2) Remove old wheel build from dist folder
 # 3) python setup.py sdist bdist_wheel
 # 4) python -m twine upload dist/*
+
+# Publishing on conda-forge
+# 0) conda install conda-build conda-forge-pinning
+# 1) publish on pip first
+# 2) download the latest eyedentify3d-{version}.tar.gz from pip
+# 3) run openssl sha256 eyedentify3d-{version}.tar.gz to get the sha256 hash
+# 4) paste the hash in the recipe/meta.yaml file
+# 5) ?
