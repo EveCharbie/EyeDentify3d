@@ -347,7 +347,11 @@ def test_set_coherent_and_incoherent_sequences():
             "get_window_sequences",
             return_value=[np.arange(10, 20), np.arange(20, 30), np.arange(50, 60), np.arange(60, 70)],
         ),
-        patch.object(event, "detect_directionality_coherence_on_axis", side_effect=[[0.01, 0.01], [0.1, 0.1], [0.01, 0.01], [0.1, 0.1]]),
+        patch.object(
+            event,
+            "detect_directionality_coherence_on_axis",
+            side_effect=[[0.01, 0.01], [0.1, 0.1], [0.01, 0.01], [0.1, 0.1]],
+        ),
     ):
 
         event.set_coherent_and_incoherent_sequences()
