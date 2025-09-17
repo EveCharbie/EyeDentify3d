@@ -385,6 +385,7 @@ def detect_directionality_coherence(gaze_direction):
     for i_frame in range(gaze_direction.shape[1] - 1):
         gaze_displacement_this_time = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
         alpha[i_frame] = np.arcsin(gaze_displacement_this_time[0] / np.linalg.norm(gaze_displacement_this_time))
+    alpha[-1] = alpha[-2]
 
     # Test that the gaze displacement and orientation are coherent inside the window
     z_value_alpha, p_value_alpha = pg.circ_rayleigh(alpha)

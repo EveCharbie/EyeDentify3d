@@ -1,6 +1,6 @@
 The following events were excluded because they happened at the moment of the 2s cut : 
 
-Smooth pursuit : 1.2412161000000008 s 
-Fixation : 0.942002 s 
-Smooth pursuit : 0.5166219000000001 s 
+Smooth pursuit : 0.33311010000000074 s 
+Fixation : 0.6412845999999996 s 
+Smooth pursuit : 0.5585098000000004 s 
 Fixation : 0.2074480999999997 s 

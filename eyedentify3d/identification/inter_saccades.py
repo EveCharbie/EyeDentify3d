@@ -134,6 +134,8 @@ class InterSaccadicEvent(Event):
             gaze_displacement_angle[i_frame] = np.arcsin(
                 gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement)
             )
+        # The last frame does not have a displacement, so we copy the previous one
+        gaze_displacement_angle[-1] = gaze_displacement_angle[-2]
 
         # Test that the gaze displacement and orientation are coherent inside the window
         z_value, p_value = pg.circ_rayleigh(gaze_displacement_angle)
