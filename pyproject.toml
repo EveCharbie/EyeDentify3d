@@ -13,6 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name =  "eyedentify3d"
+version = "1.0.3"
 description = "A package to identify gaze behavior from 3D eye-tracking data."
 dynamic = ["version"]
 authors = [
@@ -46,9 +47,6 @@ Tracker = "https://github.com/EveCharbie/EyeDentify3d/issues"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["eyedentify3d*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "eyedentify3d.__version__"}
 
 [tool.pytest.ini_options]
 pythonpath = "."
