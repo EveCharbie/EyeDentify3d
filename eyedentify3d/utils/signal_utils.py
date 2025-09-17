@@ -1,5 +1,4 @@
 import numpy as np
-import biorbd
 from scipy import signal
 
 
