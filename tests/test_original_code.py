@@ -335,13 +335,13 @@ def test_original_code():
         print(file_name)
 
         if file_name == "TESTNA01_2D_Fist3":
-            assert captured_output.getvalue() == r"Smooth pursuit : 1.24122 s ----"
+            assert captured_output.getvalue() == r"Smooth pursuit : 0.33311 s ----"
         elif file_name == "TESTNA01_360VR_Fist3":
             assert captured_output.getvalue() == ""
         elif file_name == "TESTNA05_2D_Spread7":
-            assert captured_output.getvalue() == "Fixation : 0.942 s ----"
+            assert captured_output.getvalue() == "Fixation : 0.64128 s ----"
         elif file_name == "TESTNA05_360VR_Spread7":
-            assert captured_output.getvalue() == "Smooth pursuit : 0.51662 s ----"
+            assert captured_output.getvalue() == "Smooth pursuit : 0.55851 s ----"
         elif file_name == "TESTNA15_2D_Pen3":
             assert captured_output.getvalue() == "Fixation : 0.20745 s ----"
         elif file_name == "TESTNA15_360VR_Pen3":

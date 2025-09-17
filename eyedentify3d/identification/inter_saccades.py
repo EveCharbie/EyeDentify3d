@@ -1,11 +1,15 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import pingouin as pg
+from copy import deepcopy
 
 from .event import Event
 from ..utils.data_utils import DataObject
 from ..utils.rotation_utils import get_angle_between_vectors
 from ..utils.sequence_utils import split_sequences, apply_minimal_duration, merge_sequence_lists
 from ..utils.signal_utils import find_time_index
+from ..utils.check_utils import check_save_name
 
 
 class InterSaccadicEvent(Event):
@@ -72,6 +76,13 @@ class InterSaccadicEvent(Event):
         self.phi = phi
 
         # Extended attributes
+        self.gaze_displacement_angle: np.ndarray[float] = None
+        self.mean_p_values: np.ndarray[float] = None
+        self.parameter_D: list[float] = []
+        self.parameter_CD: list[float] = []
+        self.parameter_PD: list[float] = []
+        self.parameter_R: list[float] = []
+        self.criteria_sequences: list[np.ndarray[int]] = None
         self.coherent_sequences: list[np.ndarray[int]] = None
         self.incoherent_sequences: list[np.ndarray[int]] = None
         self.fixation_indices: np.ndarray[int] = None
@@ -97,7 +108,9 @@ class InterSaccadicEvent(Event):
         self.frame_indices = np.where(self.identified_indices == False)[0]
 
     @staticmethod
-    def detect_directionality_coherence_on_axis(gaze_direction: np.ndarray, component_to_keep: int) -> float:
+    def detect_directionality_coherence_on_axis(
+        gaze_direction: np.ndarray, component_to_keep: int
+    ) -> tuple[float, float]:
         """
         Detects the coherence of the gaze direction inside a window using a Rayleigh z-test on the axis specified.
         This function first computes the gaze displacement vector between two consecutive frames, and then find the
@@ -115,14 +128,21 @@ class InterSaccadicEvent(Event):
             raise ValueError("component_to_keep must be 0, 1, or 2.")
 
         nb_frames = gaze_direction.shape[1]
-        angle = np.zeros((nb_frames,))
+        gaze_displacement_angle = np.ones((nb_frames,)) * np.nan
         for i_frame in range(nb_frames - 1):
             gaze_displacement = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
-            angle[i_frame] = np.arcsin(gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement))
+            gaze_displacement_angle[i_frame] = np.arcsin(
+                gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement)
+            )
+        # The last frame does not have a displacement, so we copy the previous one
+        gaze_displacement_angle[-1] = gaze_displacement_angle[-2]
 
         # Test that the gaze displacement and orientation are coherent inside the window
-        z_value, p_value = pg.circ_rayleigh(angle)
-        return p_value
+        z_value, p_value = pg.circ_rayleigh(gaze_displacement_angle)
+
+        # Convert the angle in degrees as the circ_rayleigh requires radians, but degrees are easier to interpret
+        gaze_displacement_angle = gaze_displacement_angle * 180 / np.pi
+        return p_value, gaze_displacement_angle
 
     @staticmethod
     def variability_decomposition(gaze_direction: np.ndarray) -> tuple[float, float]:
@@ -201,7 +221,7 @@ class InterSaccadicEvent(Event):
         parameter_D = length_second_component / length_principal_component
         parameter_CD = gaze_travel_distance / length_principal_component
         parameter_PD = gaze_travel_distance / gaze_trajectory_length
-        parameter_R = np.arctan(mean_gaze_direction_radius_range)
+        parameter_R = np.arctan(mean_gaze_direction_radius_range) * 180 / np.pi
 
         return parameter_D, parameter_CD, parameter_PD, parameter_R
 
@@ -261,7 +281,7 @@ class InterSaccadicEvent(Event):
         # Each frame can be part of several windows, so we store the p-values for each of the window it was part of and
         # use the mean p-value to classify this frame.
         p_values = [[] for _ in range(len(self.data_object.time_vector))]
-
+        self.gaze_displacement_angle = np.zeros_like(self.data_object.time_vector)
         for current_window in intersaccadic_window_sequences:
             # Sanity check
             nb_elements = int(np.prod(np.array(self.data_object.gaze_direction[:, current_window].shape)))
@@ -270,22 +290,23 @@ class InterSaccadicEvent(Event):
                 continue
 
             # Compute the directionality coherence p-value for the current window
-            p_value = self.detect_directionality_coherence_on_axis(
+            p_value, gaze_displacement_angle = self.detect_directionality_coherence_on_axis(
                 self.data_object.gaze_direction[:, current_window], component_to_keep=0
             )
+            self.gaze_displacement_angle[current_window] = gaze_displacement_angle
             for i_idx in current_window:
                 p_values[i_idx] += [p_value]
 
         # The mean p-value for each timestamp is used for the coherence/incoherence classification
-        mean_p_values = np.array([np.nanmean(np.array(p)) for p in p_values])
+        self.mean_p_values = np.array([np.nanmean(np.array(p)) for p in p_values])
 
-        incoherent_indices = np.where(mean_p_values <= self.eta_p)[0]
+        incoherent_indices = np.where(self.mean_p_values <= self.eta_p)[0]
         incoherent_sequences = split_sequences(incoherent_indices)
         self.incoherent_sequences = apply_minimal_duration(
             incoherent_sequences, self.data_object.time_vector, self.minimal_duration
         )
 
-        coherent_indices = np.where(mean_p_values > self.eta_p)[0]
+        coherent_indices = np.where(self.mean_p_values > self.eta_p)[0]
         coherent_sequences = split_sequences(coherent_indices)
         self.coherent_sequences = apply_minimal_duration(
             coherent_sequences, self.data_object.time_vector, self.minimal_duration
@@ -301,14 +322,20 @@ class InterSaccadicEvent(Event):
         fixation_indices = []
         smooth_pursuit_indices = []
         ambiguous_indices = []
+        self.criteria_sequences = deepcopy(all_intersaccadic_sequences)
         for i_sequence, sequence in enumerate(all_intersaccadic_sequences):
             parameter_D, parameter_CD, parameter_PD, parameter_R = self.compute_larsson_parameters(
                 data_object.gaze_direction[:, sequence]
             )
+            self.parameter_D += [parameter_D]
+            self.parameter_CD += [parameter_CD]
+            self.parameter_PD += [parameter_PD]
+            self.parameter_R += [parameter_R]
+
             criteria_1 = parameter_D < self.eta_d
             criteria_2 = parameter_CD > self.eta_cd
             criteria_3 = parameter_PD > self.eta_pd
-            criteria_4 = parameter_R * 180 / np.pi > self.eta_max_fixation
+            criteria_4 = parameter_R > self.eta_max_fixation
 
             sum_criteria = int(criteria_1) + int(criteria_2) + int(criteria_3) + int(criteria_4)
             if sum_criteria == 0:
@@ -360,7 +387,7 @@ class InterSaccadicEvent(Event):
             parameter_D, parameter_CD, parameter_PD, parameter_R = parameters
 
             criteria_3 = parameter_PD > self.eta_pd
-            criteria_4 = parameter_R * 180 / np.pi > self.eta_max_fixation
+            criteria_4 = parameter_R > self.eta_max_fixation
 
             if criteria_3:
                 # Smooth pursuit-like: try to merge with adjacent compatible segments
@@ -505,7 +532,7 @@ class InterSaccadicEvent(Event):
         # Compute parameters for the merged segment
         _, _, _, parameter_R = self.compute_larsson_parameters(data_object.gaze_direction[:, indices])
 
-        if parameter_R * 180 / np.pi > self.eta_min_smooth_pursuit:
+        if parameter_R > self.eta_min_smooth_pursuit:
             # The gaze moves
             smooth_pursuit_indices = np.hstack((smooth_pursuit_indices, indices))
         else:
@@ -564,3 +591,175 @@ class InterSaccadicEvent(Event):
         self.uncertain_sequences = uncertain_sequences
 
         return
+
+    def add_sequence_to_plot(self, ax: Axes):
+        """
+        Plot the detected coherent and incoherent inter-saccade sequences on the provided axis.
+
+        Parameters:
+        ax: The matplotlib axis to plot on.
+        """
+        for sequence in self.coherent_sequences:
+            start = sequence[0]
+            end = sequence[-1]
+            ax.axvspan(
+                self.data_object.time_vector[start],
+                self.data_object.time_vector[end],
+                color="tab:cyan",
+                alpha=0.5,
+                edgecolor=None,
+            )
+        for sequence in self.incoherent_sequences:
+            start = sequence[0]
+            end = sequence[-1]
+            ax.axvspan(
+                self.data_object.time_vector[start],
+                self.data_object.time_vector[end],
+                color="tab:olive",
+                alpha=0.5,
+                edgecolor=None,
+            )
+        ax.axvspan(
+            0,
+            0,
+            color="tab:cyan",
+            alpha=0.5,
+            edgecolor=None,
+            label="Coherent sequences",
+        )
+        ax.axvspan(
+            0,
+            0,
+            color="tab:olive",
+            alpha=0.5,
+            edgecolor=None,
+            label="Incoherent sequences",
+        )
+
+    def add_criteria_to_plot(self, ax: Axes):
+        """
+        Plot the detected Larsson criteria for the inter-saccade sequences.
+
+        Parameters:
+        ax: The matplotlib axis to plot on.
+        """
+        max_d = max(np.nanmax(self.parameter_D), self.eta_d)
+        max_cd = max(np.nanmax(self.parameter_CD), self.eta_cd)
+        max_pd = max(np.nanmax(self.parameter_PD), self.eta_pd)
+        max_r = max(np.nanmax(self.parameter_R), self.eta_max_fixation)
+        for i_sequence, sequence in enumerate(self.criteria_sequences):
+            start = sequence[0]
+            end = sequence[-1]
+            ax.plot(
+                np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
+                np.array([self.parameter_D[i_sequence] / max_d, self.parameter_D[i_sequence] / max_d]),
+                color="tab:red",
+            )
+            ax.plot(
+                np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
+                np.array([self.parameter_CD[i_sequence] / max_cd, self.parameter_CD[i_sequence] / max_cd]),
+                color="tab:green",
+            )
+            ax.plot(
+                np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
+                np.array([self.parameter_PD[i_sequence] / max_pd, self.parameter_PD[i_sequence] / max_pd]),
+                color="tab:blue",
+            )
+            ax.plot(
+                np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
+                np.array([self.parameter_R[i_sequence] / max_r, self.parameter_R[i_sequence] / max_r]),
+                color="tab:orange",
+            )
+        # Add the labels
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:red", label=r"Dispersion ($< \eta_D$)")
+        ax.plot(
+            np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
+            np.array([self.eta_d / max_d, self.eta_d / max_d]),
+            "--",
+            color="tab:red",
+            label=r"$\eta_D$ threshold = " + f"{self.eta_d:.2f}",
+        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:green", label=r"Consistent direction ($> \eta_{CD}$)")
+        ax.plot(
+            np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
+            np.array([self.eta_cd / max_cd, self.eta_cd / max_cd]),
+            "--",
+            color="tab:green",
+            label=r"$\eta_{CD}$ threshold = " + f"{self.eta_cd:.2f}",
+        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:blue", label=r"Positional displacement ($> \eta_{PD}$)")
+        ax.plot(
+            np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
+            np.array([self.eta_pd / max_pd, self.eta_pd / max_pd]),
+            "--",
+            color="tab:blue",
+            label=r"$\eta_{PD}$ threshold = " + f"{self.eta_pd:.2f}",
+        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:orange", label=r"Spatial range ($> \eta_{maxFix}$)")
+        ax.plot(
+            np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
+            np.array([self.eta_max_fixation / max_r, self.eta_max_fixation / max_r]),
+            "--",
+            color="tab:orange",
+            label=r"$\eta_{maxFix}$ threshold = " + f"{self.eta_max_fixation:.2f}",
+        )
+
+    def plot(self, save_name: str = None, live_show: bool = True) -> plt.Figure:
+        """
+        Plot the angle for the Rayleigh z-test, the associated p-value, the inter-saccadic sequences, and the four Larsson criteria.
+
+        Parameters
+        ----------
+        save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        live_show: If the figure should be shown immediately. Please note that showing the figure is blocking.
+        """
+
+        fig, axs = plt.subplots(3, 1, figsize=(10, 8), gridspec_kw={"height_ratios": [2, 1, 1]})
+        axs[0].set_title("Detected inter-saccadic sequences")
+
+        # Plot the gaze vector and the identified inter-saccadic sequences
+        self.data_object.plot_gaze_vector(ax=axs[0])
+        self.add_sequence_to_plot(axs[0])
+        axs[0].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        axs[0].set_ylabel("Gaze orientation [without units]")
+        axs[0].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
+
+        # Plot the angle
+        axs[1].plot(self.data_object.time_vector, np.abs(self.gaze_displacement_angle), color="tab:olive")
+        axs[1].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        axs[1].set_ylabel(r"Gaze displacement [$^\circ$]", color="tab:olive")
+        axs[1].tick_params(axis="y", labelcolor="tab:olive")
+
+        # Add the associated p-value
+        twin_ax = axs[1].twinx()
+        twin_ax.plot(
+            self.data_object.time_vector, np.abs(self.mean_p_values), color="tab:cyan", label="p-value (Rayleigh test)"
+        )
+        twin_ax.plot(
+            np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
+            np.array([self.eta_p, self.eta_p]),
+            "--",
+            color="k",
+            label=f"p-value threshold",
+        )
+        twin_ax.set_ylabel("p-value", color="tab:cyan")
+        twin_ax.tick_params(axis="y", labelcolor="tab:cyan")
+
+        # Plot the criteria
+        self.add_criteria_to_plot(axs[2])
+        axs[2].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
+        axs[2].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
+        axs[2].set_ylabel("Criteria [normalized]")
+        axs[2].set_xlabel("Time [s]")
+
+        plt.subplots_adjust(bottom=0.07, top=0.95, left=0.1, right=0.7, hspace=0.15)
+
+        # If wanted, save the figure
+        if save_name is not None:
+            extension = check_save_name(save_name)
+            plt.savefig(save_name, format=extension)
+
+        if live_show:
+            plt.show()
+
+        return fig  # for plot tests
