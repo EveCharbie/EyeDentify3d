@@ -217,8 +217,9 @@ class SaccadeEvent(Event):
         axs[0].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
 
         # Plot the eye velocity
-        axs[1].plot(self.data_object.time_vector, np.abs(self.eye_angular_velocity), color="tab:blue",
-                    label="Eye velocity")
+        axs[1].plot(
+            self.data_object.time_vector, np.abs(self.eye_angular_velocity), color="tab:blue", label="Eye velocity"
+        )
         axs[1].plot(
             self.data_object.time_vector,
             self.velocity_threshold,
@@ -232,10 +233,7 @@ class SaccadeEvent(Event):
 
         # Plot the eye acceleration
         axs[2].plot(
-            self.data_object.time_vector,
-            self.eye_angular_acceleration,
-            color="tab:blue",
-            label="Eye acceleration"
+            self.data_object.time_vector, self.eye_angular_acceleration, color="tab:blue", label="Eye acceleration"
         )
         axs[2].axhline(
             self.min_acceleration_threshold,
@@ -258,4 +256,4 @@ class SaccadeEvent(Event):
         if live_show:
             plt.show()
 
-        return fig # for plot tests
+        return fig  # for plot tests

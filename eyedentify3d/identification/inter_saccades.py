@@ -108,7 +108,9 @@ class InterSaccadicEvent(Event):
         self.frame_indices = np.where(self.identified_indices == False)[0]
 
     @staticmethod
-    def detect_directionality_coherence_on_axis(gaze_direction: np.ndarray, component_to_keep: int) -> tuple[float, float]:
+    def detect_directionality_coherence_on_axis(
+        gaze_direction: np.ndarray, component_to_keep: int
+    ) -> tuple[float, float]:
         """
         Detects the coherence of the gaze direction inside a window using a Rayleigh z-test on the axis specified.
         This function first computes the gaze displacement vector between two consecutive frames, and then find the
@@ -129,7 +131,9 @@ class InterSaccadicEvent(Event):
         gaze_displacement_angle = np.ones((nb_frames,)) * np.nan
         for i_frame in range(nb_frames - 1):
             gaze_displacement = gaze_direction[:, i_frame + 1] - gaze_direction[:, i_frame]
-            gaze_displacement_angle[i_frame] = np.arcsin(gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement))
+            gaze_displacement_angle[i_frame] = np.arcsin(
+                gaze_displacement[component_to_keep] / np.linalg.norm(gaze_displacement)
+            )
 
         # Test that the gaze displacement and orientation are coherent inside the window
         z_value, p_value = pg.circ_rayleigh(gaze_displacement_angle)
@@ -646,35 +650,26 @@ class InterSaccadicEvent(Event):
             end = sequence[-1]
             ax.plot(
                 np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
-                np.array([self.parameter_D[i_sequence] / max_d,
-                          self.parameter_D[i_sequence] / max_d]),
+                np.array([self.parameter_D[i_sequence] / max_d, self.parameter_D[i_sequence] / max_d]),
                 color="tab:red",
             )
             ax.plot(
                 np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
-                np.array([self.parameter_CD[i_sequence] / max_cd,
-                          self.parameter_CD[i_sequence] / max_cd]),
+                np.array([self.parameter_CD[i_sequence] / max_cd, self.parameter_CD[i_sequence] / max_cd]),
                 color="tab:green",
             )
             ax.plot(
                 np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
-                np.array([self.parameter_PD[i_sequence] / max_pd,
-                          self.parameter_PD[i_sequence] / max_pd]),
+                np.array([self.parameter_PD[i_sequence] / max_pd, self.parameter_PD[i_sequence] / max_pd]),
                 color="tab:blue",
             )
             ax.plot(
                 np.array([self.data_object.time_vector[start], self.data_object.time_vector[end]]),
-                np.array([self.parameter_R[i_sequence] / max_r,
-                          self.parameter_R[i_sequence] / max_r]),
+                np.array([self.parameter_R[i_sequence] / max_r, self.parameter_R[i_sequence] / max_r]),
                 color="tab:orange",
             )
         # Add the labels
-        ax.plot(
-            np.array([0, 0]),
-            np.array([0, 0]),
-            color="tab:red",
-            label=r"Dispersion ($< \eta_D$)"
-        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:red", label=r"Dispersion ($< \eta_D$)")
         ax.plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.eta_d / max_d, self.eta_d / max_d]),
@@ -682,12 +677,7 @@ class InterSaccadicEvent(Event):
             color="tab:red",
             label=r"$\eta_D$ threshold = " + f"{self.eta_d:.2f}",
         )
-        ax.plot(
-            np.array([0, 0]),
-            np.array([0, 0]),
-            color="tab:green",
-            label=r"Consistent direction ($> \eta_{CD}$)"
-        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:green", label=r"Consistent direction ($> \eta_{CD}$)")
         ax.plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.eta_cd / max_cd, self.eta_cd / max_cd]),
@@ -695,12 +685,7 @@ class InterSaccadicEvent(Event):
             color="tab:green",
             label=r"$\eta_{CD}$ threshold = " + f"{self.eta_cd:.2f}",
         )
-        ax.plot(
-            np.array([0, 0]),
-            np.array([0, 0]),
-            color="tab:blue",
-            label=r"Positional displacement ($> \eta_{PD}$)"
-        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:blue", label=r"Positional displacement ($> \eta_{PD}$)")
         ax.plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.eta_pd / max_pd, self.eta_pd / max_pd]),
@@ -708,12 +693,7 @@ class InterSaccadicEvent(Event):
             color="tab:blue",
             label=r"$\eta_{PD}$ threshold = " + f"{self.eta_pd:.2f}",
         )
-        ax.plot(
-            np.array([0, 0]),
-            np.array([0, 0]),
-            color="tab:orange",
-            label=r"Spatial range ($> \eta_{maxFix}$)"
-        )
+        ax.plot(np.array([0, 0]), np.array([0, 0]), color="tab:orange", label=r"Spatial range ($> \eta_{maxFix}$)")
         ax.plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.eta_max_fixation / max_r, self.eta_max_fixation / max_r]),
@@ -746,12 +726,13 @@ class InterSaccadicEvent(Event):
         axs[1].plot(self.data_object.time_vector, np.abs(self.gaze_displacement_angle), color="tab:olive")
         axs[1].set_xlim((self.data_object.time_vector[0], self.data_object.time_vector[-1]))
         axs[1].set_ylabel(r"Gaze displacement [$^\circ$]", color="tab:olive")
-        axs[1].tick_params(axis='y', labelcolor="tab:olive")
+        axs[1].tick_params(axis="y", labelcolor="tab:olive")
 
         # Add the associated p-value
         twin_ax = axs[1].twinx()
-        twin_ax.plot(self.data_object.time_vector, np.abs(self.mean_p_values), color="tab:cyan",
-                    label="p-value (Rayleigh test)")
+        twin_ax.plot(
+            self.data_object.time_vector, np.abs(self.mean_p_values), color="tab:cyan", label="p-value (Rayleigh test)"
+        )
         twin_ax.plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.eta_p, self.eta_p]),
@@ -760,7 +741,7 @@ class InterSaccadicEvent(Event):
             label=f"p-value threshold",
         )
         twin_ax.set_ylabel("p-value", color="tab:cyan")
-        twin_ax.tick_params(axis='y', labelcolor="tab:cyan")
+        twin_ax.tick_params(axis="y", labelcolor="tab:cyan")
 
         # Plot the criteria
         self.add_criteria_to_plot(axs[2])
@@ -779,4 +760,4 @@ class InterSaccadicEvent(Event):
         if live_show:
             plt.show()
 
-        return fig # for plot tests
+        return fig  # for plot tests

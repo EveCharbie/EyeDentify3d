@@ -116,8 +116,12 @@ class VisualScanningEvent(Event):
         axs[0].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
 
         # Plot the gaze velocity
-        axs[1].plot(self.data_object.time_vector, np.abs(self.data_object.gaze_angular_velocity), color="tab:pink",
-                    label="Gaze velocity")
+        axs[1].plot(
+            self.data_object.time_vector,
+            np.abs(self.data_object.gaze_angular_velocity),
+            color="tab:pink",
+            label="Gaze velocity",
+        )
         axs[1].plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.min_velocity_threshold, self.min_velocity_threshold]),
@@ -140,4 +144,4 @@ class VisualScanningEvent(Event):
         if live_show:
             plt.show()
 
-        return fig # for plot tests
+        return fig  # for plot tests

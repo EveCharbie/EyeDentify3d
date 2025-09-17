@@ -135,4 +135,4 @@ class SmoothPursuitEvent(Event):
         if live_show:
             plt.show()
 
-        return fig # for plot tests
+        return fig  # for plot tests

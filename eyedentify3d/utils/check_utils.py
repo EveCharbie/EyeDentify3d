@@ -1,4 +1,3 @@
-
 def check_save_name(save_name: str) -> str:
     """
     Checks that the name of the figure contains the extension and returns the format for savefig.
