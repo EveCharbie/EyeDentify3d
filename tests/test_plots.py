@@ -13,9 +13,9 @@ from eyedentify3d import (
 @pytest.fixture(scope="module")
 def initialize_plots():
 
-    if platform.system() != "MacOS":
+    if platform.system() != "Darwin":
         # Skip the tests on other systems because the reference images were generated with Mac
-        pytest.skip("Skipping tests other than MacOS", allow_module_level=True)
+        pytest.skip("Skipping tests other than Darwin", allow_module_level=True)
 
     # Cut the data after the end of the trial (black screen happening at 7.180 seconds)
     time_range = TimeRange(min_time=0, max_time=5.06)
