@@ -13,7 +13,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name =  "eyedentify3d"
-version = "1.0.3"
 description = "A package to identify gaze behavior from 3D eye-tracking data."
 dynamic = ["version"]
 authors = [
