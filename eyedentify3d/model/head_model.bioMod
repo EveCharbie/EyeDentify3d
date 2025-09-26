@@ -1,0 +1,25 @@
+version 4
+
+segment	Head
+	RT 0.0 0.0 0.0	xyz 0.0 0.0 0.0
+	rotations xyz
+	meshfile	skull_s.vtp
+	meshrt 0.0 -1.57 0.0	xyz 0.0 -0.17 0.0
+endsegment
+
+segment Jaw
+	parent Head 
+	RT 0.0 0.0 0.0	xyz 0.0 0.0 0.0	
+	meshfile jaw_s.vtp
+	meshrt 0.0 -1.57 0.0	xyz 0.0 -0.17 0.0
+endsegment
+
+segment Gaze
+	RT 0 0 0	xyz 0 0 0
+	translations xyz
+endsegment
+
+marker gaze
+	parent Gaze
+	position 0 0 0
+endmarker

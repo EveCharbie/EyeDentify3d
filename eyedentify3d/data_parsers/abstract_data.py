@@ -8,6 +8,7 @@ from matplotlib.axes import Axes
 from ..error_type import ErrorType
 from ..time_range import TimeRange
 from ..utils.rotation_utils import get_gaze_direction, compute_angular_velocity
+from ..utils.signal_utils import filter_data, centered_finite_difference
 
 
 def destroy_on_fail(method):
@@ -118,6 +119,16 @@ class Data(ABC):
             )
         self.gaze_direction = get_gaze_direction(self.head_angles, self.eye_direction)
 
+    @destroy_on_fail
+    def _set_head_angular_velocity(self):
+        """
+        Get the head angular velocity using a finite difference of the  .
+        We keep both the Euler angles derivative in degrees/s and the filtered angular velocity norm.
+        """
+        self.head_angular_velocity = centered_finite_difference(self.time_vector, self.head_angles)
+        head_velocity_norm = np.linalg.norm(self.head_angular_velocity, axis=0)
+        self.head_velocity_norm = filter_data(head_velocity_norm[np.newaxis, :])[0, :]
+
     @property
     def file_name(self):
         """
@@ -181,13 +192,6 @@ class Data(ABC):
     def _set_head_angles(self):
         """
         Get the head angles from the data file.
-        """
-        pass
-
-    @abstractmethod
-    def _set_head_angular_velocity(self):
-        """
-        Get the head angular velocity from the data file.
         """
         pass
 

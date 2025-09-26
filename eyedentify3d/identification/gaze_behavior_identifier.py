@@ -1,4 +1,5 @@
 from typing import Self
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -6,6 +7,7 @@ import matplotlib.pyplot as plt
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import get_sequences_in_range
 from ..utils.check_utils import check_save_name
+from ..utils.plot_utils import format_color_to_rgb
 from ..time_range import TimeRange
 from ..data_parsers.reduced_data import ReducedData
 from ..error_type import ErrorType
@@ -274,6 +276,39 @@ class GazeBehaviorIdentifier:
                 unidentified_indices[sequence] = False  # Mark identified frames as False
 
         return unidentified_indices
+
+    def identified_ratio(self):
+        """
+        Get the proportion of the trail when it was possible to identify a gaze behavior.
+        """
+        identified_ratio = 0
+        if self.blink is not None:
+            identified_ratio += self.blink.ratio
+        if self.saccade is not None:
+            identified_ratio += self.saccade.ratio
+        if self.visual_scanning is not None:
+            identified_ratio += self.visual_scanning.ratio
+        if self.fixation is not None:
+            identified_ratio += self.fixation.ratio
+        if self.smooth_pursuit is not None:
+            identified_ratio += self.smooth_pursuit.ratio
+        return identified_ratio
+
+    def unidentified_ratio(self):
+        """
+        Get the proportion of the trail when it was not possible to identify a gaze behavior.
+        """
+        delta_time = np.hstack(
+            (self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt)
+        )
+        unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
+        not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
+
+        if not_identified_ratio != (1 - self.identified_ratio()):
+            raise RuntimeError(
+                "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
+            )
+        return not_identified_ratio
 
     def validate_sequences(self):
         """
@@ -581,3 +616,63 @@ class GazeBehaviorIdentifier:
             plt.show()
 
         return fig  # for plot tests
+
+    def animate(self) -> None:
+        """
+        Animate the head (3 rotations) and eye (2 rotations) movements.
+        """
+
+        try:
+            import pyorerun
+        except ImportError:
+            raise ImportError(
+                "The pyorerun package is required to animate the gaze behaviors. Please install it using "
+                "'conda install -c conda-forge pyorerun'."
+            )
+
+        # Setting the gaze end point color based on the identified event in progress
+        colors_timeseries = np.zeros((1, self.data_object.nb_frames, 3))
+        # Initialize everything to black
+        colors_timeseries[0, :, :] = format_color_to_rgb("black")
+        for sequence in self.blink.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:green")
+        for sequence in self.saccade.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:blue")
+        for sequence in self.visual_scanning.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:pink")
+        for sequence in self.fixation.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:purple")
+        for sequence in self.smooth_pursuit.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:orange")
+
+        # loading biorbd model
+        current_path = Path(__file__).parent.as_posix()
+        biorbd_model = pyorerun.BiorbdModel(current_path + "/../model/head_model.bioMod")
+        viz = pyorerun.PhaseRerun(self.data_object.time_vector)
+
+        biorbd_model.options.markers_color = (255, 255, 255)
+
+        # Add the gaze endpoint as a persistent marker of the color associated with the behavior
+        biorbd_model.options.persistent_markers = pyorerun.PersistentMarkerOptions(
+            marker_names=["gaze"],
+            radius=0.005,
+            color=colors_timeseries,
+            nb_frames=self.data_object.nb_frames,
+            show_labels=False,
+        )
+
+        # Add the gaze vector
+        viz.add_xp_vector(
+            name="gaze",
+            num=0,
+            vector_origin=np.zeros((3, self.data_object.nb_frames)),
+            vector_endpoint=self.data_object.gaze_direction,
+        )
+        q = np.vstack(
+            (
+                self.data_object.head_angles * np.pi / 180,
+                self.data_object.gaze_direction,
+            )
+        )
+        viz.add_animated_model(biorbd_model, q)
+        viz.rerun("animation")
