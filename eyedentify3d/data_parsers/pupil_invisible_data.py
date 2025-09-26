@@ -102,14 +102,16 @@ class PupilInvisibleData(Data):
         Set the time vector [seconds] from the gaze csv data.
         Note: We use the eye data timestamps as reference, and the IMU data is then interpolated to match these timestamps.
         """
-        factor = 1e9 # ns to seconds
+        factor = 1e9  # ns to seconds
         initial_time = self.gaze_csv_data["timestamp [ns]"][0]
 
         # Set the time vector
         self.time_vector = np.array((self.gaze_csv_data["timestamp [ns]"] - initial_time) / factor)
 
         # also transform the blink and imu timings
-        self.blink_csv_data["start timestamp [ns]"] = (self.blink_csv_data["start timestamp [ns]"] - initial_time) / factor
+        self.blink_csv_data["start timestamp [ns]"] = (
+            self.blink_csv_data["start timestamp [ns]"] - initial_time
+        ) / factor
         self.blink_csv_data["end timestamp [ns]"] = (self.blink_csv_data["end timestamp [ns]"] - initial_time) / factor
         self.imu_csv_data["timestamp[ns]"] = (self.imu_csv_data["timestamp[ns]"] - initial_time) / factor
 
@@ -118,7 +120,9 @@ class PupilInvisibleData(Data):
         check that there are no duplicate time frames in the time vector.
         """
         if len(np.where(np.abs(self.time_vector[1:] - self.time_vector[:-1]) < 1e-10)[0]) > 0:
-            raise RuntimeError("The time vector has duplicated frames, which never happened with this eye-tracker. Please notify the developer.")
+            raise RuntimeError(
+                "The time vector has duplicated frames, which never happened with this eye-tracker. Please notify the developer."
+            )
 
     @destroy_on_fail
     def _discard_data_out_of_range(self):
@@ -136,14 +140,18 @@ class PupilInvisibleData(Data):
         """
         Pupil Invisible does not provide eye openness, so we set it to 0 when there is a blink and 1 otherwise.
         """
-        self.right_eye_openness = np.ones((self.nb_frames, ))
-        self.left_eye_openness = np.ones((self.nb_frames, ))
-        for blink_beginning, blink_end in zip(self.blink_csv_data["start timestamp [ns]"], self.blink_csv_data["end timestamp [ns]"]):
+        self.right_eye_openness = np.ones((self.nb_frames,))
+        self.left_eye_openness = np.ones((self.nb_frames,))
+        for blink_beginning, blink_end in zip(
+            self.blink_csv_data["start timestamp [ns]"], self.blink_csv_data["end timestamp [ns]"]
+        ):
             start_idx = np.where(self.time_vector == blink_beginning)[0]
             end_idx = np.where(self.time_vector == blink_end)[0]
 
             if len(start_idx) == 0 or len(end_idx) == 0:
-                raise RuntimeError("The blink start or end times are not in the time vector. This should not happen, please notify the developer.")
+                raise RuntimeError(
+                    "The blink start or end times are not in the time vector. This should not happen, please notify the developer."
+                )
 
             # Set the eye openness to 0 during blinks
             start_idx = start_idx[0]
@@ -168,7 +176,7 @@ class PupilInvisibleData(Data):
         eye_direction = np.zeros((3, self.nb_frames))
         for i_frame in range(self.nb_frames):
             rotation_matrix[:, :, i_frame] = rotation_matrix_from_euler_angles("xy", eye_angles[:, i_frame])
-            eye_direction[:, i_frame] = np.reshape(rotation_matrix[:, :, i_frame]  @ forward_vector[:, np.newaxis], (3, ))
+            eye_direction[:, i_frame] = np.reshape(rotation_matrix[:, :, i_frame] @ forward_vector[:, np.newaxis], (3,))
 
         # Check that the eye direction is normalized
         eye_direction_norm = np.linalg.norm(eye_direction, axis=0)
@@ -178,7 +186,9 @@ class PupilInvisibleData(Data):
         # If the norm is not far from one, still renormalize to avoir issues later on
         self.eye_direction = eye_direction / eye_direction_norm
 
-    def interpolate_to_eye_timestamps(self, time_vector_imu: np.ndarray[float], unwrapped_head_angles: np.ndarray[float]) -> np.ndarray[float]:
+    def interpolate_to_eye_timestamps(
+        self, time_vector_imu: np.ndarray[float], unwrapped_head_angles: np.ndarray[float]
+    ) -> np.ndarray[float]:
         """
         This function gets the head orientation at the eye data time stamps by interpolating if necessary.
 
@@ -198,7 +208,9 @@ class PupilInvisibleData(Data):
         # Check if there is duplicated frames in the imu data
         frame_diffs = np.linalg.norm(unwrapped_head_angles[:, 1:] - unwrapped_head_angles[:, :-1], axis=0)
         if not np.all(frame_diffs > 1e-10):
-            raise RuntimeError("There were repeated frames in the imu data, which never happened with this eye-tracker. Please notify the developer.")
+            raise RuntimeError(
+                "There were repeated frames in the imu data, which never happened with this eye-tracker. Please notify the developer."
+            )
 
         # Interpolate the head angles to the eye timestamps
         interpolated_head_angles = np.zeros((3, self.nb_frames))
@@ -216,7 +228,9 @@ class PupilInvisibleData(Data):
                     t_after = time_vector_imu[idx_after]
                     angles_before = unwrapped_head_angles[:, idx_before]
                     angles_after = unwrapped_head_angles[:, idx_after]
-                    interpolated_head_angles[:, i_time] = angles_before + (time - t_before) * ((angles_after - angles_before) / (t_after - t_before))
+                    interpolated_head_angles[:, i_time] = angles_before + (time - t_before) * (
+                        (angles_after - angles_before) / (t_after - t_before)
+                    )
 
     @destroy_on_fail
     def _set_head_angles(self):
@@ -232,19 +246,27 @@ class PupilInvisibleData(Data):
 
         if np.all(np.isnan(self.imu_csv_data["yaw [deg]"])):
             # We approximate the yaw angle using a Madgwick filter
-            acceleration = np.array([self.imu_csv_data["acceleration x [g]"],
-                                    self.imu_csv_data["acceleration y [g]"],
-                                    self.imu_csv_data["acceleration z [g]"]])
-            gyroscope = np.array([self.imu_csv_data["gyro x [deg/s]"],
-                                    self.imu_csv_data["gyro y [deg/s]"],
-                                    self.imu_csv_data["gyro z [deg/s]"]])
+            acceleration = np.array(
+                [
+                    self.imu_csv_data["acceleration x [g]"],
+                    self.imu_csv_data["acceleration y [g]"],
+                    self.imu_csv_data["acceleration z [g]"],
+                ]
+            )
+            gyroscope = np.array(
+                [
+                    self.imu_csv_data["gyro x [deg/s]"],
+                    self.imu_csv_data["gyro y [deg/s]"],
+                    self.imu_csv_data["gyro z [deg/s]"],
+                ]
+            )
             roll, pitch, yaw = angles_from_imu_fusion(time_vector_imu, acceleration, gyroscope)
             head_angles = np.array([roll, pitch, yaw])
         else:
             # the yaw angle is already provided by Pupil
-            head_angles = np.array([self.imu_csv_data["roll [deg]"],
-                                    self.imu_csv_data["pitch [deg]"],
-                                    self.imu_csv_data["yaw [deg]"]])
+            head_angles = np.array(
+                [self.imu_csv_data["roll [deg]"], self.imu_csv_data["pitch [deg]"], self.imu_csv_data["yaw [deg]"]]
+            )
 
         unwrapped_head_angles = unwrap_rotation(head_angles)
         # We interpolate to align the head angles with the eye orientation timestamps

@@ -298,12 +298,16 @@ class GazeBehaviorIdentifier:
         """
         Get the proportion of the trail when it was not possible to identify a gaze behavior.
         """
-        delta_time = np.hstack((self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt))
+        delta_time = np.hstack(
+            (self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt)
+        )
         unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
         not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
 
         if not_identified_ratio != (1 - self.identified_ratio()):
-            raise RuntimeError("The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer.")
+            raise RuntimeError(
+                "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
+            )
         return not_identified_ratio
 
     def validate_sequences(self):
@@ -664,9 +668,11 @@ class GazeBehaviorIdentifier:
             vector_origin=np.zeros((3, self.data_object.nb_frames)),
             vector_endpoint=self.data_object.gaze_direction,
         )
-        q = np.vstack((
-            self.data_object.head_angles * np.pi / 180,
-            self.data_object.gaze_direction,
-        ))
+        q = np.vstack(
+            (
+                self.data_object.head_angles * np.pi / 180,
+                self.data_object.gaze_direction,
+            )
+        )
         viz.add_animated_model(biorbd_model, q)
         viz.rerun("animation")

@@ -108,8 +108,9 @@ def test_rotation_matrices():
     rotated = rot_z @ v
     npt.assert_almost_equal(rotated, np.array([0, 1, 0]))  # Should rotate to y-axis
 
+
 def test_rotation_matrix_againt_biorbd():
-    """ Compare the rotation matrix building with biorbd's implementation."""
+    """Compare the rotation matrix building with biorbd's implementation."""
     np.random.seed(42)
     nb_frames = 100
     azimuth = np.random.uniform(-np.pi, np.pi, nb_frames)
@@ -122,6 +123,7 @@ def test_rotation_matrix_againt_biorbd():
         rot_mat[:, :, i_frame] = biorbd.Rotation.fromEulerAngles(angles[:, i_frame], "xy").to_array()
         rotation_matrix[:, :, i_frame] = rotation_matrix_from_euler_angles("xy", angles[:, i_frame])
     npt.assert_almost_equal(rot_mat, rotation_matrix)
+
 
 def test_rotation_matrix_from_euler_angles():
     """Test creating rotation matrix from Euler angles."""

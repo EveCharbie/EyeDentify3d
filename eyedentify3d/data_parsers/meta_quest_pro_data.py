@@ -10,6 +10,7 @@ from ..utils.signal_utils import filter_data, centered_finite_difference
 
 # TODO !
 
+
 class MetaQuestProData(Data):
     """
     Load the data from a Meta Quest Pro file.
