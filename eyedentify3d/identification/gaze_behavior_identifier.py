@@ -1,12 +1,13 @@
 from typing import Self
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
 
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import get_sequences_in_range
 from ..utils.check_utils import check_save_name
+from ..utils.plot_utils import format_color_to_rgb
 from ..time_range import TimeRange
 from ..data_parsers.reduced_data import ReducedData
 from ..error_type import ErrorType
@@ -626,39 +627,46 @@ class GazeBehaviorIdentifier:
             )
 
         # Setting the gaze end point color based on the identified event in progress
-        colors = np.zeros((self.data_object.nb_frames, ))
+        colors_timeseries = np.zeros((1, self.data_object.nb_frames, 3))
+        # Initialize everything to black
+        colors_timeseries[0, :, :] = format_color_to_rgb("black")
         for sequence in self.blink.sequences:
-        colors[:] = mcolors.CSS4_COLORS["black"]
-            colors[sequence] = mcolors.TABLEAU_COLORS['tab:green']
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:green")
         for sequence in self.saccade.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:blue")
         for sequence in self.visual_scanning.sequences:
-            colors[sequence] = mcolors.TABLEAU_COLORS['tab:blue']
-            colors[sequence] = mcolors.TABLEAU_COLORS['tab:pink']
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:pink")
         for sequence in self.fixation.sequences:
-            colors[sequence] = mcolors.TABLEAU_COLORS['tab:purple']
-            colors[sequence] = mcolors.TABLEAU_COLORS['tab:orange']
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:purple")
         for sequence in self.smooth_pursuit.sequences:
+            colors_timeseries[0, sequence, :] = format_color_to_rgb("tab:orange")
 
         # loading biorbd model
-        biorbd_model = pyorerun.BiorbdModel("../model/head_model.bioMod")
-        rerun_biorbd = pyorerun.PhaseRerun(self.data_object.time_vector)
+        current_path = Path(__file__).parent.as_posix()
+        biorbd_model = pyorerun.BiorbdModel(current_path + "/../model/head_model.bioMod")
+        viz = pyorerun.PhaseRerun(self.data_object.time_vector)
 
-        rerun_biorbd.add_animated_model(biorbd_model, self.data_object.head_angles)
+        biorbd_model.options.markers_color = (255, 255, 255)
 
-        markers = pyorerun.PyoMarkers(
-            data=self.data_object.gaze_direction,
+        # Add the gaze endpoint as a persistent marker of the color associated with the behavior
+        biorbd_model.options.persistent_markers = pyorerun.PersistentMarkerOptions(
             marker_names=["gaze"],
-            # color=colors,
+            radius=0.005,
+            color=colors_timeseries,
+            nb_frames=self.data_object.nb_frames,
+            show_labels=False,
         )
-        rerun_biorbd.add_xp_markers(
-            name="gaze_endpoint",
-            markers=markers,
-            # show_older_frames=True
-        )
-        rerun_biorbd.add_xp_vectors(
+
+        # Add the gaze vector
+        viz.add_xp_vector(
             name="gaze",
-            vector_origins=np.zeros((3, self.data_object.nb_frames)),
             num=0,
-            vector_endpoints=self.data_object.gaze_direction,
+            vector_origin=np.zeros((3, self.data_object.nb_frames)),
+            vector_endpoint=self.data_object.gaze_direction,
         )
-        rerun_biorbd.rerun("animation")
+        q = np.vstack((
+            self.data_object.head_angles * np.pi / 180,
+            self.data_object.gaze_direction,
+        ))
+        viz.add_animated_model(biorbd_model, q)
+        viz.rerun("animation")
