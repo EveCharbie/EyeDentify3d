@@ -52,7 +52,7 @@ def main():
     gaze_behavior_identifier.invalid.plot(save_name="invalid_detection.png")
     gaze_behavior_identifier.saccade.plot(save_name="saccade_detection.png")
     gaze_behavior_identifier.visual_scanning.plot(save_name="visual_scanning_detection.png")
-    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="inter_saccade_detection.png")
+    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="fixation_detection.png")
     gaze_behavior_identifier.fixation.plot(save_name="fixation_detection.png")
     gaze_behavior_identifier.smooth_pursuit.plot(save_name="fixation_detection.png")
     gaze_behavior_identifier.plot(save_name="all_gaze_behaviors.png")

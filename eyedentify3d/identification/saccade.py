@@ -196,13 +196,14 @@ class SaccadeEvent(Event):
             label="Saccades",
         )
 
-    def plot(self, save_name: str = None) -> None:
+    def plot(self, save_name: str = None, live_show: bool = True) -> plt.Figure:
         """
         Plot the eye velocity, eye acceleration and detected saccade events.
 
         Parameters
         ----------
         save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        live_show: If the figure should be shown immediately. Please note that showing the figure is blocking.
         """
 
         fig, axs = plt.subplots(3, 1, figsize=(10, 8), gridspec_kw={"height_ratios": [2, 1, 1]})
@@ -216,8 +217,9 @@ class SaccadeEvent(Event):
         axs[0].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
 
         # Plot the eye velocity
-        axs[1].plot(self.data_object.time_vector, np.abs(self.eye_angular_velocity), color="tab:blue",
-                    label="Eye velocity")
+        axs[1].plot(
+            self.data_object.time_vector, np.abs(self.eye_angular_velocity), color="tab:blue", label="Eye velocity"
+        )
         axs[1].plot(
             self.data_object.time_vector,
             self.velocity_threshold,
@@ -231,10 +233,7 @@ class SaccadeEvent(Event):
 
         # Plot the eye acceleration
         axs[2].plot(
-            self.data_object.time_vector,
-            self.eye_angular_acceleration,
-            color="tab:blue",
-            label="Eye acceleration"
+            self.data_object.time_vector, self.eye_angular_acceleration, color="tab:blue", label="Eye acceleration"
         )
         axs[2].axhline(
             self.min_acceleration_threshold,
@@ -253,4 +252,8 @@ class SaccadeEvent(Event):
         if save_name is not None:
             extension = check_save_name(save_name)
             plt.savefig(save_name, format=extension)
-        plt.show()
+
+        if live_show:
+            plt.show()
+
+        return fig  # for plot tests

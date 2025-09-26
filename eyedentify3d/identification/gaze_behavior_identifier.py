@@ -567,13 +567,14 @@ class GazeBehaviorIdentifier:
 
         return gaze_behavior_identifiers
 
-    def plot(self, save_name: str = None) -> None:
+    def plot(self, save_name: str = None, live_show: bool = True) -> plt.Figure:
         """
         Plot all the detected gaze behaviors.
 
         Parameters
         ----------
         save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        live_show: If the figure should be shown immediately. Please note that showing the figure is blocking.
         """
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 4))
@@ -605,7 +606,11 @@ class GazeBehaviorIdentifier:
         if save_name is not None:
             extension = check_save_name(save_name)
             plt.savefig(save_name, format=extension)
-        plt.show()
+
+        if live_show:
+            plt.show()
+
+        return fig  # for plot tests
 
     def animate(self) -> None:
         """
@@ -622,17 +627,17 @@ class GazeBehaviorIdentifier:
 
         # Setting the gaze end point color based on the identified event in progress
         colors = np.zeros((self.data_object.nb_frames, ))
-        colors[:] = mcolors.CSS4_COLORS["black"]
         for sequence in self.blink.sequences:
+        colors[:] = mcolors.CSS4_COLORS["black"]
             colors[sequence] = mcolors.TABLEAU_COLORS['tab:green']
         for sequence in self.saccade.sequences:
-            colors[sequence] = mcolors.TABLEAU_COLORS['tab:blue']
         for sequence in self.visual_scanning.sequences:
+            colors[sequence] = mcolors.TABLEAU_COLORS['tab:blue']
             colors[sequence] = mcolors.TABLEAU_COLORS['tab:pink']
         for sequence in self.fixation.sequences:
             colors[sequence] = mcolors.TABLEAU_COLORS['tab:purple']
-        for sequence in self.smooth_pursuit.sequences:
             colors[sequence] = mcolors.TABLEAU_COLORS['tab:orange']
+        for sequence in self.smooth_pursuit.sequences:
 
         # loading biorbd model
         biorbd_model = pyorerun.BiorbdModel("../model/head_model.bioMod")
@@ -652,8 +657,8 @@ class GazeBehaviorIdentifier:
         )
         rerun_biorbd.add_xp_vectors(
             name="gaze",
-            num=0,
             vector_origins=np.zeros((3, self.data_object.nb_frames)),
+            num=0,
             vector_endpoints=self.data_object.gaze_direction,
         )
         rerun_biorbd.rerun("animation")

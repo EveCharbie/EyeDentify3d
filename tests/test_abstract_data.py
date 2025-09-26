@@ -150,7 +150,7 @@ def test_file_name():
 def test_file_name_no_path():
     """Test getting file name without path"""
     data = MockData()
-    with pytest.raises(AttributeError, match="The data file path is not set."):
+    with pytest.raises(AttributeError, match="The data file or folder path is not set."):
         _ = data.file_name
 
 

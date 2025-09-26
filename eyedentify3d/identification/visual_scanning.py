@@ -95,13 +95,14 @@ class VisualScanningEvent(Event):
             label="Visual scanning",
         )
 
-    def plot(self, save_name: str = None) -> None:
+    def plot(self, save_name: str = None, live_show: bool = True) -> plt.Figure:
         """
         Plot the gaze velocity and detected visual scanning events.
 
         Parameters
         ----------
         save_name: The name under which to save the figure. If None is provided, the figure is not saved.
+        live_show: If the figure should be shown immediately. Please note that showing the figure is blocking.
         """
 
         fig, axs = plt.subplots(2, 1, figsize=(10, 6), gridspec_kw={"height_ratios": [2, 1]})
@@ -115,8 +116,12 @@ class VisualScanningEvent(Event):
         axs[0].legend(bbox_to_anchor=(1.025, 0.5), loc="center left")
 
         # Plot the gaze velocity
-        axs[1].plot(self.data_object.time_vector, np.abs(self.data_object.gaze_angular_velocity), color="tab:pink",
-                    label="Gaze velocity")
+        axs[1].plot(
+            self.data_object.time_vector,
+            np.abs(self.data_object.gaze_angular_velocity),
+            color="tab:pink",
+            label="Gaze velocity",
+        )
         axs[1].plot(
             np.array([self.data_object.time_vector[0], self.data_object.time_vector[-1]]),
             np.array([self.min_velocity_threshold, self.min_velocity_threshold]),
@@ -135,4 +140,8 @@ class VisualScanningEvent(Event):
         if save_name is not None:
             extension = check_save_name(save_name)
             plt.savefig(save_name, format=extension)
-        plt.show()
+
+        if live_show:
+            plt.show()
+
+        return fig  # for plot tests

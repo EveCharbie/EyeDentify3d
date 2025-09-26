@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from functools import wraps
 from datetime import datetime
 import numpy as np
+import matplotlib
 from matplotlib.axes import Axes
 
 from ..error_type import ErrorType
