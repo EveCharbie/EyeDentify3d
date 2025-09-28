@@ -2,7 +2,7 @@
 
 In the following subsections, you will find an explanation on how the different gaze behaviors are extracted using `EyeDentify3D`. 
 
-![animation.mov](../figures/animation.mov)
+![animation.mov](../figures/animation.mp4)
 Animation 1 - Animation obtained using `gaze_behavior_identifier.animate()`.
 
 ![all_gaze_behaviors.png](../figures/all_gaze_behaviors.png)
