@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/EveCharbie/EyeDentify3d/graph/badge.svg?token=BP4B2TCZXI)](https://codecov.io/gh/EveCharbie/EyeDentify3d)
 [![Maintainability](https://qlty.sh/gh/EveCharbie/projects/EyeDentify3d/maintainability.svg)](https://qlty.sh/gh/EveCharbie/projects/EyeDentify3d)
 
-![Animation](docs/figures/animation.mp4)
+![Animation](docs/figures/animation.gif)
 
 ## Installation
 The easiest way to install `EyeDentify3D` is to use pip:
