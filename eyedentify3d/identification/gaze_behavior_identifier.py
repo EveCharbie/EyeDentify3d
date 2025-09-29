@@ -59,7 +59,7 @@ class GazeBehaviorIdentifier:
     @data_object.setter
     def data_object(self, value: DataObject):
         if not isinstance(value, DataObject):
-            raise ValueError(f"The data_object must be an instance of HtcViveProData, got {value}.")
+            raise ValueError(f"The data_object must be an instance of HtcViveProData or PupilInvisibleData, got {value}.")
         self._data_object = value
 
     def _initialize_identified_indices(self):
@@ -184,6 +184,7 @@ class GazeBehaviorIdentifier:
         eta_max_fixation: float = 1.9,
         eta_min_smooth_pursuit: float = 1.7,
         phi: float = 45,
+        main_movement_axis: int = 0,
     ):
         """
         Detects fixation and smooth pursuit sequences in the data object.
@@ -204,6 +205,8 @@ class GazeBehaviorIdentifier:
         phi: The threshold for the similar angular range (in degrees).
         eta_max_fixation: The threshold for the maximum fixation range (in degrees).
         eta_min_smooth_pursuit: The threshold for the minimum smooth pursuit range (in degrees).
+        main_movement_axis: The index of the axis on which the most gaze movement happen (this is only used to reduce
+        numerical artifacts, it should have a large impact on the results).
 
         Note that the default values for the parameters
             `minimal_duration` = 40 ms
@@ -232,6 +235,7 @@ class GazeBehaviorIdentifier:
             eta_max_fixation,
             eta_min_smooth_pursuit,
             phi,
+            main_movement_axis,
         )
         self.inter_saccadic_sequences.initialize()
 
@@ -657,7 +661,7 @@ class GazeBehaviorIdentifier:
             marker_names=["gaze"],
             radius=0.005,
             color=colors_timeseries,
-            nb_frames=self.data_object.nb_frames,
+            nb_frames=200,
             show_labels=False,
         )
 

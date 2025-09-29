@@ -9,8 +9,8 @@ from eyedentify3d import PupilInvisibleData, TimeRange, ErrorType, GazeBehaviorI
 
 def main():
 
-    # Cut the data to keep only the interesting part of the trial (between 30 and 35 seconds)
-    time_range = TimeRange(min_time=30, max_time=35)
+    # Cut the data to keep only the interesting part of the trial (between 5 and 10 seconds)
+    time_range = TimeRange(min_time=5, max_time=10)
 
     # Load the data from the Pupil Invisible
     data_folder_path = "data/Pupil_Invisible/trampoline_01"
@@ -44,8 +44,24 @@ def main():
         eta_max_fixation=3,
         eta_min_smooth_pursuit=2,
         phi=45,
+        main_movement_axis=1,
     )
     gaze_behavior_identifier.finalize()  # This is mandatory
+
+    # Plot the results
+    if not os.path.exists("figures"):
+        os.makedirs("figures")
+    gaze_behavior_identifier.blink.plot(save_name="figures/blink_detection.png")
+    gaze_behavior_identifier.invalid.plot(save_name="figures/invalid_detection.png")
+    gaze_behavior_identifier.saccade.plot(save_name="figures/saccade_detection.png")
+    gaze_behavior_identifier.visual_scanning.plot(save_name="figures/visual_scanning_detection.png")
+    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="figures/fixation_detection.png")
+    gaze_behavior_identifier.fixation.plot(save_name="figures/fixation_detection.png")
+    gaze_behavior_identifier.smooth_pursuit.plot(save_name="figures/fixation_detection.png")
+    gaze_behavior_identifier.plot(save_name="figures/all_gaze_behaviors.png")
+
+    # Animate the results
+    gaze_behavior_identifier.animate()
 
     # For this example, we will remove all files generated, but in a real case, they should be kept
     if os.path.exists("bad_data_files.txt"):

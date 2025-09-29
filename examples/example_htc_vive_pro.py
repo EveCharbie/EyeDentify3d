@@ -48,6 +48,8 @@ def main():
     gaze_behavior_identifier.finalize()  # This is mandatory
 
     # Plot the results
+    if not os.path.exists("figures"):
+        os.makedirs("figures")
     gaze_behavior_identifier.blink.plot(save_name="figures/blink_detection.png")
     gaze_behavior_identifier.invalid.plot(save_name="figures/invalid_detection.png")
     gaze_behavior_identifier.saccade.plot(save_name="figures/saccade_detection.png")
