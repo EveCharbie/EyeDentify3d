@@ -79,14 +79,15 @@ class PupilInvisibleData(Data):
             self._validity_flag = False
             error_str = f"The file {self.file_name} is empty. There is no element in the field 'timestamp [ns]'. Please check the file."
             self.error_type(error_str)
+            return
 
-        if np.sum(self.gaze_csv_data["worn"] != 1) > len(self.gaze_csv_data["worn"]) / 2:
+        elif np.sum(self.gaze_csv_data["worn"] != 1) > len(self.gaze_csv_data["worn"]) / 2:
             self._validity_flag = False
             error_str = f"More than 50% of the data from file {self.file_name} is declared invalid by the eye-tracker, skipping this file."
             self.error_type(error_str)
             return
 
-        if np.any((time_vector[1:] - time_vector[:-1]) < 0):
+        elif np.any((time_vector[1:] - time_vector[:-1]) < 0):
             self._validity_flag = False
             error_str = f"The time vector in file {self.file_name} is not strictly increasing. Please check the file."
             self.error_type(error_str)
@@ -152,8 +153,8 @@ class PupilInvisibleData(Data):
         for blink_beginning, blink_end in zip(
             self.blink_csv_data["start timestamp [ns]"], self.blink_csv_data["end timestamp [ns]"]
         ):
-            start_idx = np.where(self.time_vector == blink_beginning)[0]
-            end_idx = np.where(self.time_vector == blink_end)[0]
+            start_idx = np.where(np.abs(self.time_vector - blink_beginning) < 1e-6)[0]
+            end_idx = np.where(np.abs(self.time_vector - blink_end) < 1e-6)[0]
 
             if len(start_idx) == 0 or len(end_idx) == 0:
                 raise RuntimeError(

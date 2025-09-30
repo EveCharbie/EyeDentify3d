@@ -356,7 +356,7 @@ def test_set_coherent_and_incoherent_sequences():
         ),
     ):
 
-        event.set_coherent_and_incoherent_sequences()
+        event.set_coherent_and_incoherent_sequences(component_to_keep=0)
 
         # Check that coherent_sequences and incoherent_sequences are set
         assert event.coherent_sequences is not None

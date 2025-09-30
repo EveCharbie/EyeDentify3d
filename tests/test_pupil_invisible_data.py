@@ -39,6 +39,38 @@ def mock_csv_data():
     return {"gaze": pd.DataFrame(gaze_data), "imu": pd.DataFrame(imu_data), "blinks": pd.DataFrame(blink_data)}
 
 
+@pytest.fixture
+def mock_empty_csv_data():
+    """Create mock empty CSV data for testing"""
+    # Create DataFrames with minimal required columns
+    gaze_data = {
+        "timestamp [ns]": np.array([]),
+        "worn": np.array([]),
+        "azimuth [deg]": np.array([]),
+        "elevation [deg]": np.array([]),
+    }
+
+    imu_data = {
+        "timestamp [ns]": np.array([]),
+        "roll [deg]": np.array([]),
+        "pitch [deg]": np.array([]),
+        "yaw [deg]": np.array([]),
+        "acceleration x [g]": np.array([]),
+        "acceleration y [g]": np.array([]),
+        "acceleration z [g]": np.array([]),
+        "gyro x [deg/s]": np.array([]),
+        "gyro y [deg/s]": np.array([]),
+        "gyro z [deg/s]": np.array([]),
+    }
+
+    blink_data = {
+        "start timestamp [ns]": np.array([]),
+        "end timestamp [ns]": np.array([]),
+    }
+
+    return {"gaze": pd.DataFrame(gaze_data), "imu": pd.DataFrame(imu_data), "blinks": pd.DataFrame(blink_data)}
+
+
 @patch("pandas.read_csv")
 def test_pupil_invisible_data_init(mock_read_csv, mock_csv_data):
     """Test initialization of PupilInvisibleData"""
@@ -91,13 +123,23 @@ def test_data_folder_path_setter_invalid_type():
         data.data_folder_path = 123
 
 
-def test_check_validity_empty_file():
+@patch("pandas.read_csv")
+def test_check_validity_empty_file(mock_read_csv, mock_empty_csv_data):
     """Test _check_validity with empty file"""
-    # Create a mock data object
-    data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.error_type = ErrorType.SKIP
-    data.gaze_csv_data = pd.DataFrame({"timestamp [ns]": []})
-    data.file_name = "test_folder"
+
+    # Configure the mock to return different DataFrames for different file paths
+    def side_effect(path):
+        if path.endswith("gaze.csv"):
+            return mock_empty_csv_data["gaze"]
+        elif path.endswith("imu.csv"):
+            return mock_empty_csv_data["imu"]
+        elif path.endswith("blinks.csv"):
+            return mock_empty_csv_data["blinks"]
+        return None
+
+    mock_read_csv.side_effect = side_effect
+    data = PupilInvisibleData("test_folder/", error_type = ErrorType.SKIP)
+
     data._validity_flag = True
 
     # Check that the validity flag is modified by _check_validity
@@ -105,35 +147,50 @@ def test_check_validity_empty_file():
     assert data._validity_flag is False
 
 
-def test_check_validity_invalid_data():
+@patch("pandas.read_csv")
+def test_check_validity_invalid_data(mock_read_csv, mock_csv_data):
     """Test _check_validity with mostly invalid data"""
-    # Create a mock data object
-    data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.error_type = ErrorType.SKIP
-    data_dict = {
-        "timestamp [ns]": list(range(10)),
-        "worn": [0] * 8 + [1] * 2,  # 80% invalid
-    }
-    data.gaze_csv_data = pd.DataFrame(data_dict)
-    data.file_name = "test_folder"
-    data._validity_flag = True
+
+    # Configure the mock to return different DataFrames for different file paths
+    def side_effect(path):
+        if path.endswith("gaze.csv"):
+            return mock_csv_data["gaze"]
+        elif path.endswith("imu.csv"):
+            return mock_csv_data["imu"]
+        elif path.endswith("blinks.csv"):
+            return mock_csv_data["blinks"]
+        return None
+
+    mock_read_csv.side_effect = side_effect
+    data = PupilInvisibleData("test_folder/", error_type = ErrorType.SKIP)
+    data.gaze_csv_data["worn"] = [0] * 180 + [1] * 20  # 90% invalid
+
+    assert data._validity_flag is True
 
     # Check that the validity flag is modified by _check_validity
     data._check_validity()
     assert data._validity_flag is False
 
 
-def test_check_validity_non_increasing_time():
+@patch("pandas.read_csv")
+def test_check_validity_non_increasing_time(mock_read_csv, mock_csv_data):
     """Test _check_validity with non-increasing time vector"""
-    # Create a mock data object
-    data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.error_type = ErrorType.SKIP
-    data_dict = {
-        "timestamp [ns]": [1, 2, 3, 2, 5],  # Time goes backwards
-        "worn": [1] * 5,
-    }
-    data.gaze_csv_data = pd.DataFrame(data_dict)
-    data.file_name = "test_folder"
+
+    # Configure the mock to return different DataFrames for different file paths
+    def side_effect(path):
+        if path.endswith("gaze.csv"):
+            return mock_csv_data["gaze"]
+        elif path.endswith("imu.csv"):
+            return mock_csv_data["imu"]
+        elif path.endswith("blinks.csv"):
+            return mock_csv_data["blinks"]
+        return None
+
+    mock_read_csv.side_effect = side_effect
+
+    data = PupilInvisibleData("test_folder/", error_type=ErrorType.SKIP)
+    data.gaze_csv_data["timestamp [ns]"][:] = np.array(data.gaze_csv_data["timestamp [ns]"])[::-1]  # Reverse to make non-increasing
+
     data._validity_flag = True
 
     # Check that the validity flag is modified by _check_validity
