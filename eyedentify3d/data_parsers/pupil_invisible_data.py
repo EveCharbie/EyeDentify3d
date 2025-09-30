@@ -274,7 +274,7 @@ class PupilInvisibleData(Data):
                     self.imu_csv_data["gyro z [deg/s]"],
                 ]
             )
-            roll, pitch, yaw = angles_from_imu_fusion(time_vector_imu, acceleration, gyroscope)
+            roll, pitch, yaw = angles_from_imu_fusion(time_vector_imu, acceleration, gyroscope, roll_offset=7, pitch_offset=90)
             head_angles = np.array([roll, pitch, yaw])
 
         unwrapped_head_angles = unwrap_rotation(head_angles)

@@ -12,6 +12,7 @@ from eyedentify3d.utils.rotation_utils import (
     rot_y_matrix,
     rot_z_matrix,
     compute_angular_velocity,
+    angles_from_imu_fusion,
 )
 
 
@@ -296,45 +297,73 @@ def test_compute_angular_velocity():
 
 def test_angles_from_imu_fusion():
     """Test angles_from_imu_fusion function."""
+    np.random.seed(42)
+
     # Create test data
     n_frames = 10
     time_vector = np.linspace(0, 1, n_frames)
     
     # Create constant acceleration pointing down (z-axis)
-    acceleration = np.zeros((3, n_frames))
-    acceleration[2, :] = 1.0  # 1G in z direction (down)
-    
-    # Create zero gyroscope readings (no rotation)
+    acceleration = 1 * np.random.random((3, n_frames)) * 0.01
+
+    # Create small linear gyroscope readings (slow rotation on all axis)
     gyroscope = np.zeros((3, n_frames))
-    
+    gyroscope[0, :] = np.linspace(0, 10, n_frames)
+    gyroscope[1, :] = np.linspace(0, 10, n_frames)
+    gyroscope[2, :] = np.linspace(0, 10, n_frames)
+
     # Get the angles
-    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope)
+    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope, 7, 90)
     
-    # Check shapes
-    assert pitch.shape == (n_frames,)
-    assert roll.shape == (n_frames,)
-    assert yaw.shape == (n_frames,)
-    
-    # With constant downward acceleration and no gyro input, 
-    # pitch and roll should stabilize near 0 (after initial adjustment)
-    # and yaw should remain constant (but may drift slightly)
-    npt.assert_almost_equal(pitch[-1], 90.0, decimal=1)
-    npt.assert_almost_equal(roll[-1], 7.0, decimal=1)  # Note: 7 degree offset is added in the function
-    
+    # Check values
+    npt.assert_almost_equal(pitch, np.array([ 0.        ,  90.53178465,  97.76887163, 105.7272061 ,
+       108.35886461, 111.20256202, 105.50172801, 115.38700861,
+       119.17759094, 122.22971269]))
+    npt.assert_almost_equal(roll, np.array([ 0.        ,  -2.58538018,  -8.86923007, -14.04500668,
+       -22.26810882, -13.02763774,  -5.84783797,  -5.08643362,
+       -13.20195895, -21.19612125]))
+    npt.assert_almost_equal(yaw, np.array([ 0.        , -0.0445872 , -1.50130761, -3.6987087 , -4.27686273,
+       -4.65672451, -2.04029135, -3.1461357 , -2.92541028, -2.6251741]))
+
+
+    # Create no acceleration
+    acceleration = np.random.random((3, n_frames)) * 0.00001
+
+    # Test with rotation around x-axis
+    gyroscope = np.zeros((3, n_frames))
+    gyroscope[0, :] = 10
+
+    # Get the angles
+    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope, 0, 0)
+
+    # Check values
+    npt.assert_almost_equal(pitch, np.array([ 0.        ,  3.02593764, 13.77272059,  6.45065143, 14.16077769,
+       16.55277847, 24.57882135, 33.60856048, 44.08248161, 51.42909387]))
+    npt.assert_almost_equal(roll, np.array([  0.        ,  -9.40634191, -10.04071906,  -5.69028886,
+       -12.43518293, -21.56846786, -27.30927688, -31.81484241,
+       -27.45186111, -33.31617511]))
+    npt.assert_almost_equal(yaw, np.array([  0.        ,  -0.24900345,  -1.88863459,  -0.68614092,
+        -1.79564223,  -2.26231542,  -5.19617389,  -9.17040824,
+       -13.78788158, -17.02083565]))
+
     # Test with rotation around z-axis
     gyroscope = np.zeros((3, n_frames))
-    gyroscope[2, :] = 90.0  # 90 deg/s around z-axis
+    gyroscope[2, :] = 90.0
     
-    pitch2, roll2, yaw2 = angles_from_imu_fusion(time_vector, acceleration, gyroscope)
+    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope, 0, 0)
     
-    # Yaw should change approximately linearly with time
-    # The total change should be close to 90 degrees over 1 second
-    yaw_change = yaw2[-1] - yaw2[0]
-    assert 80.0 < abs(yaw_change) < 100.0
+    # Check values
+    npt.assert_almost_equal(pitch, np.array([ 0.        ,  1.07102425,  8.98342121,  0.88652251,  6.34679771,
+        5.50167378,  9.37537096, 12.11009758, 16.75069559, 17.34341048]))
+    npt.assert_almost_equal(roll, np.array([  0.        ,  -9.50419965, -11.03248365,  -5.05056296,
+       -12.25056464, -22.23316653, -28.39906195, -35.16377571,
+       -35.55272263, -43.81497026]))
+    npt.assert_almost_equal(yaw, np.array([  0.        ,  9.88569323, 18.2867503 , 29.29228701, 38.34587595,
+       48.11674719, 55.45742683, 62.453008  , 67.75680232, 74.88477379]))
     
     # Test error case with NaNs
     acceleration_with_nan = acceleration.copy()
     acceleration_with_nan[0, 0] = np.nan
     
     with pytest.raises(NotImplementedError, match="The acceleration and/or gyroscope data contains NaNs"):
-        angles_from_imu_fusion(time_vector, acceleration_with_nan, gyroscope)
+        angles_from_imu_fusion(time_vector, acceleration_with_nan, gyroscope, 0, 0)
