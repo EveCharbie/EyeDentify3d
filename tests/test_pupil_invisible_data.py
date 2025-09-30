@@ -32,8 +32,8 @@ def mock_csv_data():
     }
     
     blink_data = {
-        "start timestamp [ns]": [1.2e9, 1.6e9],
-        "end timestamp [ns]": [1.3e9, 1.7e9],
+        "start timestamp [ns]": [1.02010050e9, 1.29145729e9],
+        "end timestamp [ns]": [1.07035176e9, 1.55778894e9],
     }
     
     return {
@@ -152,17 +152,22 @@ def test_set_time_vector():
     data.blink_csv_data = pd.DataFrame({"start timestamp [ns]": [1500000000], "end timestamp [ns]": [2500000000]})
     data.imu_csv_data = pd.DataFrame({"timestamp [ns]": [1000000000, 2000000000, 3000000000, 4000000000]})
 
+    # Before unchanged
+    npt.assert_almost_equal(data.blink_csv_data["start timestamp [ns]"].iloc[0], 1500000000)
+    npt.assert_almost_equal(data.blink_csv_data["end timestamp [ns]"].iloc[0], 2500000000)
+    npt.assert_almost_equal(data.imu_csv_data["timestamp [ns]"].iloc[1], 2000000000)
+
     data._set_time_vector()
 
     assert data.time_vector is not None
     assert len(data.time_vector) == 4
     assert data.time_vector[0] == 0.0  # First value should be 0
-    assert np.isclose(data.time_vector[1], 1.0)  # 1 second difference
+    npt.assert_almost_equal(data.time_vector[1], 1.0)  # 1 second difference
     
     # Check that blink and imu timestamps are also transformed
-    assert np.isclose(data.blink_csv_data["start timestamp [ns]"].iloc[0], 0.5)
-    assert np.isclose(data.blink_csv_data["end timestamp [ns]"].iloc[0], 1.5)
-    assert np.isclose(data.imu_csv_data["timestamp [ns]"].iloc[1], 1.0)
+    npt.assert_almost_equal(data.blink_csv_data["start timestamp [ns]"].iloc[0], 0.5)
+    npt.assert_almost_equal(data.blink_csv_data["end timestamp [ns]"].iloc[0], 1.5)
+    npt.assert_almost_equal(data.imu_csv_data["timestamp [ns]"].iloc[1], 1.0)
 
 
 def test_remove_duplicates():
@@ -170,7 +175,6 @@ def test_remove_duplicates():
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
     data.time_vector = np.array([0.0, 0.1, 0.2, 0.3])  # No duplicates
-    data.nb_frames = 4
 
     # This should not raise an exception
     data._remove_duplicates()
@@ -178,7 +182,7 @@ def test_remove_duplicates():
     # Test with duplicates
     data.time_vector = np.array([0.0, 0.1, 0.1, 0.3])  # Duplicate at index 2
     
-    with pytest.raises(RuntimeError, match="The time vector has duplicated frames"):
+    with pytest.raises(RuntimeError, match="The time vector has duplicated frames, which never happened with this eye-tracker. Please notify the developer."):
         data._remove_duplicates()
 
 
@@ -201,7 +205,7 @@ def test_discard_data_out_of_range():
     data._discard_data_out_of_range()
 
     assert len(data.time_vector) == 2
-    assert np.array_equal(data.time_vector, np.array([0.2, 0.3]))
+    npt.assert_almost_equal(data.time_vector, np.array([0.2, 0.3]))
     assert len(data.right_eye_openness) == 2
     assert data.eye_direction.shape == (3, 2)
     assert data.head_angles.shape == (3, 2)
@@ -215,32 +219,29 @@ def test_set_eye_openness():
     """Test _set_eye_openness method"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
-    data.nb_frames = 5
-    data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
+    data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     data.blink_csv_data = pd.DataFrame({
-        "start timestamp [ns]": [0.1, 0.3],
-        "end timestamp [ns]": [0.2, 0.4]
+        "start timestamp [ns]": [0.1, 0.6],
+        "end timestamp [ns]": [0.3, 0.8]
     })
 
     data._set_eye_openness()
 
-    expected = np.array([1.0, 0.0, 0.0, 0.0, 0.0])
-    assert np.array_equal(data.right_eye_openness, expected)
-    assert np.array_equal(data.left_eye_openness, expected)
+    npt.assert_almost_equal(data.right_eye_openness, np.array([1., 0., 0., 0., 1., 1., 0., 0., 0., 1.]))
+    npt.assert_almost_equal(data.left_eye_openness, np.array([1., 0., 0., 0., 1., 1., 0., 0., 0., 1.]))
 
 
 def test_set_eye_openness_blink_not_in_time_vector():
     """Test _set_eye_openness method with blink times not in time vector"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
-    data.nb_frames = 5
     data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
     data.blink_csv_data = pd.DataFrame({
         "start timestamp [ns]": [0.15],  # Not in time vector
         "end timestamp [ns]": [0.25]     # Not in time vector
     })
 
-    with pytest.raises(RuntimeError, match="The blink start or end times are not in the time vector"):
+    with pytest.raises(RuntimeError, match="The blink start or end times are not in the time vector. This should not happen, please notify the developer."):
         data._set_eye_openness()
 
 
@@ -248,7 +249,7 @@ def test_set_eye_direction():
     """Test _set_eye_direction method"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
-    data.nb_frames = 3
+    data.time_vector = np.array([0.0, 0.1, 0.2])
     
     # Create normalized vectors using azimuth and elevation
     azimuth = np.array([0.0, 10.0, 20.0])  # degrees
@@ -267,14 +268,16 @@ def test_set_eye_direction():
     assert np.allclose(norms, 1.0)
     
     # First vector should be [0, 0, 1] (forward)
-    npt.assert_almost_equal(data.eye_direction[:, 0], np.array([0.0, 0.0, 1.0]))
+    npt.assert_almost_equal(data.eye_direction, np.array([[ 0.        ,  0.08715574,  0.17364818],
+                           [ 0.        , -0.17298739, -0.33682409],
+                           [ 1.        ,  0.98106026,  0.92541658]]))
 
 
 def test_set_eye_direction_invalid_norm():
     """Test _set_eye_direction method with invalid norm"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
-    data.nb_frames = 1
+    data.time_vector = np.array([0.0])
     
     # Create a mock that will cause the norm check to fail
     with patch('eyedentify3d.data_parsers.pupil_invisible_data.rotation_matrix_from_euler_angles') as mock_rotation:
@@ -292,7 +295,6 @@ def test_set_eye_direction_invalid_norm():
 def test_interpolate_to_eye_timestamps():
     """Test interpolate_to_eye_timestamps method"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.nb_frames = 5
     data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
     
     # Create test data
@@ -317,21 +319,19 @@ def test_interpolate_to_eye_timestamps():
 def test_interpolate_to_eye_timestamps_invalid_shape():
     """Test interpolate_to_eye_timestamps method with invalid shape"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.nb_frames = 5
     data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
     
     # Create test data with invalid shape
     time_vector_imu = np.array([0.0, 0.2, 0.4])
     unwrapped_head_angles = np.array([10.0, 20.0, 30.0])  # Wrong shape, should be (3, n)
     
-    with pytest.raises(NotImplementedError, match="This function was designed for head angles of shape"):
+    with pytest.raises(NotImplementedError, match=r"This function was designed for head angles of shape \(3, n_frames\)."):
         data.interpolate_to_eye_timestamps(time_vector_imu, unwrapped_head_angles)
 
 
 def test_interpolate_to_eye_timestamps_duplicated_frames():
     """Test interpolate_to_eye_timestamps method with duplicated frames"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.nb_frames = 5
     data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
     
     # Create test data with duplicated frames
@@ -342,14 +342,13 @@ def test_interpolate_to_eye_timestamps_duplicated_frames():
         [20.0, 20.0, 40.0]
     ])
     
-    with pytest.raises(RuntimeError, match="There were repeated frames in the imu data"):
+    with pytest.raises(RuntimeError, match="There were repeated frames in the imu data, which never happened with this eye-tracker. Please notify the developer."):
         data.interpolate_to_eye_timestamps(time_vector_imu, unwrapped_head_angles)
 
 
 def test_interpolate_to_eye_timestamps_out_of_range():
     """Test interpolate_to_eye_timestamps method with timestamps out of range"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
-    data.nb_frames = 5
     data.time_vector = np.array([-0.1, 0.0, 0.2, 0.4, 0.5])  # First and last are out of range
     
     # Create test data
@@ -374,7 +373,7 @@ def test_set_head_angles_with_tags(mock_angles_from_imu, mock_unwrap):
     """Test _set_head_angles method with tags in experiment"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
-    data.nb_frames = 3
+    data.time_vector = np.array([0.0, 0.1, 0.2])
     
     # Mock data with valid yaw values (tags present)
     data.imu_csv_data = pd.DataFrame({
@@ -435,7 +434,7 @@ def test_set_head_angles_without_tags(mock_angles_from_imu, mock_unwrap):
     """Test _set_head_angles method without tags in experiment"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
     data._validity_flag = True
-    data.nb_frames = 3
+    data.time_vector = np.array([0.0, 0.1, 0.2])
     
     # Mock data with NaN yaw values (no tags)
     data.imu_csv_data = pd.DataFrame({
@@ -501,6 +500,35 @@ def test_set_head_angles_without_tags(mock_angles_from_imu, mock_unwrap):
     ]))
 
 
+def test_set_head_angular_velocity():
+    """Test _set_head_angular_velocity method"""
+    data = PupilInvisibleData.__new__(PupilInvisibleData)
+    data._validity_flag = True
+    data.time_vector = np.linspace(0, 1, 200)
+    data.head_angles = np.zeros((3, 200))
+    for i in range(3):
+        data.head_angles[i, :] = np.linspace(0, 2 * np.pi, 200)
+
+    data._set_head_angular_velocity()
+
+    assert data.head_angular_velocity is not None
+    assert data.head_angular_velocity.shape == (3, 200)
+    # All values should be 2pi
+    npt.assert_almost_equal(data.head_angular_velocity[0, 0], 2 * np.pi)
+    npt.assert_almost_equal(data.head_angular_velocity[1, 100], 2 * np.pi)
+    npt.assert_almost_equal(data.head_angular_velocity[2, 50], 2 * np.pi)
+    npt.assert_almost_equal(data.head_angular_velocity[0, 150], 2 * np.pi)
+    assert data.head_velocity_norm is not None
+
+    norm = np.sqrt(3 * (2 * np.pi) ** 2)
+    npt.assert_almost_equal(norm, 10.88279619)
+    npt.assert_almost_equal(data.head_velocity_norm[0], norm)
+    npt.assert_almost_equal(data.head_velocity_norm[50], norm)
+    npt.assert_almost_equal(data.head_velocity_norm[100], norm)
+    npt.assert_almost_equal(data.head_velocity_norm[150], norm)
+    assert data.head_velocity_norm.shape == (200,)
+
+
 def test_set_data_invalidity():
     """Test _set_data_invalidity method"""
     data = PupilInvisibleData.__new__(PupilInvisibleData)
@@ -512,4 +540,4 @@ def test_set_data_invalidity():
     data._set_data_invalidity()
 
     assert data.data_invalidity is not None
-    assert np.array_equal(data.data_invalidity, np.array([False, True, False, True, False]))
+    npt.assert_almost_equal(data.data_invalidity, np.array([False, True, False, True, False]))
