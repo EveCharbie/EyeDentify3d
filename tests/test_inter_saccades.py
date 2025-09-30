@@ -97,6 +97,7 @@ def test_inter_saccadic_event_initialization():
         eta_max_fixation=2.0,
         eta_min_smooth_pursuit=5.0,
         phi=30.0,
+        main_movement_axis=0,
     )
 
     assert event.data_object is mock_data
@@ -111,6 +112,7 @@ def test_inter_saccadic_event_initialization():
     assert event.eta_max_fixation == 2.0
     assert event.eta_min_smooth_pursuit == 5.0
     assert event.phi == 30.0
+    assert event.main_movement_axis == 0
     assert event.coherent_sequences is None
     assert event.incoherent_sequences is None
     assert event.fixation_indices is None
@@ -354,7 +356,7 @@ def test_set_coherent_and_incoherent_sequences():
         ),
     ):
 
-        event.set_coherent_and_incoherent_sequences()
+        event.set_coherent_and_incoherent_sequences(component_to_keep=0)
 
         # Check that coherent_sequences and incoherent_sequences are set
         assert event.coherent_sequences is not None

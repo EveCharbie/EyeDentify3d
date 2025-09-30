@@ -5,7 +5,6 @@ from .abstract_data import Data, destroy_on_fail
 from ..error_type import ErrorType
 from ..time_range import TimeRange
 from ..utils.rotation_utils import unwrap_rotation
-from ..utils.signal_utils import filter_data, centered_finite_difference
 
 
 class HtcViveProData(Data):

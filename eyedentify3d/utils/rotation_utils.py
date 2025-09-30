@@ -183,13 +183,31 @@ def compute_angular_velocity(time_vector: np.ndarray, direction_vector: np.ndarr
 
 
 def angles_from_imu_fusion(
-    time_vector: np.ndarray[float], acceleration: np.ndarray[float], gyroscope: np.ndarray[float]
+    time_vector: np.ndarray[float],
+    acceleration: np.ndarray[float],
+    gyroscope: np.ndarray[float],
+    roll_offset: float,
+    pitch_offset: float,
 ) -> tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
     """
     Computes the Euler angles from the accelerometer and gyroscope data using the Madgwick filter algorithm.
     Code adapted from https://github.com/pupil-labs/pupil/blob/7a3cd9e8d2e54ac123ab0ed292d741732db899a2/pupil_src/shared_modules/imu_timeline.py
     Note: The initial head orientation is assumed to be pitch=0, roll=0, yaw=0.
+
+    Parameters
+    ----------
+    time_vector: A numpy array of shape (n_frames,) containing the time vector of the data acquisition.
+    acceleration: A numpy array of shape (3, n_frames) containing the acceleration data in G.
+    gyroscope: A numpy array of shape (3, n_frames) containing the gyroscope data in deg/s.
+    roll_offset: An offset representing the angle between head and IMU in degrees (to be added to the roll angle).
+    pitch_offset: An offset representing the angle between head and IMU in degrees (to be added to the pitch angle).
     """
+    # Check that there are not NaNs in the acceleration or gyroscope data, otherwise the filter gets stuck
+    if np.sum(np.isnan(acceleration)) != 0 or np.sum(np.isnan(gyroscope)) != 0:
+        raise NotImplementedError(
+            "The acceleration and/or gyroscope data contains NaNs, which is not handled gracefully."
+        )
+
     # Parameters
     nb_frames = time_vector.shape[0]
     gyroscope_error = 50 * np.pi / 180  # Default in Pupil Invisible code
@@ -230,7 +248,9 @@ def angles_from_imu_fusion(
         # Normalise accelerometer measurement
         norm = np.sqrt(ax * ax + ay * ay + az * az)
         if norm == 0:
-            return  # handle NaN
+            # This is highly suspicious of a NaN somewhere
+            raise RuntimeError("This should not happen, please contact the developer.")
+
         norm = 1 / norm  # use reciprocal for division
         ax *= norm
         ay *= norm
@@ -268,7 +288,7 @@ def angles_from_imu_fusion(
             np.degrees(
                 -np.arcsin(2.0 * (this_quaternion[1] * this_quaternion[3] - this_quaternion[0] * this_quaternion[2]))
             )
-            + 7
+            + roll_offset
         )
         # bring to range [-180, 180]
         roll[i_frame + 1] = ((this_roll + 180) % 360) - 180
@@ -283,13 +303,13 @@ def angles_from_imu_fusion(
                     + this_quaternion[3] * this_quaternion[3],
                 )
             )
-            + 90
+            + pitch_offset
         )
         # bring to range [-180, 180]
         pitch[i_frame + 1] = ((this_pitch + 180) % 360) - 180
 
         this_yaw = np.degrees(
-            np.atan2(
+            np.arctan2(
                 2.0 * (this_quaternion[1] * this_quaternion[2] + this_quaternion[0] * this_quaternion[3]),
                 this_quaternion[0] * this_quaternion[0]
                 + this_quaternion[1] * this_quaternion[1]

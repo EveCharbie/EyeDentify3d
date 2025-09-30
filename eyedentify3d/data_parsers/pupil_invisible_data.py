@@ -33,11 +33,10 @@ class PupilInvisibleData(Data):
         super().__init__(error_type, time_range)
         self.data_folder_path: str = data_folder_path
 
-        # Load the data and set the time vector
+        # Load the data, please note that these entries will not be updated with the time_range
         self.gaze_csv_data: pd.DataFrame = pd.read_csv(self.data_folder_path + "gaze.csv")
         self.imu_csv_data: pd.DataFrame = pd.read_csv(self.data_folder_path + "imu.csv")
         self.blink_csv_data: pd.DataFrame = pd.read_csv(self.data_folder_path + "blinks.csv")
-        # self.timestamps_csv_data: pd.DataFrame = pd.read_csv(self.data_folder_path + "world_timestamps.csv")
 
         self._check_validity()
         self._set_time_vector()
@@ -80,14 +79,15 @@ class PupilInvisibleData(Data):
             self._validity_flag = False
             error_str = f"The file {self.file_name} is empty. There is no element in the field 'timestamp [ns]'. Please check the file."
             self.error_type(error_str)
+            return
 
-        if np.sum(self.gaze_csv_data["worn"] != 1) > len(self.gaze_csv_data["worn"]) / 2:
+        elif np.sum(self.gaze_csv_data["worn"] != 1) > len(self.gaze_csv_data["worn"]) / 2:
             self._validity_flag = False
             error_str = f"More than 50% of the data from file {self.file_name} is declared invalid by the eye-tracker, skipping this file."
             self.error_type(error_str)
             return
 
-        if np.any((time_vector[1:] - time_vector[:-1]) < 0):
+        elif np.any((time_vector[1:] - time_vector[:-1]) < 0):
             self._validity_flag = False
             error_str = f"The time vector in file {self.file_name} is not strictly increasing. Please check the file."
             self.error_type(error_str)
@@ -106,15 +106,16 @@ class PupilInvisibleData(Data):
         initial_time = self.gaze_csv_data["timestamp [ns]"][0]
 
         # Set the time vector
-        self.time_vector = np.array((self.gaze_csv_data["timestamp [ns]"] - initial_time) / factor)
+        self.time_vector = np.array(np.array((self.gaze_csv_data["timestamp [ns]"]) - initial_time) / factor)
 
         # also transform the blink and imu timings
         self.blink_csv_data["start timestamp [ns]"] = (
             self.blink_csv_data["start timestamp [ns]"] - initial_time
         ) / factor
         self.blink_csv_data["end timestamp [ns]"] = (self.blink_csv_data["end timestamp [ns]"] - initial_time) / factor
-        self.imu_csv_data["timestamp[ns]"] = (self.imu_csv_data["timestamp[ns]"] - initial_time) / factor
+        self.imu_csv_data["timestamp [ns]"] = (self.imu_csv_data["timestamp [ns]"] - initial_time) / factor
 
+    @destroy_on_fail
     def _remove_duplicates(self):
         """
         check that there are no duplicate time frames in the time vector.
@@ -130,10 +131,18 @@ class PupilInvisibleData(Data):
         Discard the data that is out of the time range specified in the time_range attribute.
         """
         indices_to_keep = self.time_range.get_indices(self.time_vector)
+
+        # Update the attributes with the indices to keep
         self.time_vector = self.time_vector[indices_to_keep]
-        self.csv_data = self.gaze_csv_data.iloc[indices_to_keep, :]
-        self.csv_data = self.gaze_csv_data.iloc[indices_to_keep, :]
-        self.csv_data = self.gaze_csv_data.iloc[indices_to_keep, :]
+        self.dt = np.nanmean(self.time_vector[1:] - self.time_vector[:-1])
+        self.right_eye_openness = self.right_eye_openness[indices_to_keep]
+        self.left_eye_openness = self.left_eye_openness[indices_to_keep]
+        self.eye_direction = self.eye_direction[:, indices_to_keep]
+        self.head_angles = self.head_angles[:, indices_to_keep]
+        self.gaze_direction = self.gaze_direction[:, indices_to_keep]
+        self.head_angular_velocity = self.head_angular_velocity[:, indices_to_keep]
+        self.head_velocity_norm = self.head_velocity_norm[indices_to_keep]
+        self.data_invalidity = self.data_invalidity[indices_to_keep]
 
     @destroy_on_fail
     def _set_eye_openness(self) -> None:
@@ -145,8 +154,8 @@ class PupilInvisibleData(Data):
         for blink_beginning, blink_end in zip(
             self.blink_csv_data["start timestamp [ns]"], self.blink_csv_data["end timestamp [ns]"]
         ):
-            start_idx = np.where(self.time_vector == blink_beginning)[0]
-            end_idx = np.where(self.time_vector == blink_end)[0]
+            start_idx = np.where(np.abs(self.time_vector - blink_beginning) < 1e-6)[0]
+            end_idx = np.where(np.abs(self.time_vector - blink_end) < 1e-6)[0]
 
             if len(start_idx) == 0 or len(end_idx) == 0:
                 raise RuntimeError(
@@ -231,6 +240,7 @@ class PupilInvisibleData(Data):
                     interpolated_head_angles[:, i_time] = angles_before + (time - t_before) * (
                         (angles_after - angles_before) / (t_after - t_before)
                     )
+        return interpolated_head_angles
 
     @destroy_on_fail
     def _set_head_angles(self):
@@ -242,10 +252,16 @@ class PupilInvisibleData(Data):
         drifting, but in our cas the effect should be minimal sinc we mainly compare frame through a small time interval.
         """
         # Get the time vector of the imu data (not the same as the eye data)
-        time_vector_imu = self.imu_csv_data["timestamp[ns]"]
+        time_vector_imu = np.array(self.imu_csv_data["timestamp [ns]"])
 
-        if np.all(np.isnan(self.imu_csv_data["yaw [deg]"])):
-            # We approximate the yaw angle using a Madgwick filter
+        tags_in_exp: bool = not np.all(np.isnan(self.imu_csv_data["yaw [deg]"]))
+        if tags_in_exp:
+            # The yaw angle is already provided by Pupil as there were tags in the experimental setup
+            head_angles = np.array(
+                [self.imu_csv_data["roll [deg]"], self.imu_csv_data["pitch [deg]"], self.imu_csv_data["yaw [deg]"]]
+            )
+        else:
+            # No tags were used in the experimental setup, so we approximate the yaw angle using a Madgwick filter
             acceleration = np.array(
                 [
                     self.imu_csv_data["acceleration x [g]"],
@@ -260,13 +276,10 @@ class PupilInvisibleData(Data):
                     self.imu_csv_data["gyro z [deg/s]"],
                 ]
             )
-            roll, pitch, yaw = angles_from_imu_fusion(time_vector_imu, acceleration, gyroscope)
-            head_angles = np.array([roll, pitch, yaw])
-        else:
-            # the yaw angle is already provided by Pupil
-            head_angles = np.array(
-                [self.imu_csv_data["roll [deg]"], self.imu_csv_data["pitch [deg]"], self.imu_csv_data["yaw [deg]"]]
+            roll, pitch, yaw = angles_from_imu_fusion(
+                time_vector_imu, acceleration, gyroscope, roll_offset=7, pitch_offset=90
             )
+            head_angles = np.array([roll, pitch, yaw])
 
         unwrapped_head_angles = unwrap_rotation(head_angles)
         # We interpolate to align the head angles with the eye orientation timestamps
@@ -277,4 +290,4 @@ class PupilInvisibleData(Data):
         """
         Get a numpy array of bool indicating if the eye-tracker declared that the glasses were not worn.
         """
-        self.data_invalidity = self.gaze_csv_data["worn"] != 1
+        self.data_invalidity = np.array(self.gaze_csv_data["worn"] != 1)

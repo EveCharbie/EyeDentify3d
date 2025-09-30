@@ -34,6 +34,7 @@ class InterSaccadicEvent(Event):
         eta_max_fixation: float = None,
         eta_min_smooth_pursuit: float = None,
         phi: float = None,
+        main_movement_axis: int = None,
     ):
         """
         Parameters:
@@ -48,9 +49,11 @@ class InterSaccadicEvent(Event):
         eta_d: The threshold for the gaze direction dispersion (without units).
         eta_cd: The threshold for the consistency of direction (without units).
         eta_pd: The threshold for the position displacement (without units).
-        phi: The threshold for the similar angular range (in degrees).
         eta_max_fixation: The threshold for the maximum fixation range (in degrees).
         eta_min_smooth_pursuit: The threshold for the minimum smooth pursuit range (in degrees).
+        phi: The threshold for the similar angular range (in degrees).
+        main_movement_axis: The index of the axis on which the most gaze movement happen (this is only used to reduce
+        numerical artifacts, it should have a large impact on the results).
         """
 
         super().__init__()
@@ -74,6 +77,7 @@ class InterSaccadicEvent(Event):
         self.eta_max_fixation = eta_max_fixation
         self.eta_min_smooth_pursuit = eta_min_smooth_pursuit
         self.phi = phi
+        self.main_movement_axis = main_movement_axis
 
         # Extended attributes
         self.gaze_displacement_angle: np.ndarray[float] = None
@@ -93,7 +97,7 @@ class InterSaccadicEvent(Event):
         self.detect_intersaccadic_indices()
         self.split_sequences()
         self.keep_only_sequences_long_enough()
-        self.set_coherent_and_incoherent_sequences()
+        self.set_coherent_and_incoherent_sequences(component_to_keep=self.main_movement_axis)
         self.set_intersaccadic_sequences()
         self.classify_sequences()
 
@@ -269,7 +273,7 @@ class InterSaccadicEvent(Event):
 
         return window_sequences
 
-    def set_coherent_and_incoherent_sequences(self):
+    def set_coherent_and_incoherent_sequences(self, component_to_keep: int):
         """
         Split the inter-saccadic sequences into overlapping windows. Merge the consecutive windows that are similar in
         nature based on if they are coherent or incoherent in terms of gaze direction.
@@ -291,7 +295,7 @@ class InterSaccadicEvent(Event):
 
             # Compute the directionality coherence p-value for the current window
             p_value, gaze_displacement_angle = self.detect_directionality_coherence_on_axis(
-                self.data_object.gaze_direction[:, current_window], component_to_keep=0
+                self.data_object.gaze_direction[:, current_window], component_to_keep=component_to_keep
             )
             self.gaze_displacement_angle[current_window] = gaze_displacement_angle
             for i_idx in current_window:
