@@ -59,7 +59,9 @@ class GazeBehaviorIdentifier:
     @data_object.setter
     def data_object(self, value: DataObject):
         if not isinstance(value, DataObject):
-            raise ValueError(f"The data_object must be an instance of HtcViveProData or PupilInvisibleData, got {value}.")
+            raise ValueError(
+                f"The data_object must be an instance of HtcViveProData or PupilInvisibleData, got {value}."
+            )
         self._data_object = value
 
     def _initialize_identified_indices(self):

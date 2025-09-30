@@ -183,11 +183,11 @@ def compute_angular_velocity(time_vector: np.ndarray, direction_vector: np.ndarr
 
 
 def angles_from_imu_fusion(
-        time_vector: np.ndarray[float],
-        acceleration: np.ndarray[float],
-        gyroscope: np.ndarray[float],
-        roll_offset: float,
-        pitch_offset: float,
+    time_vector: np.ndarray[float],
+    acceleration: np.ndarray[float],
+    gyroscope: np.ndarray[float],
+    roll_offset: float,
+    pitch_offset: float,
 ) -> tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
     """
     Computes the Euler angles from the accelerometer and gyroscope data using the Madgwick filter algorithm.
@@ -204,7 +204,9 @@ def angles_from_imu_fusion(
     """
     # Check that there are not NaNs in the acceleration or gyroscope data, otherwise the filter gets stuck
     if np.sum(np.isnan(acceleration)) != 0 or np.sum(np.isnan(gyroscope)) != 0:
-        raise NotImplementedError("The acceleration and/or gyroscope data contains NaNs, which is not handled gracefully.")
+        raise NotImplementedError(
+            "The acceleration and/or gyroscope data contains NaNs, which is not handled gracefully."
+        )
 
     # Parameters
     nb_frames = time_vector.shape[0]
