@@ -115,6 +115,7 @@ class PupilInvisibleData(Data):
         self.blink_csv_data["end timestamp [ns]"] = (self.blink_csv_data["end timestamp [ns]"] - initial_time) / factor
         self.imu_csv_data["timestamp [ns]"] = (self.imu_csv_data["timestamp [ns]"] - initial_time) / factor
 
+    @destroy_on_fail
     def _remove_duplicates(self):
         """
         check that there are no duplicate time frames in the time vector.
