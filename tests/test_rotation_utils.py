@@ -292,3 +292,49 @@ def test_compute_angular_velocity():
 
     with pytest.raises(ValueError, match="The time vector should have at least 3 frames to compute angular velocity."):
         compute_angular_velocity(time_vector[:1], eye_direction[:, :1])  # Not enough frames in time vector
+
+
+def test_angles_from_imu_fusion():
+    """Test angles_from_imu_fusion function."""
+    # Create test data
+    n_frames = 10
+    time_vector = np.linspace(0, 1, n_frames)
+    
+    # Create constant acceleration pointing down (z-axis)
+    acceleration = np.zeros((3, n_frames))
+    acceleration[2, :] = 1.0  # 1G in z direction (down)
+    
+    # Create zero gyroscope readings (no rotation)
+    gyroscope = np.zeros((3, n_frames))
+    
+    # Get the angles
+    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope)
+    
+    # Check shapes
+    assert pitch.shape == (n_frames,)
+    assert roll.shape == (n_frames,)
+    assert yaw.shape == (n_frames,)
+    
+    # With constant downward acceleration and no gyro input, 
+    # pitch and roll should stabilize near 0 (after initial adjustment)
+    # and yaw should remain constant (but may drift slightly)
+    npt.assert_almost_equal(pitch[-1], 90.0, decimal=1)
+    npt.assert_almost_equal(roll[-1], 7.0, decimal=1)  # Note: 7 degree offset is added in the function
+    
+    # Test with rotation around z-axis
+    gyroscope = np.zeros((3, n_frames))
+    gyroscope[2, :] = 90.0  # 90 deg/s around z-axis
+    
+    pitch2, roll2, yaw2 = angles_from_imu_fusion(time_vector, acceleration, gyroscope)
+    
+    # Yaw should change approximately linearly with time
+    # The total change should be close to 90 degrees over 1 second
+    yaw_change = yaw2[-1] - yaw2[0]
+    assert 80.0 < abs(yaw_change) < 100.0
+    
+    # Test error case with NaNs
+    acceleration_with_nan = acceleration.copy()
+    acceleration_with_nan[0, 0] = np.nan
+    
+    with pytest.raises(NotImplementedError, match="The acceleration and/or gyroscope data contains NaNs"):
+        angles_from_imu_fusion(time_vector, acceleration_with_nan, gyroscope)
