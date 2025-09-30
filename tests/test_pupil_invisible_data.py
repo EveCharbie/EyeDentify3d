@@ -138,7 +138,7 @@ def test_check_validity_empty_file(mock_read_csv, mock_empty_csv_data):
         return None
 
     mock_read_csv.side_effect = side_effect
-    data = PupilInvisibleData("test_folder/", error_type = ErrorType.SKIP)
+    data = PupilInvisibleData("test_folder/", error_type=ErrorType.SKIP)
 
     data._validity_flag = True
 
@@ -162,7 +162,7 @@ def test_check_validity_invalid_data(mock_read_csv, mock_csv_data):
         return None
 
     mock_read_csv.side_effect = side_effect
-    data = PupilInvisibleData("test_folder/", error_type = ErrorType.SKIP)
+    data = PupilInvisibleData("test_folder/", error_type=ErrorType.SKIP)
     data.gaze_csv_data["worn"] = [0] * 180 + [1] * 20  # 90% invalid
 
     assert data._validity_flag is True
@@ -189,7 +189,9 @@ def test_check_validity_non_increasing_time(mock_read_csv, mock_csv_data):
     mock_read_csv.side_effect = side_effect
 
     data = PupilInvisibleData("test_folder/", error_type=ErrorType.SKIP)
-    data.gaze_csv_data["timestamp [ns]"][:] = np.array(data.gaze_csv_data["timestamp [ns]"])[::-1]  # Reverse to make non-increasing
+    data.gaze_csv_data["timestamp [ns]"][:] = np.array(data.gaze_csv_data["timestamp [ns]"])[
+        ::-1
+    ]  # Reverse to make non-increasing
 
     data._validity_flag = True
 
