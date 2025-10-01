@@ -30,13 +30,8 @@ def test_complete_example():
 
         # Find matching row in reference by participant_id and trial_id
         reference_row = reference_results[
-            (reference_results["participant_id"] == participant_id) &
-            (reference_results["trial_id"] == trial_id)
-            ]
+            (reference_results["participant_id"] == participant_id) & (reference_results["trial_id"] == trial_id)
+        ]
 
         # Reset index for proper comparison
-        pdt.assert_frame_equal(
-            test_row.reset_index(drop=True),
-            reference_row.reset_index(drop=True),
-            check_dtype=False
-        )
+        pdt.assert_frame_equal(test_row.reset_index(drop=True), reference_row.reset_index(drop=True), check_dtype=False)
