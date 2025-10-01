@@ -146,9 +146,7 @@ def perform_all_files():
         os.makedirs(f"{current_path_file}/../examples/results/HTC_Vive_Pro")
 
     full_trial_dataframe = pd.concat(full_trial_list_of_dataframe)
-    full_trial_dataframe.to_csv(
-        f"{current_path_file}/../examples/results/HTC_Vive_Pro/full_trial_results.csv"
-    )
+    full_trial_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/full_trial_results.csv")
 
     pre_cue_dataframe = pd.concat(pre_cue_list_of_dataframe)
     pre_cue_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/pre_cue_results.csv")
