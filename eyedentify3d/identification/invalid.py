@@ -91,3 +91,23 @@ class InvalidEvent(Event):
             plt.show()
 
         return fig  # for plot tests
+
+    def get_results(self) -> dict:
+        """
+        Get the results of the invalid events as a dictionary.
+
+        Returns
+        -------
+        A dictionary containing:
+            - 'invalid_ratio': Proportion of time when the data was invalid (total invalid duration/trial duration).
+            - 'invalid_total_duration': Total duration of invalid data (in seconds).
+        """
+        invalid_ratio = self.ratio()
+        invalid_total_duration = self.total_duration()
+
+        results = {
+            "invalid_ratio": [invalid_ratio],
+            "invalid_total_duration": [invalid_total_duration],
+        }
+
+        return results

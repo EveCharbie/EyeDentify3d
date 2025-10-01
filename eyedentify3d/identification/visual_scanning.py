@@ -145,3 +145,33 @@ class VisualScanningEvent(Event):
             plt.show()
 
         return fig  # for plot tests
+
+    def get_results(self) -> dict:
+        """
+        Get the results of the visual scanning events as a dictionary.
+
+        Returns
+        -------
+        A dictionary containing:
+            - 'visual_scanning_number': Total number of detected visual scanning events.
+            - 'visual_scanning_ratio': Proportion of the trial duration spent in visual scanning events (total visual
+                scanning duration/trial duration).
+            - 'visual_scanning_total_duration': Total duration of all visual scanning events (in seconds).
+            - 'visual_scanning_mean_duration': Mean duration of the visual scanning events (in seconds).
+            - 'visual_scanning_max_duration': Duration of the longest visual scanning events (in seconds).
+        """
+        visual_scanning_number = self.nb_events()
+        visual_scanning_ratio = self.ratio()
+        visual_scanning_total_duration = self.total_duration()
+        visual_scanning_mean_duration = self.mean_duration()
+        visual_scanning_max_duration = self.max_duration()
+
+        results = {
+            "visual_scanning_number": [visual_scanning_number],
+            "visual_scanning_ratio": [visual_scanning_ratio],
+            "visual_scanning_total_duration": [visual_scanning_total_duration],
+            "visual_scanning_mean_duration": [visual_scanning_mean_duration],
+            "visual_scanning_max_duration": [visual_scanning_max_duration],
+        }
+
+        return results

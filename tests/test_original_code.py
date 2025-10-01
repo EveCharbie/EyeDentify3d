@@ -363,8 +363,3 @@ def test_original_code():
                 output_reference = pickle.load(result_file)
 
             pdt.assert_frame_equal(output, output_reference, check_exact=False, rtol=1e-5)
-
-
-"""
-TODO: test the plots pixels
-"""
