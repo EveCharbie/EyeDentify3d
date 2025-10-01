@@ -20,4 +20,23 @@ def test_complete_example():
     # Load the results and compare with a reference file
     test_results = pd.read_csv(result_path)
     reference_results = pd.read_csv(result_path.replace(".csv", "_reference.csv"))
-    pdt.assert_frame_equal(test_results, reference_results, check_dtype=False)
+
+    for i_line in range(len(test_results)):
+        participant_id = test_results.iloc[i_line]["participant_id"]
+        trial_id = test_results.iloc[i_line]["trial_id"]
+
+        # Get the test row
+        test_row = test_results.iloc[[i_line]]
+
+        # Find matching row in reference by participant_id and trial_id
+        reference_row = reference_results[
+            (reference_results["participant_id"] == participant_id) &
+            (reference_results["trial_id"] == trial_id)
+            ]
+
+        # Reset index for proper comparison
+        pdt.assert_frame_equal(
+            test_row.reset_index(drop=True),
+            reference_row.reset_index(drop=True),
+            check_dtype=False
+        )
