@@ -145,16 +145,16 @@ def perform_all_files():
     if not os.path.exists(f"{current_path_file}/../examples/results/HTC_Vive_Pro"):
         os.makedirs(f"{current_path_file}/../examples/results/HTC_Vive_Pro")
 
-    full_trial_dataframe = pd.concat(full_trial_list_of_dataframe, ignore_index=True)
+    full_trial_dataframe = pd.concat(full_trial_list_of_dataframe)
     full_trial_dataframe.to_csv(
-        f"{current_path_file}/../examples/results/HTC_Vive_Pro/full_trial_results.csv", index=False
+        f"{current_path_file}/../examples/results/HTC_Vive_Pro/full_trial_results.csv"
     )
 
-    pre_cue_dataframe = pd.concat(pre_cue_list_of_dataframe, ignore_index=True)
-    pre_cue_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/pre_cue_results.csv", index=False)
+    pre_cue_dataframe = pd.concat(pre_cue_list_of_dataframe)
+    pre_cue_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/pre_cue_results.csv")
 
-    post_cue_dataframe = pd.concat(post_cue_list_of_dataframe, ignore_index=True)
-    post_cue_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/post_cue_results.csv", index=False)
+    post_cue_dataframe = pd.concat(post_cue_list_of_dataframe)
+    post_cue_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/post_cue_results.csv")
 
 
 if __name__ == "__main__":
