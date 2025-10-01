@@ -14,11 +14,10 @@ def test_complete_example():
 
     # Run the complete example, which will generate a data frame of all results and save it to a CSV file
     from examples.complete_example import perform_all_files
+
     perform_all_files()
 
     # Load the results and compare with a reference file
     test_results = pd.read_csv(result_path)
     reference_results = pd.read_csv(result_path.replace(".csv", "_reference.csv"))
     pdt.assert_frame_equal(test_results, reference_results, check_dtype=False)
-
-

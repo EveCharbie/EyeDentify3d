@@ -685,7 +685,7 @@ class GazeBehaviorIdentifier:
         viz.add_animated_model(biorbd_model, q)
         viz.rerun("animation")
 
-    def get_results(self, **kwarg)-> pd.DataFrame:
+    def get_results(self, **kwarg) -> pd.DataFrame:
         """
         Collects the results from all detected gaze behaviors into a single pandas data frame.
 
@@ -715,7 +715,16 @@ class GazeBehaviorIdentifier:
         }
 
         # Concatenate all results
-        result_dictionary = blink_results | invalid_results | saccade_results | visual_scanning_results | fixation_results | smooth_pursuit_results | other_results | kwarg
+        result_dictionary = (
+            blink_results
+            | invalid_results
+            | saccade_results
+            | visual_scanning_results
+            | fixation_results
+            | smooth_pursuit_results
+            | other_results
+            | kwarg
+        )
         result_data_frame = pd.DataFrame(result_dictionary)
 
         return result_data_frame

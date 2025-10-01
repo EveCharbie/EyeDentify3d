@@ -156,8 +156,12 @@ class SmoothPursuitEvent(Event):
         smooth_pursuit_total_duration = self.total_duration()
         smooth_pursuit_mean_duration = self.mean_duration()
         smooth_pursuit_max_duration = self.max_duration()
-        smooth_pursuit_mean_trajectory = None if self.nb_events() == 0 else float(np.nanmean(self.smooth_pursuit_trajectories))
-        smooth_pursuit_max_trajectory = None if self.nb_events() == 0 else float(np.nanmax(self.smooth_pursuit_trajectories))
+        smooth_pursuit_mean_trajectory = (
+            None if self.nb_events() == 0 else float(np.nanmean(self.smooth_pursuit_trajectories))
+        )
+        smooth_pursuit_max_trajectory = (
+            None if self.nb_events() == 0 else float(np.nanmax(self.smooth_pursuit_trajectories))
+        )
 
         results = {
             "smooth_pursuit_number": [smooth_pursuit_number],

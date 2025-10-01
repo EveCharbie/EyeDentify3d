@@ -17,6 +17,7 @@ from eyedentify3d import (
     GazeBehaviorIdentifier,
 )
 
+
 def perform_one_file(
     data_file_path: str,
     min_time: float,
@@ -145,7 +146,9 @@ def perform_all_files():
         os.makedirs(f"{current_path_file}/../examples/results/HTC_Vive_Pro")
 
     full_trial_dataframe = pd.concat(full_trial_list_of_dataframe, ignore_index=True)
-    full_trial_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/full_trial_results.csv", index=False)
+    full_trial_dataframe.to_csv(
+        f"{current_path_file}/../examples/results/HTC_Vive_Pro/full_trial_results.csv", index=False
+    )
 
     pre_cue_dataframe = pd.concat(pre_cue_list_of_dataframe, ignore_index=True)
     pre_cue_dataframe.to_csv(f"{current_path_file}/../examples/results/HTC_Vive_Pro/pre_cue_results.csv", index=False)
