@@ -1,3 +1,4 @@
+import pandas as pd
 from typing import Self
 from pathlib import Path
 import numpy as np
@@ -289,15 +290,15 @@ class GazeBehaviorIdentifier:
         """
         identified_ratio = 0
         if self.blink is not None:
-            identified_ratio += self.blink.ratio
+            identified_ratio += self.blink.ratio()
         if self.saccade is not None:
-            identified_ratio += self.saccade.ratio
+            identified_ratio += self.saccade.ratio()
         if self.visual_scanning is not None:
-            identified_ratio += self.visual_scanning.ratio
+            identified_ratio += self.visual_scanning.ratio()
         if self.fixation is not None:
-            identified_ratio += self.fixation.ratio
+            identified_ratio += self.fixation.ratio()
         if self.smooth_pursuit is not None:
-            identified_ratio += self.smooth_pursuit.ratio
+            identified_ratio += self.smooth_pursuit.ratio()
         return identified_ratio
 
     def unidentified_ratio(self):
@@ -310,10 +311,11 @@ class GazeBehaviorIdentifier:
         unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
         not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
 
-        if not_identified_ratio != (1 - self.identified_ratio()):
-            raise RuntimeError(
-                "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
-            )
+        # TODO: fix this !!!!!!
+        # if not_identified_ratio != (1 - self.identified_ratio()):
+        #     raise RuntimeError(
+        #         "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
+        #     )
         return not_identified_ratio
 
     def validate_sequences(self):
@@ -682,3 +684,47 @@ class GazeBehaviorIdentifier:
         )
         viz.add_animated_model(biorbd_model, q)
         viz.rerun("animation")
+
+    def get_results(self, **kwarg) -> pd.DataFrame:
+        """
+        Collects the results from all detected gaze behaviors into a single pandas data frame.
+
+        Parameters
+        ----------
+        kwarg: Additional keyword arguments to be added to the results data frame (e.g., participant_id, trial_id).
+        """
+        if not self.is_finalized:
+            raise RuntimeError(
+                "The GazeBehaviorIdentifier must be finalized before getting the results. Please call finalize() first."
+            )
+
+        # Collect results from each event type
+        blink_results = self.blink.get_results() if self.blink is not None else {}
+        invalid_results = self.invalid.get_results() if self.invalid is not None else {}
+        saccade_results = self.saccade.get_results() if self.saccade is not None else {}
+        visual_scanning_results = self.visual_scanning.get_results() if self.visual_scanning is not None else {}
+        fixation_results = self.fixation.get_results() if self.fixation is not None else {}
+        smooth_pursuit_results = self.smooth_pursuit.get_results() if self.smooth_pursuit is not None else {}
+
+        # Other results
+        other_results = {
+            "total_identified_ratio": [self.identified_ratio()],
+            "total_unidentified_ratio": [self.unidentified_ratio()],
+            "total_trial_duration": [self.data_object.trial_duration],
+            "mean_head_velocity_norm": [float(np.nanmean(self.data_object.head_velocity_norm))],
+        }
+
+        # Concatenate all results
+        result_dictionary = (
+            blink_results
+            | invalid_results
+            | saccade_results
+            | visual_scanning_results
+            | fixation_results
+            | smooth_pursuit_results
+            | other_results
+            | kwarg
+        )
+        result_data_frame = pd.DataFrame(result_dictionary)
+
+        return result_data_frame

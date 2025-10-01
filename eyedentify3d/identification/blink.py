@@ -123,3 +123,32 @@ class BlinkEvent(Event):
             plt.show()
 
         return fig  # for plot tests
+
+    def get_results(self) -> dict:
+        """
+        Get the results of the blink events as a dictionary.
+
+        Returns
+        -------
+        A dictionary containing:
+            - 'blink_number': Total number of detected blink events.
+            - 'blink_ratio': Proportion of the trial duration spent in blinks (total blink duration/trial duration).
+            - 'blink_total_duration': Total duration of all blink events (in seconds).
+            - 'blink_mean_duration': Mean duration of blink events (in seconds).
+            - 'blink_max_duration': Duration of the longest blink event (in seconds).
+        """
+        blink_number = self.nb_events()
+        blink_ratio = self.ratio()
+        blink_total_duration = self.total_duration()
+        blink_mean_duration = self.mean_duration()
+        blink_max_duration = self.max_duration()
+
+        results = {
+            "blink_number": [blink_number],
+            "blink_ratio": [blink_ratio],
+            "blink_total_duration": [blink_total_duration],
+            "blink_mean_duration": [blink_mean_duration],
+            "blink_max_duration": [blink_max_duration],
+        }
+
+        return results

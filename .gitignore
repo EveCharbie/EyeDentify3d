@@ -172,3 +172,11 @@ AllData/
 tests/figures/
 
 examples/figures/
+
+bad_data_files.txt
+
+examples/results/HTC_Vive_Pro/full_trial_results.csv
+
+examples/results/HTC_Vive_Pro/post_cue_results.csv
+
+examples/results/HTC_Vive_Pro/pre_cue_results.csv

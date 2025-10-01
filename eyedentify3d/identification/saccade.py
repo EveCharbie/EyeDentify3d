@@ -257,3 +257,36 @@ class SaccadeEvent(Event):
             plt.show()
 
         return fig  # for plot tests
+
+    def get_results(self) -> dict:
+        """
+        Get the results of the saccade events as a dictionary.
+
+        Returns
+        -------
+        A dictionary containing:
+            - 'saccade_number': Total number of detected saccade events.
+            - 'saccade_ratio': Proportion of the trial duration spent in saccades (total saccade duration/trial duration).
+            - 'saccade_total_duration': Total duration of all saccade events (in seconds).
+            - 'saccade_mean_duration': Mean duration of saccade events (in seconds).
+            - 'saccade_max_duration': Duration of the longest saccade event (in seconds).
+        """
+        saccade_number = self.nb_events()
+        saccade_ratio = self.ratio()
+        saccade_total_duration = self.total_duration()
+        saccade_mean_duration = self.mean_duration()
+        saccade_max_duration = self.max_duration()
+        saccade_mean_amplitudes = float(np.nanmean(self.saccade_amplitudes))
+        saccade_max_amplitudes = float(np.nanmax(self.saccade_amplitudes))
+
+        results = {
+            "saccade_number": [saccade_number],
+            "saccade_ratio": [saccade_ratio],
+            "saccade_total_duration": [saccade_total_duration],
+            "saccade_mean_duration": [saccade_mean_duration],
+            "saccade_max_duration": [saccade_max_duration],
+            "saccade_mean_amplitudes": [saccade_mean_amplitudes],
+            "saccade_max_amplitudes": [saccade_max_amplitudes],
+        }
+
+        return results

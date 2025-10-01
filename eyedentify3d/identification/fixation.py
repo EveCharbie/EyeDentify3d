@@ -130,3 +130,35 @@ class FixationEvent(Event):
             plt.show()
 
         return fig  # for plot tests
+
+    def get_results(self) -> dict:
+        """
+        Get the results of the fixation events as a dictionary.
+
+        Returns
+        -------
+        A dictionary containing:
+            - 'fixation_number': Total number of detected fixation events.
+            - 'fixation_ratio': Proportion of the trial duration spent in fixations (total fixation duration/trial
+                duration).
+            - 'fixation_total_duration': Total duration of all fixation events (in seconds).
+            - 'fixation_mean_duration': Mean duration of the fixation events (in seconds).
+            - 'fixation_max_duration': Duration of the longest fixation events (in seconds).
+        """
+        fixation_number = self.nb_events()
+        fixation_ratio = self.ratio()
+        fixation_total_duration = self.total_duration()
+        fixation_mean_duration = self.mean_duration()
+        fixation_max_duration = self.max_duration()
+        fixation_search_rate = self.search_rate
+
+        results = {
+            "fixation_number": [fixation_number],
+            "fixation_ratio": [fixation_ratio],
+            "fixation_total_duration": [fixation_total_duration],
+            "fixation_mean_duration": [fixation_mean_duration],
+            "fixation_max_duration": [fixation_max_duration],
+            "fixation_search_rate": [fixation_search_rate],
+        }
+
+        return results

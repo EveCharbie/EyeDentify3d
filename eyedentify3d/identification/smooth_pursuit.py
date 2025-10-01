@@ -136,3 +136,41 @@ class SmoothPursuitEvent(Event):
             plt.show()
 
         return fig  # for plot tests
+
+    def get_results(self) -> dict:
+        """
+        Get the results of the smooth pursuit events as a dictionary.
+
+        Returns
+        -------
+        A dictionary containing:
+            - 'smooth_pursuit_number': Total number of detected smooth pursuit events.
+            - 'smooth_pursuit_ratio': Proportion of the trial duration spent in smooth pursuits (total smooth pursuit
+                duration/trial duration).
+            - 'smooth_pursuit_total_duration': Total duration of all smooth pursuit events (in seconds).
+            - 'smooth_pursuit_mean_duration': Mean duration of the smooth pursuit events (in seconds).
+            - 'smooth_pursuit_max_duration': Duration of the longest smooth pursuit events (in seconds).
+        """
+        smooth_pursuit_number = self.nb_events()
+        smooth_pursuit_ratio = self.ratio()
+        smooth_pursuit_total_duration = self.total_duration()
+        smooth_pursuit_mean_duration = self.mean_duration()
+        smooth_pursuit_max_duration = self.max_duration()
+        smooth_pursuit_mean_trajectory = (
+            None if self.nb_events() == 0 else float(np.nanmean(self.smooth_pursuit_trajectories))
+        )
+        smooth_pursuit_max_trajectory = (
+            None if self.nb_events() == 0 else float(np.nanmax(self.smooth_pursuit_trajectories))
+        )
+
+        results = {
+            "smooth_pursuit_number": [smooth_pursuit_number],
+            "smooth_pursuit_ratio": [smooth_pursuit_ratio],
+            "smooth_pursuit_total_duration": [smooth_pursuit_total_duration],
+            "smooth_pursuit_mean_duration": [smooth_pursuit_mean_duration],
+            "smooth_pursuit_max_duration": [smooth_pursuit_max_duration],
+            "smooth_pursuit_mean_trajectory": [smooth_pursuit_mean_trajectory],
+            "smooth_pursuit_max_trajectory": [smooth_pursuit_max_trajectory],
+        }
+
+        return results
