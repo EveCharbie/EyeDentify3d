@@ -82,5 +82,6 @@ def main():
     if os.path.exists("figures/all_gaze_behaviors.png"):
         os.remove("figures/all_gaze_behaviors.png")
 
+
 if __name__ == "__main__":
     main()

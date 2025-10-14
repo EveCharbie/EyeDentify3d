@@ -74,7 +74,9 @@ class PicoNeoData(Data):
             self.error_type(error_str)
 
         if (
-            np.sum(np.logical_or(self.csv_data["Left Eye Pose Status"] != 1, self.csv_data["Right Eye Pose Status"] != 1))
+            np.sum(
+                np.logical_or(self.csv_data["Left Eye Pose Status"] != 1, self.csv_data["Right Eye Pose Status"] != 1)
+            )
             > len(self.csv_data["Left Eye Pose Status"]) / 2
         ):
             self._validity_flag = False
@@ -127,9 +129,10 @@ class PicoNeoData(Data):
         self.left_eye_openness = self.csv_data["Left Eye Gaze Openness"]
 
         import matplotlib.pyplot as plt
+
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(self.right_eye_openness, 'r', label="Right Eye Gaze Openness")
-        axs[0].plot(self.left_eye_openness, 'g', label="Left Eye Gaze Openness")
+        axs[0].plot(self.right_eye_openness, "r", label="Right Eye Gaze Openness")
+        axs[0].plot(self.left_eye_openness, "g", label="Left Eye Gaze Openness")
         axs[0].legend()
         axs[1].plot(self.csv_data["Eye Right Blinking"], "r", label="Eye Right blinking")
         axs[1].plot(self.csv_data["Eye Left Blinking"], "g", label="Eye Left blinking")
@@ -142,7 +145,11 @@ class PicoNeoData(Data):
         Get the eye direction from the csv data. It is a unit vector in the same direction as the eyes.
         """
         eye_direction = np.array(
-            [self.csv_data["Combine Eye Gaze Vector. x"], self.csv_data["Combine Eye Gaze Vector. y"], self.csv_data["Combine Eye Gaze Vector. z"]]
+            [
+                self.csv_data["Combine Eye Gaze Vector. x"],
+                self.csv_data["Combine Eye Gaze Vector. y"],
+                self.csv_data["Combine Eye Gaze Vector. z"],
+            ]
         )
 
         eye_direction_norm = np.linalg.norm(eye_direction, axis=0)
@@ -172,4 +179,6 @@ class PicoNeoData(Data):
         """
         Get a numpy array of bool indicating if the eye-tracker declared this data frame as invalid.
         """
-        self.data_invalidity = np.logical_or(self.csv_data["Left Eye Pose Status"] != 1, self.csv_data["Right Eye Pose Status"] != 1)
+        self.data_invalidity = np.logical_or(
+            self.csv_data["Left Eye Pose Status"] != 1, self.csv_data["Right Eye Pose Status"] != 1
+        )
