@@ -13,7 +13,7 @@ def main():
     time_range = TimeRange(min_time=0, max_time=5.06)
 
     # Load the data from the HTC Vive Pro
-    data_file_path = "data/Pico_Neo_3_Pro/boxing_VR.csv"
+    data_file_path = "data/Pico_Neo_3_Pro/boxing_2D.csv"
     data_object = PicoNeoData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
 
     # Create a GazeBehaviorIdentifier object

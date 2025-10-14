@@ -61,7 +61,7 @@ class GazeBehaviorIdentifier:
     def data_object(self, value: DataObject):
         if not isinstance(value, DataObject):
             raise ValueError(
-                f"The data_object must be an instance of HtcViveProData or PupilInvisibleData, got {value}."
+                f"The data_object must be an instance of HtcViveProData, PupilInvisibleData, or PicoNeoData, got {value}."
             )
         self._data_object = value
 

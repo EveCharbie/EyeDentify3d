@@ -75,7 +75,7 @@ class PicoNeoData(Data):
 
         if (
             np.sum(
-                np.logical_or(self.csv_data["Left Eye Pose Status"] != 1, self.csv_data["Right Eye Pose Status"] != 1)
+                np.logical_or(self.csv_data["Left Eye Pose Status"] != 52, self.csv_data["Right Eye Pose Status"] != 52)
             )
             > len(self.csv_data["Left Eye Pose Status"]) / 2
         ):
@@ -125,14 +125,13 @@ class PicoNeoData(Data):
         """
         Set the eye openness of both eyes.
         """
-        self.right_eye_openness = self.csv_data[" Right Eye Gaze Openness"]
-        self.left_eye_openness = self.csv_data["Left Eye Gaze Openness"]
+        self.right_eye_openness = np.ones_like(self.csv_data["Eye Right Blinking"])
+        self.left_eye_openness = np.ones_like(self.csv_data["Eye Left Blinking"])
 
         import matplotlib.pyplot as plt
-
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(self.right_eye_openness, "r", label="Right Eye Gaze Openness")
-        axs[0].plot(self.left_eye_openness, "g", label="Left Eye Gaze Openness")
+        # axs[0].plot(self.right_eye_openness, "r", label="Right Eye Gaze Openness")
+        # axs[0].plot(self.left_eye_openness, "g", label="Left Eye Gaze Openness")
         axs[0].legend()
         axs[1].plot(self.csv_data["Eye Right Blinking"], "r", label="Eye Right blinking")
         axs[1].plot(self.csv_data["Eye Left Blinking"], "g", label="Eye Left blinking")
@@ -180,5 +179,5 @@ class PicoNeoData(Data):
         Get a numpy array of bool indicating if the eye-tracker declared this data frame as invalid.
         """
         self.data_invalidity = np.logical_or(
-            self.csv_data["Left Eye Pose Status"] != 1, self.csv_data["Right Eye Pose Status"] != 1
+            self.csv_data["Left Eye Pose Status"] != 52, self.csv_data["Right Eye Pose Status"] != 52
         )
