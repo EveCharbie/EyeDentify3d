@@ -1,20 +1,17 @@
 """
-In this example, we will load the data from the HTC Vive Pro and extract gaze behavior from the data.
+In this example, we will load the data from the Pico Noe and extract gaze behavior from the data.
 """
 
 import os
 
-from eyedentify3d import HtcViveProData, TimeRange, ErrorType, GazeBehaviorIdentifier
+from eyedentify3d import PicoNeoData, ErrorType, GazeBehaviorIdentifier
 
 
 def main():
 
-    # Cut the data after the end of the trial (black screen happening at 7.180 seconds)
-    time_range = TimeRange(min_time=0, max_time=5.06)
-
     # Load the data from the HTC Vive Pro
-    data_file_path = "data/HTC_Vive_Pro/TESTNA05_360VR_Spread7.csv"
-    data_object = HtcViveProData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
+    data_file_path = "data/Pico_Neo_3_Pro/boxing_360.csv"
+    data_object = PicoNeoData(data_file_path, error_type=ErrorType.PRINT)
 
     # Create a GazeBehaviorIdentifier object
     gaze_behavior_identifier = GazeBehaviorIdentifier(data_object)
@@ -23,7 +20,7 @@ def main():
     gaze_behavior_identifier.detect_blink_sequences(eye_openness_threshold=0.5)
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences(
-        min_acceleration_threshold=4000,
+        min_acceleration_threshold=1000,
         velocity_window_size=0.52,
         velocity_factor=5.0,
     )
@@ -65,6 +62,22 @@ def main():
     # For this example, we will remove all files generated, but in a real case, they should be kept
     if os.path.exists("bad_data_files.txt"):
         os.remove("bad_data_files.txt")
+    if os.path.exists("figures/blink_detection.png"):
+        os.remove("figures/blink_detection.png")
+    if os.path.exists("figures/invalid_detection.png"):
+        os.remove("figures/invalid_detection.png")
+    if os.path.exists("figures/saccade_detection.png"):
+        os.remove("figures/saccade_detection.png")
+    if os.path.exists("figures/visual_scanning_detection.png"):
+        os.remove("figures/visual_scanning_detection.png")
+    if os.path.exists("figures/inter_saccadic_detection.png"):
+        os.remove("figures/inter_saccadic_detection.png")
+    if os.path.exists("figures/fixation_detection.png"):
+        os.remove("figures/fixation_detection.png")
+    if os.path.exists("figures/smooth_pursuit_detection.png"):
+        os.remove("figures/smooth_pursuit_detection.png")
+    if os.path.exists("figures/all_gaze_behaviors.png"):
+        os.remove("figures/all_gaze_behaviors.png")
 
 
 if __name__ == "__main__":

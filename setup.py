@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="eyedentify3d",
-    version="1.0.3",
+    version="1.0.4",
     author="Eve Charbonneau",
     author_email="eve.charbie@gmail.com",
     description="Identify gaze behaviors from 3D eye-trakcing data",
@@ -21,7 +21,7 @@ setuptools.setup(
 )
 
 # Publish on pip manually
-# 1) change version in version.py, setup.py, and pyproject.toml
+# 1) change version in version.py, setup.py
 # 2) Remove old wheel build from dist folder
 # 3) python setup.py sdist bdist_wheel
 # 4) python -m twine upload dist/*

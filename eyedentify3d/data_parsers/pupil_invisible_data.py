@@ -118,7 +118,7 @@ class PupilInvisibleData(Data):
     @destroy_on_fail
     def _remove_duplicates(self):
         """
-        check that there are no duplicate time frames in the time vector.
+        Check that there are no duplicate time frames in the time vector.
         """
         if len(np.where(np.abs(self.time_vector[1:] - self.time_vector[:-1]) < 1e-10)[0]) > 0:
             raise RuntimeError(

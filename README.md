@@ -3,7 +3,6 @@
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a>
 [![Build status](https://github.com/EveCharbie/EyeDentify3d/actions/workflows/run_tests.yml/badge.svg)](https://github.com/EveCharbie/EyeDentify3d/actions)
 [![codecov](https://codecov.io/gh/EveCharbie/EyeDentify3d/graph/badge.svg?token=BP4B2TCZXI)](https://codecov.io/gh/EveCharbie/EyeDentify3d)
-[![Maintainability](https://qlty.sh/gh/EveCharbie/projects/EyeDentify3d/maintainability.svg)](https://qlty.sh/gh/EveCharbie/projects/EyeDentify3d)
 
 ![Animation](docs/figures/animation.gif)
 
