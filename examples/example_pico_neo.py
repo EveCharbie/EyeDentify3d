@@ -4,17 +4,14 @@ In this example, we will load the data from the Pico Noe and extract gaze behavi
 
 import os
 
-from eyedentify3d import PicoNeoData, TimeRange, ErrorType, GazeBehaviorIdentifier
+from eyedentify3d import PicoNeoData, ErrorType, GazeBehaviorIdentifier
 
 
 def main():
 
-    # Cut the data after the end of the trial (black screen happening at 7.180 seconds)
-    time_range = TimeRange(min_time=0, max_time=5.06)
-
     # Load the data from the HTC Vive Pro
-    data_file_path = "data/Pico_Neo_3_Pro/boxing_2D.csv"
-    data_object = PicoNeoData(data_file_path, error_type=ErrorType.PRINT, time_range=time_range)
+    data_file_path = "data/Pico_Neo_3_Pro/boxing_360.csv"
+    data_object = PicoNeoData(data_file_path, error_type=ErrorType.PRINT)
 
     # Create a GazeBehaviorIdentifier object
     gaze_behavior_identifier = GazeBehaviorIdentifier(data_object)
@@ -23,7 +20,7 @@ def main():
     gaze_behavior_identifier.detect_blink_sequences(eye_openness_threshold=0.5)
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences(
-        min_acceleration_threshold=4000,
+        min_acceleration_threshold=1000,
         velocity_window_size=0.52,
         velocity_factor=5.0,
     )

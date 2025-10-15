@@ -48,9 +48,9 @@ class GazeBehaviorIdentifier:
         self.inter_saccadic_sequences: InterSaccadicEvent = None
         self.fixation: FixationEvent = None
         self.smooth_pursuit: SmoothPursuitEvent = None
-        self.identified_indices: np.ndarray[int] = None
+        self.unavailable_indices: np.ndarray[int] = None
         self.fast_frame_indices: np.ndarray[bool] = None
-        self._initialize_identified_indices()
+        self._initialize_unavailable_indices()
         self.is_finalized = False
 
     @property
@@ -65,9 +65,9 @@ class GazeBehaviorIdentifier:
             )
         self._data_object = value
 
-    def _initialize_identified_indices(self):
-        self.identified_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
-        self.identified_indices.fill(False)
+    def _initialize_unavailable_indices(self):
+        self.unavailable_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
+        self.unavailable_indices.fill(False)
 
     def remove_bad_frames(self, event_identifier):
         """
@@ -82,7 +82,7 @@ class GazeBehaviorIdentifier:
         self.data_object.eye_direction[:, event_identifier.frame_indices] = np.nan
         self.data_object.gaze_direction[:, event_identifier.frame_indices] = np.nan
 
-    def set_identified_frames(self, event_identifier):
+    def set_unavailable_frames(self, event_identifier):
         """
         When an event is identified at a frame, this frame becomes identified and is not available for further
         identification, as events are mutually exclusive and have a detection priority ordering.
@@ -93,7 +93,7 @@ class GazeBehaviorIdentifier:
                 "The event identifier must have a 'frame_indices' attribute. This should not happen, please contact the developer."
             )
 
-        self.identified_indices[event_identifier.frame_indices] = True
+        self.unavailable_indices[event_identifier.frame_indices] = True
 
     def detect_blink_sequences(self, eye_openness_threshold: float = 0.5):
         """
@@ -106,7 +106,7 @@ class GazeBehaviorIdentifier:
         self.blink = BlinkEvent(self.data_object, eye_openness_threshold)
         self.blink.initialize()
         self.remove_bad_frames(self.blink)
-        self.set_identified_frames(self.blink)
+        self.set_unavailable_frames(self.blink)
 
     def detect_invalid_sequences(self):
         """
@@ -115,7 +115,7 @@ class GazeBehaviorIdentifier:
         self.invalid = InvalidEvent(self.data_object)
         self.invalid.initialize()
         self.remove_bad_frames(self.invalid)
-        self.set_identified_frames(self.invalid)
+        self.set_unavailable_frames(self.invalid)
 
     def detect_saccade_sequences(
         self,
@@ -137,13 +137,13 @@ class GazeBehaviorIdentifier:
         """
         self.saccade = SaccadeEvent(
             self.data_object,
-            self.identified_indices,
+            self.unavailable_indices,
             min_acceleration_threshold,
             velocity_window_size,
             velocity_factor,
         )
         self.saccade.initialize()
-        self.set_identified_frames(self.saccade)
+        self.set_unavailable_frames(self.saccade)
 
     def detect_visual_scanning_sequences(self, min_velocity_threshold: float = 100, minimal_duration: float = 0.040):
         """
@@ -157,21 +157,21 @@ class GazeBehaviorIdentifier:
         """
         self.visual_scanning = VisualScanningEvent(
             self.data_object,
-            self.identified_indices,
+            self.unavailable_indices,
             min_velocity_threshold,
             minimal_duration,
         )
         self.visual_scanning.initialize()
 
         # Remove frames where visual scanning events are detected
-        self.set_identified_frames(self.visual_scanning)
+        self.set_unavailable_frames(self.visual_scanning)
         # Also remove all frames where the velocity is above threshold, as these frames are not available for the
         # detection of other events. Please note that these frames might not be part of a visual scanning event if the
         # velocity is not maintained for at least minimal_duration.
         self.fast_frame_indices = np.where(
             np.abs(self.data_object.gaze_angular_velocity) > self.visual_scanning.min_velocity_threshold
         )[0]
-        self.identified_indices[self.fast_frame_indices] = True
+        self.unavailable_indices[self.fast_frame_indices] = True
 
     def detect_fixation_and_smooth_pursuit_sequences(
         self,
@@ -227,7 +227,7 @@ class GazeBehaviorIdentifier:
         """
         self.inter_saccadic_sequences = InterSaccadicEvent(
             self.data_object,
-            self.identified_indices,
+            self.unavailable_indices,
             inter_saccade_minimal_duration,
             window_duration,
             window_overlap,
@@ -244,7 +244,7 @@ class GazeBehaviorIdentifier:
 
         self.fixation = FixationEvent(
             self.data_object,
-            self.identified_indices,
+            self.unavailable_indices,
             self.inter_saccadic_sequences.fixation_indices,
             fixation_minimal_duration,
         )
@@ -252,15 +252,15 @@ class GazeBehaviorIdentifier:
 
         self.smooth_pursuit = SmoothPursuitEvent(
             self.data_object,
-            self.identified_indices,
+            self.unavailable_indices,
             self.inter_saccadic_sequences.smooth_pursuit_indices,
             smooth_pursuit_minimal_duration,
         )
         self.smooth_pursuit.initialize()
         self.inter_saccadic_sequences.finalize(self.fixation.sequences, self.smooth_pursuit.sequences)
 
-        self.set_identified_frames(self.fixation)
-        self.set_identified_frames(self.smooth_pursuit)
+        self.set_unavailable_frames(self.fixation)
+        self.set_unavailable_frames(self.smooth_pursuit)
 
     @property
     def unidentified_indices(self):
@@ -273,7 +273,6 @@ class GazeBehaviorIdentifier:
         )  # Initialize as all frames identified
         for sequence in (
             self.blink.sequences
-            + self.invalid.sequences
             + self.saccade.sequences
             + self.visual_scanning.sequences
             + self.fixation.sequences
@@ -283,6 +282,27 @@ class GazeBehaviorIdentifier:
                 unidentified_indices[sequence] = False  # Mark identified frames as False
 
         return unidentified_indices
+
+    @property
+    def identified_indices(self):
+        """
+        Update the identified frames based on the identified sequences.
+        This is useful to avoid fast and invalid frames that were previously accounted.
+        """
+        identified_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
+        identified_indices.fill(False)
+        for sequence in (
+                self.blink.sequences
+                + self.saccade.sequences
+                + self.visual_scanning.sequences
+                + self.fixation.sequences
+                + self.smooth_pursuit.sequences
+        ):
+            if len(sequence) != 0:
+                identified_indices[sequence] = True  # Mark identified frames as True
+
+        return identified_indices
+
 
     def identified_ratio(self):
         """
@@ -303,7 +323,7 @@ class GazeBehaviorIdentifier:
 
     def unidentified_ratio(self):
         """
-        Get the proportion of the trail when it was not possible to identify a gaze behavior.
+        Get the proportion of the trial when it was not possible to identify a gaze behavior.
         """
         delta_time = np.hstack(
             (self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt)
@@ -311,11 +331,11 @@ class GazeBehaviorIdentifier:
         unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
         not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
 
-        # TODO: fix this !!!!!!
-        # if not_identified_ratio != (1 - self.identified_ratio()):
-        #     raise RuntimeError(
-        #         "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
-        #     )
+        # Sanity check
+        if not_identified_ratio != (1 - self.identified_ratio()):
+            raise RuntimeError(
+                "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
+            )
         return not_identified_ratio
 
     def validate_sequences(self):
@@ -389,10 +409,8 @@ class GazeBehaviorIdentifier:
         # Check that the identified frames are the frames in the sequences
         for sequence in (
             self.blink.sequences
-            + self.invalid.sequences
             + self.saccade.sequences
             + self.visual_scanning.sequences
-            + self.inter_saccadic_sequences.sequences
             + self.fixation.sequences
             + self.smooth_pursuit.sequences
         ):
@@ -402,17 +420,15 @@ class GazeBehaviorIdentifier:
                     "This should not happen, please contact the developer."
                 )
         for frame in np.where(self.unidentified_indices)[0]:
-            if frame in np.where(self.identified_indices)[0] and frame not in self.fast_frame_indices:
+            if frame in np.where(self.identified_indices)[0]:
                 raise RuntimeError(
                     "There are frames that are considered as unidentified, but that are also considered as identified."
                     "This should not happen, please contact the developer."
                 )
             for sequence in (
                 self.blink.sequences
-                + self.invalid.sequences
                 + self.saccade.sequences
                 + self.visual_scanning.sequences
-                + self.inter_saccadic_sequences.sequences
                 + self.fixation.sequences
                 + self.smooth_pursuit.sequences
             ):
@@ -518,9 +534,6 @@ class GazeBehaviorIdentifier:
         reduced_gaze_behavior_identifier.smooth_pursuit = SmoothPursuitEvent(reduced_data_object).from_sequences(
             get_sequences_in_range(self.data_object.time_vector, time_range, self.smooth_pursuit.sequences)
         )
-
-        # Identified indices
-        reduced_gaze_behavior_identifier.identified_indices = ~reduced_gaze_behavior_identifier.unidentified_indices
 
         # Fast frame indices
         first_index_in_old_time_vector = time_range.get_indices(self.data_object.time_vector)[0]

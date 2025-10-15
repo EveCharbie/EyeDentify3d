@@ -129,6 +129,7 @@ class PicoNeoData(Data):
         self.left_eye_openness = np.ones_like(self.csv_data["Eye Left Blinking"])
 
         import matplotlib.pyplot as plt
+
         fig, axs = plt.subplots(2, 1)
         # axs[0].plot(self.right_eye_openness, "r", label="Right Eye Gaze Openness")
         # axs[0].plot(self.left_eye_openness, "g", label="Left Eye Gaze Openness")
