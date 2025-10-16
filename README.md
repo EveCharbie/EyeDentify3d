@@ -25,3 +25,12 @@ package features and underlying mathematical choices [here](https://evecharbie.g
 ## Examples
 Examples of usage can be found in the [examples](examples/) directory.
 
+## Citation
+If you use `EyeDentify3D` in your research, please cite the following paper:
+```@article{Charbonneau2025EyeDentify3D,
+  title={EyeDentify3D: A Python package for gaze behavior classification of 3D eye-tracking data},
+  author={Charbonneau, Eve and Romeas, Thomas and Trempe, Maxime},
+  journal={Submitted to Journal of Open Source Software},
+}
+```
+

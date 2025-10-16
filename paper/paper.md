@@ -34,46 +34,52 @@ bibliography: paper.bib
 
 # Summary
 
-With the technological advances of portable eye-tracking technologies, researchers can now place participants in 
+With the technological advances of mobile eye-tracking technologies, researchers can now place participants in 
 real-world settings and measure their head and eye orientation to get the gaze orientation in 3D space. 
 Although more ecological, real-world eye-tracking data must be post-processed to extract interpretable gaze behaviors 
-(e.g., fixations, saccades, smooth pursuits, visual scanning) than in the raw gaze data itself. 
-However, most algorithms for classifying gaze behaviour were developed for screen-based eye-tracking data (2D) acquired 
-with the head fixed in space.
-These algorithms are ill-suited for real-world portable eye-tracking data (3D) where the gaze-vector origin and endpoint 
+(e.g., fixations, saccades, smooth pursuits, visual scanning) from raw gaze coordinates. 
+However, most open-source gaze classification algorithms were developed for screen-based eye-tracking, where data are 
+recorded on a 2D plane and the participant’s head is kept still.
+These algorithms are ill-suited for real-world mobile eye-tracking data (3D) where the gaze-vector origin and endpoint 
 are not constrained in space. 
+Additionally, eye-tracking researchers often rely on study-specific analysis pipelines, which leads to methodological 
+discrepancies that impede cross-study comparison and the interpretation of results, ultimately limiting our 
+understanding of gaze behavior-related phenomena.
 To address this gap, we developed `EyeDentify3D`, an automated and modulable pipeline for analyzing real-world 
 eye-tracking data.
 
 # Statement of need
 
-`EyeDentify3D` is a Python package for extracting gaze behavior from portable eye-tracking data. 
+`EyeDentify3D` is a Python package for identifying gaze behavior from mobile eye-tracking data. 
 It was designed to:
-1. Extract and interpret data from various eye-tracking systems (e.g., HTC Vive Pro, Pupil Invisible, 
-Meta Quest Pro, Pico Neo 3 Pro Eye).
-2. Provide a simple user interface, where only a few lines of code are needed to extract the desired 
-gaze behaviors.
+1. Interpret data from various mobile eye-tracking systems (e.g., Pupil Invisible), including those embedded in 
+head-mounted displays (e.g., HTC Vive Pro, Pico Neo 3 Pro Eye).
+2. Provide a simple user interface, where only a few lines of code are needed to identify the desired 
+gaze behaviors and extract related metrics.
 3. Enable visual inspection of the classification results.
 
-`EyeDentify3D` was designed to be used by both neuroscience and sport researchers. It has already been used in sport 
-psychology to analyze the gaze behavior of basketball players [@Trempe:2025], baseball players, and boxers. 
-The toolbox is distributed openly to help researchers more reliably identify and analyze gaze behaviors in real-world 
-scenarios hoping that it will help improving understanding of visual strategy mechanisms.
-We cannot wait for our toolbox to be used to analyze gaze behavior in a variety of contexts!
+`EyeDentify3D` was designed to be used is science and human performance analysis. It has already been used in sport 
+psychology to analyze the gaze behavior of basketball players [@Trempe:2025], and was used in pilot studies on baseball 
+players, trampolinists, and boxers. 
+Our objective is to distribute the toolbox openly to help researchers more reliably identify and analyze gaze behaviors 
+in real-world scenarios and promote standardization in gaze analysis, thereby improving our understanding of 
+visual-strategy mechanisms.
 
 # Background
 
-Each trial recorded during an experiment is analyzed frame-by-frame; for each frame, the pipeline applies a classified 
-based on the following criteria:
-1. **Invalid**: The eye-tracker has declared having low confidence in the gaze orientation measurement (this often happen 
-when the eyes are closed, the eye orientation is outside the eye-tracker's measurement range, or if the eye-tracker was 
-not positioned correctly on the participant).
+For each trial recorded during an experiment, the head and eye rotations are extracted from the eye-tracking data.
+The gaze orientation (head and eye rotations combined) expressed in 3D space is then analyzed frame-by-frame.
+For each frame, the pipeline applies a step-by-step classification based on the following criteria:
+1. **Invalid**: The eye-tracker has declared having low confidence in the gaze orientation measurement and considers 
+the data invalid. This often happens when the eyes are closed (e.g., during a blink), the eye orientation is outside 
+the eye-tracker's measurement range, or if the 
+eye-tracker was not positioned properly on the participant.
 2. **Blink**: The eye openness is below the threshold [@Chen:2021].
-3. **Saccade**: Two criteria must be met to detect a saccade. 1) The eye movement must be faster than a dynamics 
+3. **Saccade**: Two criteria must be met to detect a saccade. 1) The eye movement must be faster than a dynamical
 threshold. The dynamics threshold is determined using a rolling median over a user defined window size. 2) The eye 
 movement acceleration must be larger than a user defined threshold for at least two frames. This ensures that the eyes 
 are moving rapidly between two targets with an acceleration when leaving the first target and a deceleration when 
-arriving to the second target [@Van:1987].
+arriving at the second target [@Van:1987].
 4. **Visual scanning**: The gaze (head + eyes) velocity is larger than a threshold [@Mcguckian:2020]. Visual scanning should usually be 
 identified after saccades as visual scanning behavior would also present high eye velocity.
 5. **Inter-saccadic interval**: Our inter-saccadic interval classification was adapted from 
@@ -96,12 +102,13 @@ More details on the definition of events and how they are identified can be foun
 [documentation](https://evecharbie.github.io/EyeDentify3d).
 
 Finally, `EyeDentify3D` enables visualisation of the classified gaze data and extraction/export of metrics related to 
-the behaviors (e.g., duration, time ratio spent in each behavior, number of occurrences, saccade amplitude, smooth 
+the behaviors (e.g., mean duration, time ratio spent in each behavior, number of occurrences, saccade amplitude, smooth 
 pursuit trajectory length, etc.).
 
 # Note on the implementation
 We believe that the choices made in `EyeDentify3D` are the most suitable for the analysis of gaze behavior in 3D space 
-(especially in sporting context). However, we are very open to implement other identification methods in the future.
+(especially in sporting context). However, we are very open to implement other identification methods that might be more 
+suitable in other application contexts.
 
 # Acknowledgements
 This project was supported by a Research and Creative Activity grant from Bishop’s University.
