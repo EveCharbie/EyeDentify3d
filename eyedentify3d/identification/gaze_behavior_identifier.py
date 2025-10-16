@@ -120,6 +120,7 @@ class GazeBehaviorIdentifier:
     def detect_saccade_sequences(
         self,
         min_acceleration_threshold: float = 4000,
+        nb_acceleration_frames: int = 2,
         velocity_window_size: float = 0.52,
         velocity_factor: float = 5.0,
     ):
@@ -129,6 +130,8 @@ class GazeBehaviorIdentifier:
         Parameters
         ----------
         min_acceleration_threshold: The minimal threshold for the eye angular acceleration to consider a saccade in deg/s².
+        nb_acceleration_frames: The number of consecutive frames where the eye angular acceleration must be above the
+            min_acceleration_threshold to consider a saccade.
         velocity_window_size: The length in seconds of the window used to compute the rolling median of the eye angular
             velocity. This rolling median is used to identify when the eye angular velocity is larger than usual.
         velocity_factor: The factor by which the eye angular velocity must be larger than the rolling median to consider
@@ -139,6 +142,7 @@ class GazeBehaviorIdentifier:
             self.data_object,
             self.identified_indices,
             min_acceleration_threshold,
+            nb_acceleration_frames,
             velocity_window_size,
             velocity_factor,
         )

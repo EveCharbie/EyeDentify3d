@@ -8,6 +8,7 @@ We define a saccade as a sequence aiming to reposition the eyes quickly between 
 ```python3 
 gaze_behavior_identifier.detect_saccade_sequences(
         min_acceleration_threshold,
+        nb_acceleration_frames,
         velocity_window_size,
         velocity_factor,
     )
