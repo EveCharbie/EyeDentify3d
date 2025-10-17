@@ -1,4 +1,4 @@
-# EyeDentify3D: A Python package for gaze behavior classification of 3D eye-tracking data
+# EyeDentify3D: A Python package for gaze behavior classification of mobile eye-tracking data
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a>
 [![Build status](https://github.com/EveCharbie/EyeDentify3d/actions/workflows/run_tests.yml/badge.svg)](https://github.com/EveCharbie/EyeDentify3d/actions)
@@ -27,8 +27,9 @@ Examples of usage can be found in the [examples](examples/) directory.
 
 ## Citation
 If you use `EyeDentify3D` in your research, please cite the following paper:
-```@article{Charbonneau2025EyeDentify3D,
-  title={EyeDentify3D: A Python package for gaze behavior classification of 3D eye-tracking data},
+```bibtex
+@article{Charbonneau2025EyeDentify3D,
+  title={EyeDentify3D: A Python package for gaze behavior classification of mobile eye-tracking data},
   author={Charbonneau, Eve and Romeas, Thomas and Trempe, Maxime},
   journal={Submitted to Journal of Open Source Software},
 }

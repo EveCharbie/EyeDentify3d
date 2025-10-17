@@ -18,7 +18,7 @@ gaze_behavior_identifier.detect_saccade_sequences(
 A saccade is detected if two conditions are met.
     1) The eye velocity is larger than a time varying threshold. The threshold is defined as a multiple of the gaze velocity rolling median.
     2) The eye acceleration is larger than the threshold for at least two frames.
-This implementation is based on the typical eye velocity profile observed during a saccade [# TODO: add figure ?] where we eyes accelerate while taking off from the initial target to reach a high velocity before decelerating to land on the new target.
+This implementation is based on the typical eye velocity profile observed during a saccade (see [figure](https://www.researchgate.net/figure/Saccade-a-angle-and-b-angular-velocity_fig5_313539565)) where we eyes accelerate while taking off from the initial target to reach a high velocity before decelerating to land on the new target.
 Please note that only the eye repositioning is assessed, therefore we consider that a saccade can be observed between any other kind of behavior (not only fixation). 
 Also, the saccade identification considers only the eye velocity profile (head movements are ignored).
 
@@ -32,7 +32,7 @@ So `EyeDentify3D` would, identify two saccades split by a blink.
 If your study requires overcoming this limitation, please contact the developer by opening an issue on [GitHub](https://github.com/EveCharbie/EyeDentify3d/issues).
 
 ## Parameters
-- `min_acceleration_threshold (float)`: The minimal eye acceleration to consider a saccade. The default is `4000`°/s^2. # TODO: CITE
+- `min_acceleration_threshold (float)`: The minimal eye acceleration to consider a saccade. The default is `4000`°/s^2 {cite}`Holmqvist:2011`. # TODO: CITE
 - `velocity_window_size (float)`: The duration of the window used to compute the rolling median of the eye velocity. The default is `0.52` s.
 - `velocity_factor (float)`: The coefficient by which the eye velocity must surpass the rolling median of the eye velocity to consider a saccade. The default is `5.0`.
 

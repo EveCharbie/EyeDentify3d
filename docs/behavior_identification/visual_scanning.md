@@ -1,8 +1,14 @@
 # Visual scanning detection
 
 ```{admonition} Visual scanning definition
-We define visual acanning as a sequence where the gaze (eye + head) is moving rapidly to find information rich portions of the environement. 
-Due to the important gaze velocity, visual scanning mainly rely on peripheral vision. # TODO: Cite visual scanning Thomas ?
+We define visual scanning as a sequence where the gaze (eye + head) is moving rapidly to find information rich portions of the environment. 
+Due to the important gaze velocity, visual scanning mainly relies on peripheral vision.
+
+Note: This definition is a generalization of the concept of visual scanning as defined in invasion sports and usually 
+identified on head movements alone {cite}`Mcguckian:2020`.
+Rationale: It is generally accepted that humans cannot interpret foveal information when gaze velocity exceeds 
+approximately 100°/s. However, we observed athletes performing rapid combined head-and-eye movements while keeping eye 
+velocity below the typical saccade threshold of 100°/s.
 ```
 
 ## How to detect visual scanning
@@ -20,7 +26,7 @@ A visual scanning event is detected when the gaze velocity is above the `min_vel
 Figure 1 - Plot obtained using `gaze_behavior_identifier.visual_scanning.plot(save_name)`.
 
 ## Parameters
-- `min_velocity_threshold (float)`: The minimal gaze velocity to consider a visual scanning. The default is `100`°/s. # TODO: CITE
+- `min_velocity_threshold (float)`: The minimal gaze velocity to consider a visual scanning. The default is `100`°/s.
 - `minimal_duration (float)`: The minimal duration for which the gaze velocity must surpass the threshold to consider a visual scanning. The default is `0.04` s.
 
 ## Available visual scanning metrics

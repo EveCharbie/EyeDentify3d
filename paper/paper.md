@@ -1,5 +1,5 @@
 ---
-title: 'EyeDentify3D: A Python package for gaze behavior classification of 3D eye-tracking data'
+title: 'EyeDentify3D: A Python package for gaze behavior classification of mobile eye-tracking data'
 tags:
   - Python
   - Eye-tracking
