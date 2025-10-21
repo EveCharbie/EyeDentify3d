@@ -24,9 +24,10 @@ gaze_behavior_identifier.detect_fixation_and_smooth_pursuit_sequences(
 
 ## Implementation
 Fixations are identified if the following {cite}`Larsson:2015` criteria are met.
-    1) `Dispersion` > $\eta_d$ and `Directional consistency` < $\eta_{CD}$ and `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{maxFix}$.
-    2) `Positional displacement` > $\eta_{PD}$ and `Spatial range` < $\eta_{minSP}$.
-    3) `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{minFix}$.
+1) `Dispersion` > $\eta_d$ and `Directional consistency` < $\eta_{CD}$ and `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{maxFix}$.
+2) `Positional displacement` > $\eta_{PD}$ and `Spatial range`* < $\eta_{minSP}$.
+3) `Positional displacement` < $\eta_{PD}$ and `Spatial range`* < $\eta_{minFix}$.
+\* Here, the `Spatial range` is computed on the current sequence merged with all adjacent smooth pursuit sequences.
 
 ![fixation_detection.png](../figures/fixation_detection.png)
 Figure 1 - Plot obtained using `gaze_behavior_identifier.fixation.plot(save_name)`.
