@@ -329,18 +329,7 @@ class GazeBehaviorIdentifier:
         """
         Get the proportion of the trial when it was not possible to identify a gaze behavior.
         """
-        delta_time = np.hstack(
-            (self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt)
-        )
-        unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
-        not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
-
-        # Sanity check
-        if not_identified_ratio != (1 - self.identified_ratio()):
-            raise RuntimeError(
-                "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
-            )
-        return not_identified_ratio
+        return 1 - self.identified_ratio()
 
     def validate_sequences(self):
         """
