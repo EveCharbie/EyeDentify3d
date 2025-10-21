@@ -1,7 +1,7 @@
 # Visual scanning detection
 
 ```{admonition} Visual scanning definition
-We define visual scanning as a sequence where the gaze (eye + head) is moving rapidly to find information rich portions 
+We define visual scanning as a sequence where the gaze (eye + head) moves rapidly to find information rich portions 
 of the environment {cite}`Aksum:2021`.
 Visual scanning allows to reorient the gaze beyond the angular range of saccades (eye movement alone). 
 Due to the important gaze velocity, visual scanning information search mainly relies on peripheral vision.

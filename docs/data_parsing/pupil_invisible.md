@@ -2,20 +2,20 @@
 
 The data from the [Pupil Invisible](https://pupil-labs.com/products/invisible) (Pupil Labs, Germany) eye-tracker is stored in multiple files.
 From them, we are interested in the following:
-- `gaze.csv` containing the eye orientation
-- `imu.csv` containing the head motion data
-- `blinks.csv` containing the blinks events
+- `gaze.csv` containing the eye orientation.
+- `imu.csv` containing the head motion data.
+- `blinks.csv` containing the blinks events.
 
 ## Gaze data
 The `gaze.csv` file contains the following columns:
-- `timestamp [ns]`: The time vector in nanoseconds
+- `timestamp [ns]`: The time vector in nanoseconds.
 - `worn`: Whether the glasses were worn (1) or not (0). Please note that this eye-tracker does not provide any indication on the confidence of the gaze orientation estimates, so we consider that as long as the eye-tracker is "worn" the eye-tracker data is valid.
 - `azimuth [deg]`: The eyes' horizontal angle in degrees. The zero defines looking straight ahead, positive values define looking to the right, and negative values define looking to the left.
 - `elevation [deg]`: The eyes' vertical angle in degrees. The zero defines looking straight ahead, positive values define looking up, and negative values define looking down.
 
 ## IMU data
 The `imu.csv` file contains the following columns:
-- `timestamp [ns]`: The time vector in nanoseconds
+- `timestamp [ns]`: The time vector in nanoseconds.
 - `gyro x [deg/s]`: The head angular velocity along the extension/flexion axis (pitch) in degrees per second measured by the gyroscope.
 - `gyro y [deg/s]`: The head angular velocity along the left/right rotation axis (yaw) in degrees per second measured by the gyroscope.
 - `gyro z [deg/s]`: The head angular velocity along the lateral extension/flexion axis (roll) in degrees per second measured by the gyroscope.

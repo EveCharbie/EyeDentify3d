@@ -1,7 +1,7 @@
 # Saccade detection
 
 ```{admonition} Saccade definition
-We define a saccade as a sequence aiming to reposition the eyes quickly between two targets.
+We define a saccade as a sequence where the eyes orientation is quickly repositionned between two targets.
 ```
 
 ## How to detect saccades
@@ -32,7 +32,7 @@ So `EyeDentify3D` would, identify two saccades split by a blink.
 If your study requires overcoming this limitation, please contact the developer by opening an issue on [GitHub](https://github.com/EveCharbie/EyeDentify3d/issues).
 
 ## Parameters
-- `min_acceleration_threshold (float)`: The minimal eye acceleration to consider a saccade. The default is `4000`°/s^2 {cite}`Holmqvist:2011`. # TODO: CITE
+- `min_acceleration_threshold (float)`: The minimal eye acceleration to consider a saccade. The default is `4000`°/s^2 {cite}`Holmqvist:2011`.
 - `velocity_window_size (float)`: The duration of the window used to compute the rolling median of the eye velocity. The default is `0.52` s.
 - `velocity_factor (float)`: The coefficient by which the eye velocity must surpass the rolling median of the eye velocity to consider a saccade. The default is `5.0`.
 
@@ -41,6 +41,6 @@ If your study requires overcoming this limitation, please contact the developer 
 - `gaze_behavior_identifier.saccade.duration`: The duration of each saccade in the trial.
 - `gaze_behavior_identifier.saccade.mean_duration`: The mean duration of the saccades in the trial.
 - `gaze_behavior_identifier.saccade.max_duration`: The duration of the longest saccade in the trial.
-- `gaze_behavior_identifier.saccade.total_duration`: The total time spent doing saccades in the trial.
-- `gaze_behavior_identifier.saccade.ratio`: The proportion ot time of the trial spent doing saccades.
+- `gaze_behavior_identifier.saccade.total_duration`: The total time spent in saccades in the trial.
+- `gaze_behavior_identifier.saccade.ratio`: The proportion ot time of the trial spent in saccades.
 - `gaze_behavior_identifier.saccade.saccade_amplitudes`: The amplitudes of each saccade in the trial.

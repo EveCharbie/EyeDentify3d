@@ -1,7 +1,7 @@
 # Fixation detection
 
 ```{admonition} Fixation definition
-We define a fixation as a sequence aiming to stabilize the gaze endpoint in the world reference frame.
+We define a fixation as a sequence where the gaze endpoint is stabilized in the environment.
 ```
 
 ## How to detect fixations
@@ -24,9 +24,9 @@ gaze_behavior_identifier.detect_fixation_and_smooth_pursuit_sequences(
 
 ## Implementation
 Fixations are identified if the following {cite}`Larsson:2015` criteria are met.
-    1) `Dispersion` > $\eta_d$ and `Directional consistency` < $\eta_{CD}$ and `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{maxFix}$
-    2) `Positional displacement` > $\eta_{PD}$ and `Spatial range` < $\eta_{minSP}$
-    3) `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{minFix}$
+    1) `Dispersion` > $\eta_d$ and `Directional consistency` < $\eta_{CD}$ and `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{maxFix}$.
+    2) `Positional displacement` > $\eta_{PD}$ and `Spatial range` < $\eta_{minSP}$.
+    3) `Positional displacement` < $\eta_{PD}$ and `Spatial range` < $\eta_{minFix}$.
 
 ![fixation_detection.png](../figures/fixation_detection.png)
 Figure 1 - Plot obtained using `gaze_behavior_identifier.fixation.plot(save_name)`.
@@ -47,6 +47,6 @@ Figure 1 - Plot obtained using `gaze_behavior_identifier.fixation.plot(save_name
 - `gaze_behavior_identifier.fixation.duration`: The duration of each fixation in the trial.
 - `gaze_behavior_identifier.fixation.mean_duration`: The mean duration of the fixations in the trial.
 - `gaze_behavior_identifier.fixation.max_duration`: The duration of the longest fixation in the trial.
-- `gaze_behavior_identifier.fixation.total_duration`: The total time spent doing fixations in the trial.
-- `gaze_behavior_identifier.fixation.ratio`: The proportion ot time of the trial spent doing fixations.
+- `gaze_behavior_identifier.fixation.total_duration`: The total time spent in fixations in the trial.
+- `gaze_behavior_identifier.fixation.ratio`: The proportion ot time of the trial spent in fixations.
 - `gaze_behavior_identifier.fixation.search_rate`: The ratio of the number of fixations divided by the mean duration of the fixations.

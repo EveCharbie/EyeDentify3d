@@ -9,7 +9,7 @@ previously identified gaze behaviors are split into coherent or incoherent inter
 All frames that have not been identified yet are split into windows that are overlapping a little bit at the beginning and end.
 The coherence of the gaze movements inside each window is assessed using a Rayleigh z-test. 
 First, the gaze movement is extracted by computing the gaze endpoint displacement vector between consecutive frames.
-Then, the angle formed by the gaze end point movement and a specified axis. 
+Then, the angle formed by the gaze end point movement and a specified axis is computed. 
 A Rayleigh z-test is performed on this angle to determine if the gaze movement is coherent (i.e., the p-value is smaller than eta_p), meaning that the gaze is moving in a particular direction.
 As there is an overlap between the windows, the mean p-values across all windows in which it was part of is used to determine the coherence of this frame.
 The adjacent coherent (or incoherent) windows are merged to form larger coherent (or incoherent) sequences {cite}`Larsson:2015`.

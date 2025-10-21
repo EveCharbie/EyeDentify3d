@@ -1,8 +1,8 @@
-# HTC Vive Pro Eye eye-tracker
+# HTC Vive Pro Eye (Tobii) eye-tracker
 
 The data from the [HTC Vive Pro Eye](https://www.vive.com/fr/product/vive-pro2/overview/) (HTC Coprporation, Taiwan) 
 eye-tracker is stored in a `.csv` file containing the following columns:
-- `time(100ns)`: The time vector in 100 nanoseconds
+- `time(100ns)`: The time vector in 100 nanoseconds.
 - `eye_valid_L` and `eye_valid_R`: As estimate of the validity of the eye-tracking data. The data can either be valid (`31`) or not (`0`). Please note that this eye-tracker does not provide any indication on the confidence of the gaze orientation estimates, so we consider that as long as the value is `31`, the eye-tracker data is valid.
 - `openness_L` and `openness_R`: The eyes' openness ranging between closed (`0`) and opened (`1`).
 - `gaze_direct_L.x`, `gaze_direct_L.y`, and `gaze_direct_L.z`: The eyes' orientation expressed as a unit vector. 
