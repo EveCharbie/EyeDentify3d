@@ -14,10 +14,10 @@ A Rayleigh z-test is performed on this angle to determine if the gaze movement i
 As there is an overlap between the windows, the mean p-values across all windows in which it was part of is used to determine the coherence of this frame.
 The adjacent coherent (or incoherent) windows are merged to form larger coherent (or incoherent) sequences {cite}`Larsson:2015`.
 These sequences are then each analyzed to determine if they should be identified as a fixation, sequence, or undefined sequence by computing four parameters {cite}`Larsson:2015`.
-    1) Dispersion: Measures if the segment is more dispersed in one direction than in the other (ratio between the lengths of the first and the second principal components of the gaze positions decomposition). 
-    2) Direction consistency: Measures if the segment is consistently moving in one direction (ratio between the gaze displacement over the sequence and the length of the first principal components of the gaze positions decomposition).
-    3) Positional displacement: Measures if the displacement over the segment is mainly due to coherent gaze movements (ratio between the gaze displacement over the sequence and the gaze trajectory length over the sequence).
-    4) Spatial range: Measures the spatial extent of the segment (the diameter of the average circle containing all gaze points).
+1) Dispersion: Measures if the segment is more dispersed in one direction than in the other (ratio between the lengths of the first and the second principal components of the gaze positions decomposition). 
+2) Direction consistency: Measures if the segment is consistently moving in one direction (ratio between the gaze displacement over the sequence and the length of the first principal components of the gaze positions decomposition).
+3) Positional displacement: Measures if the displacement over the segment is mainly due to coherent gaze movements (ratio between the gaze displacement over the sequence and the gaze trajectory length over the sequence).
+4) Spatial range: Measures the spatial extent of the segment (the diameter of the average circle containing all gaze points).
 See the sections [fixation](fixation.md) and [smooth_pursuit](smooth_pursuit.md) detection sections for their interpretation.
 
 ![inter_saccade_detection.png](../figures/inter_saccade_detection.png)
