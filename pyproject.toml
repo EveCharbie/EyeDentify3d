@@ -13,7 +13,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name =  "eyedentify3d"
-description = "A package to identify gaze behavior from 3D eye-tracking data."
+description = "A package to identify gaze behavior from mobile eye-tracking data."
 dynamic = ["version"]
 authors = [
     {name = "EveCharbie", email = "eve.charbie@gmail.com"},

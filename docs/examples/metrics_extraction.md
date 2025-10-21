@@ -1,6 +1,15 @@
 # Metrics extraction examples
 
-# How to extract metrics
+## How to save all metrics
+If you are interested in saving all available metrics, you can use the `get_results` method:
+```python3
+import pandas as pd
+full_results = gaze_behavior_identifier.get_results(participant_id, trial_id)
+full_results.to_csv("results_file_name.csv")
+```
+
+## How to extract custom metrics
+Otherwise, you can extract the metrics you are interested in individually. Here are some examples of available metrics:
 ```python3
 # Invalid
 total_invalid_duration = gaze_behavior_identifier.blink.total_duration()

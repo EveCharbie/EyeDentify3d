@@ -16,7 +16,8 @@ class SaccadeEvent(Event):
     A saccade event is detected when both conditions are met:
         1. The eye angular velocity is larger than `velocity_factor` times the rolling median on the current window of
         length `velocity_window_size`.
-        2. The eye angular acceleration is larger than `min_acceleration_threshold` deg/s² for at least two frames
+        2. The eye angular acceleration is larger than `min_acceleration_threshold` deg/s² for at least
+        `nb_acceleration_frames` frames
     Please note that only the eye (not gaze) movements were used to identify saccades.
     """
 
@@ -25,6 +26,7 @@ class SaccadeEvent(Event):
         data_object: DataObject,
         identified_indices: np.ndarray = None,
         min_acceleration_threshold: float = 4000,
+        nb_acceleration_frames: int = 2,
         velocity_window_size: float = 0.52,
         velocity_factor: float = 5.0,
     ):
@@ -34,6 +36,8 @@ class SaccadeEvent(Event):
         data_object: The EyeDentify3d object containing the parsed eye-tracking data.
         identified_indices: A boolean array indicating which frames have already been identified as events.
         min_acceleration_threshold: The minimal threshold for the eye angular acceleration to consider a saccade in deg/s².
+        nb_acceleration_frames: The minimal number of frames where the eye angular acceleration must be above the
+            min_acceleration_threshold to consider a saccade.
         velocity_window_size: The length in seconds of the window used to compute the rolling median of the eye angular
         velocity. This rolling median is used to identify when the eye angular velocity is larger than usual.
         velocity_factor: The factor by which the eye angular velocity must be larger than the rolling median to consider
@@ -46,6 +50,7 @@ class SaccadeEvent(Event):
         self.data_object = data_object
         self.identified_indices = identified_indices
         self.min_acceleration_threshold = min_acceleration_threshold
+        self.nb_acceleration_frames = nb_acceleration_frames
         self.velocity_window_size = velocity_window_size
         self.velocity_factor = velocity_factor
 
@@ -137,7 +142,7 @@ class SaccadeEvent(Event):
                 acceleration_above_threshold = np.where(
                     np.abs(self.eye_angular_acceleration[i[0] - 1 : i[-1] + 1]) > self.min_acceleration_threshold
                 )[0]
-                if len(acceleration_above_threshold) > 1:
+                if len(acceleration_above_threshold) >= self.nb_acceleration_frames:
                     self.sequences += [i]
 
     def merge_sequences(self):

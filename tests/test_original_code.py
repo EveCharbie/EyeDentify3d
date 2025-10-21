@@ -43,6 +43,7 @@ def perform_one_file(
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences(
         min_acceleration_threshold=4000,
+        nb_acceleration_frames=2,
         velocity_window_size=0.52,
         velocity_factor=5.0,
     )

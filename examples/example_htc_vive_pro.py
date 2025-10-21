@@ -24,6 +24,7 @@ def main():
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences(
         min_acceleration_threshold=4000,
+        nb_acceleration_frames=2,
         velocity_window_size=0.52,
         velocity_factor=5.0,
     )
@@ -54,9 +55,9 @@ def main():
     gaze_behavior_identifier.invalid.plot(save_name="figures/invalid_detection.png")
     gaze_behavior_identifier.saccade.plot(save_name="figures/saccade_detection.png")
     gaze_behavior_identifier.visual_scanning.plot(save_name="figures/visual_scanning_detection.png")
-    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="figures/fixation_detection.png")
+    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="figures/inter_saccade_detection.png")
     gaze_behavior_identifier.fixation.plot(save_name="figures/fixation_detection.png")
-    gaze_behavior_identifier.smooth_pursuit.plot(save_name="figures/fixation_detection.png")
+    gaze_behavior_identifier.smooth_pursuit.plot(save_name="figures/smooth_pursuit_detection.png")
     gaze_behavior_identifier.plot(save_name="figures/all_gaze_behaviors.png")
 
     # Animate the results
