@@ -1,7 +1,8 @@
 """
 In this example, we will load the data from the Pico Noe and extract gaze behavior from the data.
+Note: The blink detection is not possible yet with the Pico Neo data, since the eye openness information was not available.
+If you have a set of data where this information is available, we would appreciate if you could contact us :)
 """
-
 import os
 
 from eyedentify3d import PicoNeoData, ErrorType, GazeBehaviorIdentifier
@@ -17,7 +18,6 @@ def main():
     gaze_behavior_identifier = GazeBehaviorIdentifier(data_object)
 
     # Detect gaze behaviors (must be performed in the desired order)
-    gaze_behavior_identifier.detect_blink_sequences(eye_openness_threshold=0.5)
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences(
         min_acceleration_threshold=1000,

@@ -59,7 +59,7 @@ class PicoNeoData(Data):
         if not isinstance(value, str):
             raise ValueError(f"The data_file_path must be a string, got {value}.")
         if not value.endswith(".csv"):
-            raise ValueError(f"The HTC Vive Pro data file must be a .csv file, got {value}.")
+            raise ValueError(f"The Pico Neo data file must be a .csv file, got {value}.")
         self._data_file_path = value
 
     @destroy_on_fail
@@ -124,20 +124,10 @@ class PicoNeoData(Data):
     def _set_eye_openness(self) -> None:
         """
         Set the eye openness of both eyes.
+        # TODO: Currently, we assume the eyes are always fully open as the Pico Neo 3 Pro does not provide this information.
         """
         self.right_eye_openness = np.ones_like(self.csv_data["Eye Right Blinking"])
         self.left_eye_openness = np.ones_like(self.csv_data["Eye Left Blinking"])
-
-        import matplotlib.pyplot as plt
-
-        fig, axs = plt.subplots(2, 1)
-        # axs[0].plot(self.right_eye_openness, "r", label="Right Eye Gaze Openness")
-        # axs[0].plot(self.left_eye_openness, "g", label="Left Eye Gaze Openness")
-        axs[0].legend()
-        axs[1].plot(self.csv_data["Eye Right Blinking"], "r", label="Eye Right blinking")
-        axs[1].plot(self.csv_data["Eye Left Blinking"], "g", label="Eye Left blinking")
-        axs[1].legend()
-        plt.show()
 
     @destroy_on_fail
     def _set_eye_direction(self):
