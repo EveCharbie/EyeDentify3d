@@ -33,7 +33,7 @@ def mock_empty_csv_data():
     # Create DataFrames with minimal required columns
     csv_data = {
         "Timeline": [],
-        "Left Eye Pose Status":  [],
+        "Left Eye Pose Status": [],
         "Right Eye Pose Status": [],
         "Eye Right Blinking": [],
         "Eye Left Blinking": [],
@@ -65,6 +65,7 @@ def test_pico_neo_data_init(mock_read_csv, mock_csv_data):
     assert data.head_angular_velocity is not None
     assert data.head_velocity_norm is not None
     assert data.data_invalidity is not None
+
 
 def test_data_file_path_setter_valid():
     """Test setting a valid data file path"""
@@ -161,7 +162,10 @@ def test_remove_duplicates():
     data.time_vector = np.array([0.0, 0.1, 0.1, 0.2, 0.3])  # Duplicate at index 2
     data.csv_data = pd.DataFrame({"col1": [1, 2, 3, 4, 5]})
 
-    with pytest.raises(RuntimeError, match="The time vector has duplicated frames, which never happened with this eye-tracker. Please notify the developer."):
+    with pytest.raises(
+        RuntimeError,
+        match="The time vector has duplicated frames, which never happened with this eye-tracker. Please notify the developer.",
+    ):
         data._remove_duplicates()
 
 
@@ -212,7 +216,9 @@ def test_set_eye_direction():
         y[i] /= norm
         z[i] /= norm
 
-    data.csv_data = pd.DataFrame({"Combine Eye Gaze Vector. x": x, "Combine Eye Gaze Vector. y": y, "Combine Eye Gaze Vector. z": z})
+    data.csv_data = pd.DataFrame(
+        {"Combine Eye Gaze Vector. x": x, "Combine Eye Gaze Vector. y": y, "Combine Eye Gaze Vector. z": z}
+    )
 
     data._set_eye_direction()
 
@@ -257,7 +263,11 @@ def test_set_head_angles():
     data = PicoNeoData.__new__(PicoNeoData)
     data._validity_flag = True
     data.csv_data = pd.DataFrame(
-        {"Head Rotation. x": [10, 11, 12, 13], "Head Rotation. y": [20, 21, 22, 23], "Head Rotation. z": [30, 31, 32, 33]}
+        {
+            "Head Rotation. x": [10, 11, 12, 13],
+            "Head Rotation. y": [20, 21, 22, 23],
+            "Head Rotation. z": [30, 31, 32, 33],
+        }
     )
 
     data._set_head_angles()
@@ -300,7 +310,10 @@ def test_set_data_invalidity():
     data = PicoNeoData.__new__(PicoNeoData)
     data._validity_flag = True
     data.csv_data = pd.DataFrame(
-        {"Left Eye Pose Status": [52, 52, 0], "Right Eye Pose Status": [52, 1, 52]}  # Second frame is invalid  # Third frame is invalid
+        {
+            "Left Eye Pose Status": [52, 52, 0],
+            "Right Eye Pose Status": [52, 1, 52],
+        }  # Second frame is invalid  # Third frame is invalid
     )
 
     data._set_data_invalidity()

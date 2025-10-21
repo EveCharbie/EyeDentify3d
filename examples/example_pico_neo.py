@@ -3,6 +3,7 @@ In this example, we will load the data from the Pico Noe and extract gaze behavi
 Note: The blink detection is not possible yet with the Pico Neo data, since the eye openness information was not available.
 If you have a set of data where this information is available, we would appreciate if you could contact us :)
 """
+
 import os
 
 from eyedentify3d import PicoNeoData, ErrorType, GazeBehaviorIdentifier

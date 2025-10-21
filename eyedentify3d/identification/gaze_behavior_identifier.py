@@ -296,17 +296,16 @@ class GazeBehaviorIdentifier:
         identified_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
         identified_indices.fill(False)
         for sequence in (
-                self.blink.sequences
-                + self.saccade.sequences
-                + self.visual_scanning.sequences
-                + self.fixation.sequences
-                + self.smooth_pursuit.sequences
+            self.blink.sequences
+            + self.saccade.sequences
+            + self.visual_scanning.sequences
+            + self.fixation.sequences
+            + self.smooth_pursuit.sequences
         ):
             if len(sequence) != 0:
                 identified_indices[sequence] = True  # Mark identified frames as True
 
         return identified_indices
-
 
     def identified_ratio(self):
         """
