@@ -58,6 +58,7 @@ def test_saccade_event_initialization():
     assert event.data_object is mock_data
     assert event.identified_indices is identified_indices
     assert event.min_acceleration_threshold == 4000
+    assert event.nb_acceleration_frames == 2
     assert event.velocity_window_size == 0.52
     assert event.velocity_factor == 5.0
     assert event.eye_angular_velocity is None
@@ -74,10 +75,16 @@ def test_saccade_event_custom_parameters():
     identified_indices = np.zeros(10, dtype=bool)
 
     event = SaccadeEvent(
-        mock_data, identified_indices, min_acceleration_threshold=5000, velocity_window_size=0.6, velocity_factor=6.0
+        mock_data,
+        identified_indices,
+        min_acceleration_threshold=5000,
+        nb_acceleration_frames=10,
+        velocity_window_size=0.6,
+        velocity_factor=6.0,
     )
 
     assert event.min_acceleration_threshold == 5000
+    assert event.nb_acceleration_frames == 10
     assert event.velocity_window_size == 0.6
     assert event.velocity_factor == 6.0
 
@@ -191,6 +198,7 @@ def test_detect_saccade_sequences(mock_data_object):
 
     event.eye_angular_acceleration = eye_angular_acceleration
     event.min_acceleration_threshold = 4000
+    event.nb_acceleration_frames = 2
 
     event.detect_saccade_sequences()
 

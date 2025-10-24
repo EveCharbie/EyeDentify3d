@@ -120,6 +120,7 @@ class GazeBehaviorIdentifier:
     def detect_saccade_sequences(
         self,
         min_acceleration_threshold: float = 4000,
+        nb_acceleration_frames: int = 2,
         velocity_window_size: float = 0.52,
         velocity_factor: float = 5.0,
     ):
@@ -129,6 +130,8 @@ class GazeBehaviorIdentifier:
         Parameters
         ----------
         min_acceleration_threshold: The minimal threshold for the eye angular acceleration to consider a saccade in deg/s².
+        nb_acceleration_frames: The number of consecutive frames where the eye angular acceleration must be above the
+            min_acceleration_threshold to consider a saccade.
         velocity_window_size: The length in seconds of the window used to compute the rolling median of the eye angular
             velocity. This rolling median is used to identify when the eye angular velocity is larger than usual.
         velocity_factor: The factor by which the eye angular velocity must be larger than the rolling median to consider
@@ -139,6 +142,7 @@ class GazeBehaviorIdentifier:
             self.data_object,
             self.unavailable_indices,
             min_acceleration_threshold,
+            nb_acceleration_frames,
             velocity_window_size,
             velocity_factor,
         )
@@ -292,17 +296,16 @@ class GazeBehaviorIdentifier:
         identified_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
         identified_indices.fill(False)
         for sequence in (
-                self.blink.sequences
-                + self.saccade.sequences
-                + self.visual_scanning.sequences
-                + self.fixation.sequences
-                + self.smooth_pursuit.sequences
+            self.blink.sequences
+            + self.saccade.sequences
+            + self.visual_scanning.sequences
+            + self.fixation.sequences
+            + self.smooth_pursuit.sequences
         ):
             if len(sequence) != 0:
                 identified_indices[sequence] = True  # Mark identified frames as True
 
         return identified_indices
-
 
     def identified_ratio(self):
         """
@@ -325,18 +328,7 @@ class GazeBehaviorIdentifier:
         """
         Get the proportion of the trial when it was not possible to identify a gaze behavior.
         """
-        delta_time = np.hstack(
-            (self.data_object.time_vector[1:] - self.data_object.time_vector[:-1], self.data_object.dt)
-        )
-        unidentified_total_duration = np.sum(delta_time[self.unidentified_indices])
-        not_identified_ratio = unidentified_total_duration / self.data_object.trial_duration
-
-        # Sanity check
-        if not_identified_ratio != (1 - self.identified_ratio()):
-            raise RuntimeError(
-                "The not_identified_ratio + identified_ratio is not equal to one. This should not happen, please notify the developer."
-            )
-        return not_identified_ratio
+        return 1 - self.identified_ratio()
 
     def validate_sequences(self):
         """

@@ -1,6 +1,6 @@
 # Eye-tracker data extraction examples
 
-# HTC Vive Pro
+## HTC Vive Pro
 ```python3
 from eyedentify3d import HtcViveProData, TimeRange, ErrorType
 

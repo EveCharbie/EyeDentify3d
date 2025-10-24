@@ -1,4 +1,4 @@
-# EyeDentify3D: A Python package for gaze behavior classification from 3D eye-tracking data
+# EyeDentify3D: A Python package for gaze behavior classification from mobile eye-tracking data
 
 Welcome to the official documentation for [EyeDentify3D](https://github.com/EveCharbie/EyeDentify3d)! 
 We hope that this documentation will help you get started with this package. The aim of EyeDentify3D is to provide a 
@@ -22,5 +22,16 @@ conda install -c conda-forge eyedentify3d
 If you have any questions, need help using the package, or have feature requests, please feel free to open an issue on 
 the [GitHub repository](https://github.com/EveCharbie/EyeDentify3d). If you would like to contribute to the development 
 of the package, please fork the repository and submit a pull request. Any contribution would be welcomed!
+
+
+## Citation
+If you use EyeDentify3D in your research, please cite the following paper:
+```bibtex
+@article{Charbonneau2025EyeDentify3D,
+  title={EyeDentify3D: A Python package for gaze behavior classification of mobile eye-tracking data},
+  author={Charbonneau, Eve and Romeas, Thomas and Trempe, Maxime},
+  journal={Submitted to Journal of Open Source Software},
+}
+```
 
 
