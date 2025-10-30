@@ -124,10 +124,9 @@ class PicoNeoData(Data):
     def _set_eye_openness(self) -> None:
         """
         Set the eye openness of both eyes.
-        # TODO: Currently, we assume the eyes are always fully open as the Pico Neo 3 Pro does not provide this information.
         """
-        self.right_eye_openness = np.ones_like(self.csv_data["Eye Right Blinking"])
-        self.left_eye_openness = np.ones_like(self.csv_data["Eye Left Blinking"])
+        self.right_eye_openness = np.ones_like(self.csv_data["Left Eye Gaze Openness"])
+        self.left_eye_openness = np.ones_like(self.csv_data["Right Eye Gaze Openness"])
 
     @destroy_on_fail
     def _set_eye_direction(self):
