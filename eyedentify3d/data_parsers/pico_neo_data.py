@@ -23,7 +23,7 @@ class PicoNeoData(Data):
         """
         Parameters
         ----------
-        data_file_path: The path to the HTC Vive Pro data file.
+        data_file_path: The path to the Pico Neo Pro Eye data file.
         error_type: The error handling method to use.
         time_range: The time range to consider in the trial.
         """
