@@ -125,8 +125,8 @@ class PicoNeoData(Data):
         """
         Set the eye openness of both eyes.
         """
-        self.right_eye_openness = np.ones_like(self.csv_data["Left Eye Gaze Openness"])
-        self.left_eye_openness = np.ones_like(self.csv_data["Right Eye Gaze Openness"])
+        self.right_eye_openness = self.csv_data["Right Eye Gaze Openness"]
+        self.left_eye_openness = self.csv_data["Left Eye Gaze Openness"]
 
     @destroy_on_fail
     def _set_eye_direction(self):
