@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="eyedentify3d",
-    version="1.0.4",
+    version="1.0.6",
     author="Eve Charbonneau",
     author_email="eve.charbie@gmail.com",
     description="Identify gaze behaviors from 3D eye-trakcing data",
