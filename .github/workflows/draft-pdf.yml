@@ -1,6 +1,13 @@
 name: Draft PDF
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - paper/**
+      - .github/workflows/draft-pdf.yml
   pull_request:
     paths:
       - paper/**
@@ -29,9 +36,10 @@ jobs:
           # paper.md
           path: paper/paper.pdf
 
+      # Only commit when NOT running from a pull request
       - name: Commit PDF to repository
+        if: github.event_name != 'pull_request'
         uses: EndBug/add-and-commit@v9
         with:
           message: '(auto) Paper PDF Draft'
-          # This should be the path to the paper within your repo.
-          add: 'paper/paper.pdf' # 'paper/*.pdf' to commit all PDFs in the paper directory
+          add: 'paper/paper.pdf'
