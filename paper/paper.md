@@ -63,10 +63,8 @@ involve large eye and head movements, such as smooth pursuit and visual scanning
 `EyeDentify3D` is a Python package for identifying multiple gaze behaviors (blinks, fixations, saccades, smooth pursuits, 
 visual scannings) from mobile eye-tracking data. 
 It was designed to:
-1. Interpret data from various mobile eye-tracking systems (e.g., Pupil Invisible), including those embedded in 
-head-mounted displays (e.g., HTC Vive Pro, Pico Neo 3 Pro Eye).
-2. Provide a simple user interface, where only a few lines of code are needed to identify the desired 
-gaze behaviors and extract related metrics.
+1. Interpret data from various mobile eye-tracking systems (e.g., Pupil Invisible), including those embedded in head-mounted displays (e.g., HTC Vive Pro, Pico Neo 3 Pro Eye).
+2. Provide a simple user interface, where only a few lines of code are needed to identify the desired gaze behaviors and extract related metrics.
 3. Enable visual inspection of the classification results.
 
 `EyeDentify3D` was designed to be used in science and human performance analysis. It has already been used in sport 
@@ -82,31 +80,16 @@ For each trial recorded during an experiment, the eyes and head rotations are ex
 eye-tracker and the inertial measurement unit, respectively.
 The gaze orientation (head and eye rotations combined) expressed over a 360° range is then analyzed frame-by-frame.
 For each frame, the pipeline applies a step-by-step classification based on the following criteria:
-1. **Invalid**: The eye-tracker has declared having low confidence in the gaze orientation measurement and considers 
-the data invalid. This often happens when the eyes are closed (e.g., during a blink), the eye orientation is outside 
-the eye-tracker's measurement range, or if the 
-eye-tracker was not positioned properly on the participant.
+1. **Invalid**: The eye-tracker has declared having low confidence in the gaze orientation measurement and considers the data invalid. This often happens when the eyes are closed (e.g., during a blink), the eye orientation is outside the eye-tracker's measurement range, or if the eye-tracker was not positioned properly on the participant.
 2. **Blink**: The eye openness is below the user defined threshold [@Chen:2021].
-3. **Saccade**: Two criteria must be met to detect a saccade. 1) The eye movement must be faster than a dynamical
-threshold determined using a rolling median over a user defined window size. 2) The eye 
-movement acceleration must exceed a user defined threshold for a user defined number of frames. 
-This ensures that the eyes are moving rapidly between two targets, accelerating as they leave the first target and 
-decelerating as they approach the second target [@Van:1987].
-4. **Visual scanning**: The gaze (head + eyes) velocity is larger than a user defined threshold [@Mcguckian:2020]. 
-Visual scanning should be identified after saccades as visual scanning behaviors could also present high eye velocity.
-5. **Inter-saccadic interval**: Our inter-saccadic interval classification was adapted from 
-@Larsson:2015 implementation designed for screen-based eye-tracking data by replacing cartesian coordinates (2D plane) 
-with spherical coordinates (360° range of motion). The frames that remained unidentified after the previous steps are 
-grouped into intervals. The intervals lasting longer than a user defined duration threshold, are considered inter-saccadic intervals.
-These intervals are subdivided into windows of a user defined size. 
-Each window is classified as either coherent or incoherent based on the gaze movement (moving in a 
-consistent direction or not). Adjacent coherent and incoherent windows are merged together to form segments. Then, 
-these segments are further classified as either 
+3. **Saccade**: Two criteria must be met to detect a saccade. 1) The eye movement must be faster than a dynamical threshold determined using a rolling median over a user defined window size. 2) The eye movement acceleration must exceed a user defined threshold for a user defined number of frames. This ensures that the eyes are moving rapidly between two targets, accelerating as they leave the first target and decelerating as they approach the second target [@Van:1987].
+4. **Visual scanning**: The gaze (head + eyes) velocity is larger than a user defined threshold [@Mcguckian:2020]. Visual scanning should be identified after saccades as visual scanning behaviors could also present high eye velocity.
+5. **Inter-saccadic interval**: Our inter-saccadic interval classification was adapted from @Larsson:2015 implementation designed for screen-based eye-tracking data by replacing cartesian coordinates (2D plane) with spherical coordinates (360° range of motion). The frames that remained unidentified after the previous steps are grouped into intervals. The intervals lasting longer than a user defined duration threshold, are considered inter-saccadic intervals. These intervals are subdivided into windows of a user defined size. Each window is classified as either coherent or incoherent based on the gaze movement (moving in a consistent direction or not). Adjacent coherent and incoherent windows are merged together to form segments. Then, these segments are further classified as either 
 6. **fixation** or **smooth pursuit** behaviors based on the four criteria described in @Larsson:2015:
-   * Dispersion: $p_D < \eta_D$
-   * Consistent direction: $p_{CD} > \eta_{CD}$
-   * Positional displacement: $p_{PD} > \eta_{PD}$
-   * Spatial range: $p_R > \eta_{maxFix}$
+   - Dispersion: $p_D < \eta_D$
+   - Consistent direction: $p_{CD} > \eta_{CD}$
+   - Positional displacement: $p_{PD} > \eta_{PD}$
+   - Spatial range: $p_R > \eta_{maxFix}$
     
 All behaviors are mutually exclusive (except for invalid and blink that can happen simultaneously). For example, a frame 
 cannot be classified as both a visual scanning and a smooth pursuit. Thus, the order of the identification is important as the first 
