@@ -19,6 +19,7 @@ def main():
     gaze_behavior_identifier = GazeBehaviorIdentifier(data_object)
 
     # Detect gaze behaviors (must be performed in the desired order)
+    gaze_behavior_identifier.detect_blink_sequences(eye_openness_threshold=0.5)
     gaze_behavior_identifier.detect_invalid_sequences()
     gaze_behavior_identifier.detect_saccade_sequences(
         min_acceleration_threshold=1000,

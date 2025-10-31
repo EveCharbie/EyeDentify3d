@@ -71,8 +71,7 @@ gaze behaviors and extract related metrics.
 3. Enable visual inspection of the classification results.
 
 `EyeDentify3D` was designed to be used in science and human performance analysis. It has already been used in sport 
-psychology to analyze the gaze behavior of basketball players [@Trempe:2025], and was used in pilot studies on baseball 
-players, trampolinists, and boxers. 
+psychology to analyze the gaze behavior of basketball players [@Trempe:2025], and was used in pilot studies trampolinists and boxers. 
 Our objective is to distribute the toolbox openly to help researchers more reliably identify and analyze gaze behaviors 
 in real-world scenarios, which involve movements of the head, and promote standardization in gaze analysis, thereby 
 improving our understanding of visual strategies.

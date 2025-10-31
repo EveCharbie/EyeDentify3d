@@ -23,7 +23,7 @@ class PicoNeoData(Data):
         """
         Parameters
         ----------
-        data_file_path: The path to the HTC Vive Pro data file.
+        data_file_path: The path to the Pico Neo Pro Eye data file.
         error_type: The error handling method to use.
         time_range: The time range to consider in the trial.
         """
@@ -124,10 +124,9 @@ class PicoNeoData(Data):
     def _set_eye_openness(self) -> None:
         """
         Set the eye openness of both eyes.
-        # TODO: Currently, we assume the eyes are always fully open as the Pico Neo 3 Pro does not provide this information.
         """
-        self.right_eye_openness = np.ones_like(self.csv_data["Eye Right Blinking"])
-        self.left_eye_openness = np.ones_like(self.csv_data["Eye Left Blinking"])
+        self.right_eye_openness = self.csv_data["Right Eye Gaze Openness"]
+        self.left_eye_openness = self.csv_data["Left Eye Gaze Openness"]
 
     @destroy_on_fail
     def _set_eye_direction(self):
