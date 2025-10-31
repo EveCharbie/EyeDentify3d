@@ -60,7 +60,6 @@ micro-saccades, although these have remained limited to fixed-screen eye-tracker
 Notably, none of the existing packages have included the identification of gaze behaviors in dynamic environments that 
 involve large eye and head movements, such as smooth pursuit and visual scanning.
 
-
 `EyeDentify3D` is a Python package for identifying multiple gaze behaviors (blinks, fixations, saccades, smooth pursuits, 
 visual scannings) from mobile eye-tracking data. 
 It was designed to:
