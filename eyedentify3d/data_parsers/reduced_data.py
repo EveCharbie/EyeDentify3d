@@ -22,7 +22,7 @@ class ReducedData(Data):
         original_head_angular_velocity: np.ndarray[float],
         original_head_velocity_norm: np.ndarray[float],
         original_data_invalidity: np.ndarray[bool],
-        time_range: TimeRange = TimeRange(),
+        time_range: TimeRange = None,
         error_type: ErrorType = ErrorType.PRINT,
     ):
 
@@ -48,6 +48,18 @@ class ReducedData(Data):
 
         # Finalize
         self.finalize()
+
+    @property
+    def time_range(self):
+        return self._time_range
+
+    @time_range.setter
+    def time_range(self, value: TimeRange):
+        if value is None:
+            value = TimeRange()
+        if not isinstance(value, TimeRange):
+            raise ValueError(f"The time range must be an TimeRange, got {value}.")
+        self._time_range = value
 
     def _set_indices(self, time_vector):
         """

@@ -20,7 +20,7 @@ class PupilInvisibleData(Data):
         self,
         data_folder_path: str,
         error_type: ErrorType = ErrorType.PRINT,
-        time_range: TimeRange = TimeRange(),
+        time_range: TimeRange = None,
     ):
         """
         Parameters

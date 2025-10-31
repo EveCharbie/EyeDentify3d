@@ -15,8 +15,8 @@ def mock_csv_data():
         "Timeline": np.linspace(10, 11, 200),
         "Left Eye Pose Status": [52] * 200,
         "Right Eye Pose Status": [52] * 200,
-        "Eye Right Blinking": [0] * 200,
-        "Eye Left Blinking": [0] * 200,
+        "Right Eye Gaze Openness": [1] * 200,
+        "Left Eye Gaze Openness": [1] * 200,
         "Combine Eye Gaze Vector. x": [0] * 200,
         "Combine Eye Gaze Vector. y": [0] * 200,
         "Combine Eye Gaze Vector. z": [1] * 200,
@@ -35,8 +35,8 @@ def mock_empty_csv_data():
         "Timeline": [],
         "Left Eye Pose Status": [],
         "Right Eye Pose Status": [],
-        "Eye Right Blinking": [],
-        "Eye Left Blinking": [],
+        "Right Eye Gaze Openness": [],
+        "Left Eye Gaze Openness": [],
         "Combine Eye Gaze Vector. x": [],
         "Combine Eye Gaze Vector. y": [],
         "Combine Eye Gaze Vector. z": [],
@@ -189,12 +189,12 @@ def test_set_eye_openness():
     """Test _set_eye_openness method"""
     data = PicoNeoData.__new__(PicoNeoData)
     data._validity_flag = True
-    data.csv_data = pd.DataFrame({"Eye Right Blinking": [52, 52, 52], "Eye Left Blinking": [52, 52, 52]})
+    data.csv_data = pd.DataFrame({"Right Eye Gaze Openness": [0, 0, 1], "Left Eye Gaze Openness": [1, 0, 0]})
 
     data._set_eye_openness()
 
-    assert np.array_equal(data.right_eye_openness, np.array([1, 1, 1]))
-    assert np.array_equal(data.left_eye_openness, np.array([1, 1, 1]))
+    assert np.array_equal(data.right_eye_openness, np.array([0, 0, 1]))
+    assert np.array_equal(data.left_eye_openness, np.array([1, 0, 0]))
 
 
 def test_set_eye_direction():

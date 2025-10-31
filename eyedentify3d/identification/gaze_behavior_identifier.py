@@ -330,82 +330,114 @@ class GazeBehaviorIdentifier:
         """
         return 1 - self.identified_ratio()
 
+    @property
+    def all_good_sequences(self):
+        """
+        Get all sequences identified in the data object.
+        """
+        sequences = []
+        if self.blink is not None:
+            sequences += self.blink.sequences
+        if self.saccade is not None:
+            sequences += self.saccade.sequences
+        if self.visual_scanning is not None:
+            sequences += self.visual_scanning.sequences
+        if self.fixation is not None:
+            sequences += self.fixation.sequences
+        if self.smooth_pursuit is not None:
+            sequences += self.smooth_pursuit.sequences
+        return sequences
+
     def validate_sequences(self):
         """
         Check if there were problems in the classification algorithm by making sure that there is no overlapping between
         sequences as each frame can only be part of one sequence (except invalid and blink).
         """
         # Blinks and invalid data must not overlap with any other sequences
-        for blink in self.blink.sequences + self.invalid.sequences:
-            for sequence in (
-                self.saccade.sequences
-                + self.visual_scanning.sequences
-                + self.inter_saccadic_sequences.sequences
-                + self.fixation.sequences
-                + self.smooth_pursuit.sequences
-            ):
-                if any(item in blink for item in sequence):
-                    raise RuntimeError(
-                        "Problem: Blink or Invalid data sequence overlap with another sequence."
-                        "This should not happen, please contact the developer."
-                    )
+        if self.blink is not None:
+            for blink in self.blink.sequences + self.invalid.sequences:
+                sequences = []
+                if self.saccade is not None:
+                    sequences += self.saccade.sequences
+                if self.visual_scanning is not None:
+                    sequences += self.visual_scanning.sequences
+                if self.inter_saccadic_sequences is not None:
+                    sequences += self.inter_saccadic_sequences.sequences
+                if self.fixation is not None:
+                    sequences += self.fixation.sequences
+                if self.smooth_pursuit is not None:
+                    sequences += self.smooth_pursuit.sequences
+                for sequence in sequences:
+                    if any(item in blink for item in sequence):
+                        raise RuntimeError(
+                            "Problem: Blink or Invalid data sequence overlap with another sequence."
+                            "This should not happen, please contact the developer."
+                        )
 
         # Saccades, visual scanning, fixations, and smooth pursuits must not overlap with each other
-        for saccade in self.saccade.sequences:
-            for sequence in (
-                self.visual_scanning.sequences
-                + self.inter_saccadic_sequences.sequences
-                + self.fixation.sequences
-                + self.smooth_pursuit.sequences
-            ):
-                if any(item in saccade for item in sequence):
-                    raise RuntimeError(
-                        "Problem: Saccade sequence overlap with Inter-saccadic, Visual scanning, Fixation, or Smooth pursuit sequences"
-                        "This should not happen, please contact the developer."
-                    )
+        if self.saccade is not None:
+            for saccade in self.saccade.sequences:
+                sequences = []
+                if self.visual_scanning is not None:
+                    sequences += self.visual_scanning.sequences
+                if self.inter_saccadic_sequences is not None:
+                    sequences += self.inter_saccadic_sequences.sequences
+                if self.fixation is not None:
+                    sequences += self.fixation.sequences
+                if self.smooth_pursuit is not None:
+                    sequences += self.smooth_pursuit.sequences
+                for sequence in sequences:
+                    if any(item in saccade for item in sequence):
+                        raise RuntimeError(
+                            "Problem: Saccade sequence overlap with Inter-saccadic, Visual scanning, Fixation, or Smooth pursuit sequences"
+                            "This should not happen, please contact the developer."
+                        )
 
-        for visual_scanning in self.visual_scanning.sequences:
-            for sequence in (
-                self.inter_saccadic_sequences.sequences + self.fixation.sequences + self.smooth_pursuit.sequences
-            ):
-                if any(item in visual_scanning for item in sequence):
-                    raise RuntimeError(
-                        "Problem:  Visual scanning sequence overlap with Inter-saccadic, Fixation, or Smooth pursuit sequences"
-                        "This should not happen, please contact the developer."
-                    )
+        if self.visual_scanning is not None:
+            for visual_scanning in self.visual_scanning.sequences:
+                sequences = []
+                if self.inter_saccadic_sequences is not None:
+                    sequences += self.inter_saccadic_sequences.sequences
+                if self.fixation is not None:
+                    sequences += self.fixation.sequences
+                if self.smooth_pursuit is not None:
+                    sequences += self.smooth_pursuit.sequences
+                for sequence in sequences:
+                    if any(item in visual_scanning for item in sequence):
+                        raise RuntimeError(
+                            "Problem:  Visual scanning sequence overlap with Inter-saccadic, Fixation, or Smooth pursuit sequences"
+                            "This should not happen, please contact the developer."
+                        )
 
-        for fixation in self.fixation.sequences:
-            for sequence in self.smooth_pursuit.sequences:
-                if any(item in fixation for item in sequence):
-                    raise RuntimeError(
-                        "Problem: Fixation sequence overlap with Smooth pursuit sequences"
-                        "This should not happen, please contact the developer."
-                    )
+        if self.fixation is not None:
+            for fixation in self.fixation.sequences:
+                if self.smooth_pursuit is not None:
+                    for sequence in self.smooth_pursuit.sequences:
+                        if any(item in fixation for item in sequence):
+                            raise RuntimeError(
+                                "Problem: Fixation sequence overlap with Smooth pursuit sequences"
+                                "This should not happen, please contact the developer."
+                            )
 
         # Check that inter-saccadic sequences are all fixations, smooth pursuits, or unknown sequences
-        if (len(self.fixation.sequences) + len(self.smooth_pursuit.sequences)) > len(
-            self.inter_saccadic_sequences.sequences
-        ):
-            raise RuntimeError(
-                "There is more inter-saccadic sequences than there are fixations + smooth pursuits."
-                "This should not happen, please contact the developer."
-            )
-        for sequence in self.fixation.sequences + self.smooth_pursuit.sequences:
-            for frame in sequence:
-                if frame not in self.inter_saccadic_sequences.frame_indices:
-                    raise RuntimeError(
-                        "There is a fixation or smooth pursuit sequence that is not part of an inter-saccadic sequence."
-                        "This should not happen, please contact the developer."
-                    )
+        if self.fixation is not None and self.smooth_pursuit is not None:
+            if (len(self.fixation.sequences) + len(self.smooth_pursuit.sequences)) > len(
+                self.inter_saccadic_sequences.sequences
+            ):
+                raise RuntimeError(
+                    "There is more inter-saccadic sequences than there are fixations + smooth pursuits."
+                    "This should not happen, please contact the developer."
+                )
+            for sequence in self.fixation.sequences + self.smooth_pursuit.sequences:
+                for frame in sequence:
+                    if frame not in self.inter_saccadic_sequences.frame_indices:
+                        raise RuntimeError(
+                            "There is a fixation or smooth pursuit sequence that is not part of an inter-saccadic sequence."
+                            "This should not happen, please contact the developer."
+                        )
 
         # Check that the identified frames are the frames in the sequences
-        for sequence in (
-            self.blink.sequences
-            + self.saccade.sequences
-            + self.visual_scanning.sequences
-            + self.fixation.sequences
-            + self.smooth_pursuit.sequences
-        ):
+        for sequence in self.all_good_sequences:
             if not np.all(self.identified_indices[sequence]):
                 raise RuntimeError(
                     "There are frames that are not considered as identified, but that are part of an event sequence."
@@ -417,13 +449,7 @@ class GazeBehaviorIdentifier:
                     "There are frames that are considered as unidentified, but that are also considered as identified."
                     "This should not happen, please contact the developer."
                 )
-            for sequence in (
-                self.blink.sequences
-                + self.saccade.sequences
-                + self.visual_scanning.sequences
-                + self.fixation.sequences
-                + self.smooth_pursuit.sequences
-            ):
+            for sequence in self.all_good_sequences:
                 if frame in sequence:
                     raise RuntimeError(
                         "There are frames that are considered as unidentified, but that are part of an event sequence."
@@ -448,11 +474,12 @@ class GazeBehaviorIdentifier:
     ) -> tuple[str, int, int]:
 
         for sequence_type, sequence_list in (
-            ("Blink", self.blink.sequences),
-            ("Saccade", self.saccade.sequences),
-            ("Visual scanning", self.visual_scanning.sequences),
-            ("Fixation", self.fixation.sequences),
-            ("Smooth pursuit", self.smooth_pursuit.sequences),
+            ("Blink", self.blink.sequences if self.blink is not None else []),
+            ("Invalid", self.invalid.sequences if self.invalid is not None else []),
+            ("Saccade", self.saccade.sequences if self.saccade is not None else []),
+            ("Visual scanning", self.visual_scanning.sequences if self.visual_scanning is not None else []),
+            ("Fixation", self.fixation.sequences if self.fixation is not None else []),
+            ("Smooth pursuit", self.smooth_pursuit.sequences if self.smooth_pursuit is not None else []),
         ):
             for sequence in sequence_list:
                 beginning_time = time_vector[sequence[0]]
