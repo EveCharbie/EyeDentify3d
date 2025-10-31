@@ -12,7 +12,7 @@ from eyedentify3d import PicoNeoData, ErrorType, GazeBehaviorIdentifier
 def main():
 
     # Load the data from the HTC Vive Pro
-    data_file_path = "data/Pico_Neo_3_Pro/boxing_360.csv"
+    data_file_path = "data/Pico_Neo_3_Pro/boxing_VR.csv"
     data_object = PicoNeoData(data_file_path, error_type=ErrorType.PRINT)
 
     # Create a GazeBehaviorIdentifier object

@@ -32,7 +32,7 @@ class Data(ABC):
     Load the data from a HTC Vive Pro file.
     """
 
-    def __init__(self, error_type: ErrorType = ErrorType.PRINT, time_range: TimeRange = TimeRange()):
+    def __init__(self, error_type: ErrorType = ErrorType.PRINT, time_range: TimeRange = None):
         """
         Parameters
         ----------
@@ -80,6 +80,8 @@ class Data(ABC):
 
     @time_range.setter
     def time_range(self, value: TimeRange):
+        if value is None:
+            value = TimeRange()
         if not isinstance(value, TimeRange):
             raise ValueError(f"The time range must be an TimeRange, got {value}.")
         self._time_range = value

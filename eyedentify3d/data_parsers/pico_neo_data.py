@@ -18,7 +18,7 @@ class PicoNeoData(Data):
         self,
         data_file_path: str,
         error_type: ErrorType = ErrorType.PRINT,
-        time_range: TimeRange = TimeRange(),
+        time_range: TimeRange = None,
     ):
         """
         Parameters

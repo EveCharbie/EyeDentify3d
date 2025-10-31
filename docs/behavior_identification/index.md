@@ -11,3 +11,8 @@ Figure 1 - Plot obtained using `gaze_behavior_identifier.plot(save_name)`.
 
 ```{tableofcontents}
 ```
+
+For a quick overview, here is a list of the algorithm parameters that you can modify.
+
+| Parameter name               | Description                                                                                     | Default value |
+|------------------------------|-------------------------------------------------------------------------------------------------|---------------|

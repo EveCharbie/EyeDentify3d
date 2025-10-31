@@ -61,8 +61,8 @@ Notably, none of the existing packages have included the identification of gaze 
 involve large eye and head movements, such as smooth pursuit and visual scanning.
 
 
-`EyeDentify3D` is a Python package for identifying multiple gaze behavior (blinks, fixations, saccades, smooth pursuit, 
-visual scanning) from mobile eye-tracking data. 
+`EyeDentify3D` is a Python package for identifying multiple gaze behaviors (blinks, fixations, saccades, smooth pursuits, 
+visual scannings) from mobile eye-tracking data. 
 It was designed to:
 1. Interpret data from various mobile eye-tracking systems (e.g., Pupil Invisible), including those embedded in 
 head-mounted displays (e.g., HTC Vive Pro, Pico Neo 3 Pro Eye).
