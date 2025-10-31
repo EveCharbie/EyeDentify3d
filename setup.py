@@ -21,7 +21,7 @@ setuptools.setup(
 )
 
 # Publish on pip manually
-# 1) change version in version.py, setup.py 
+# 1) change version in version.py, setup.py
 # 2) Remove old wheel build from dist folder
 # 3) python setup.py sdist bdist_wheel
 # 4) python -m twine upload dist/*
