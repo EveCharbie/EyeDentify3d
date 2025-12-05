@@ -5,6 +5,7 @@ from .abstract_data import Data, destroy_on_fail
 from ..error_type import ErrorType
 from ..time_range import TimeRange
 from ..utils.rotation_utils import unwrap_rotation, rotation_matrix_from_euler_angles, angles_from_imu_fusion
+from ..utils.signal_utils import interpolate_to_specified_timestamps
 
 
 class PupilInvisibleData(Data):
@@ -210,36 +211,11 @@ class PupilInvisibleData(Data):
         -------
         The modified numpy array of head angles aligned with the eye data timestamps (3, n_frames)
         """
-        # Check shapes
-        if len(unwrapped_head_angles.shape) != 2 or unwrapped_head_angles.shape[0] != 3:
-            raise NotImplementedError("This function was designed for head angles of shape (3, n_frames). ")
-
-        # Check if there is duplicated frames in the imu data
-        frame_diffs = np.linalg.norm(unwrapped_head_angles[:, 1:] - unwrapped_head_angles[:, :-1], axis=0)
-        if not np.all(frame_diffs > 1e-10):
-            raise RuntimeError(
-                "There were repeated frames in the imu data, which never happened with this eye-tracker. Please notify the developer."
-            )
-
-        # Interpolate the head angles to the eye timestamps
-        interpolated_head_angles = np.zeros((3, self.nb_frames))
-        for i_time, time in enumerate(self.time_vector):
-            if time < time_vector_imu[0] or time > time_vector_imu[-1]:
-                interpolated_head_angles[:, i_time] = np.nan
-            else:
-                if time in time_vector_imu:
-                    idx = np.where(time_vector_imu == time)[0][0]
-                    interpolated_head_angles[:, i_time] = unwrapped_head_angles[:, idx]
-                else:
-                    idx_before = np.where(time_vector_imu < time)[0][-1]
-                    idx_after = np.where(time_vector_imu > time)[0][0]
-                    t_before = time_vector_imu[idx_before]
-                    t_after = time_vector_imu[idx_after]
-                    angles_before = unwrapped_head_angles[:, idx_before]
-                    angles_after = unwrapped_head_angles[:, idx_after]
-                    interpolated_head_angles[:, i_time] = angles_before + (time - t_before) * (
-                        (angles_after - angles_before) / (t_after - t_before)
-                    )
+        interpolated_head_angles = interpolate_to_specified_timestamps(
+            time_vector_imu,
+            self.time_vector,
+            unwrapped_head_angles,
+        )
         return interpolated_head_angles
 
     @destroy_on_fail

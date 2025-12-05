@@ -49,16 +49,14 @@ def main():
     gaze_behavior_identifier.finalize()  # This is mandatory
 
     # Plot the results
-    if not os.path.exists("figures"):
-        os.makedirs("figures")
-    gaze_behavior_identifier.blink.plot(save_name="figures/blink_detection.png")
-    gaze_behavior_identifier.invalid.plot(save_name="figures/invalid_detection.png")
-    gaze_behavior_identifier.saccade.plot(save_name="figures/saccade_detection.png")
-    gaze_behavior_identifier.visual_scanning.plot(save_name="figures/visual_scanning_detection.png")
-    gaze_behavior_identifier.inter_saccadic_sequences.plot(save_name="figures/inter_saccade_detection.png")
-    gaze_behavior_identifier.fixation.plot(save_name="figures/fixation_detection.png")
-    gaze_behavior_identifier.smooth_pursuit.plot(save_name="figures/smooth_pursuit_detection.png")
-    gaze_behavior_identifier.plot(save_name="figures/all_gaze_behaviors.png")
+    gaze_behavior_identifier.blink.plot()
+    gaze_behavior_identifier.invalid.plot()
+    gaze_behavior_identifier.saccade.plot()
+    gaze_behavior_identifier.visual_scanning.plot()
+    gaze_behavior_identifier.inter_saccadic_sequences.plot()
+    gaze_behavior_identifier.fixation.plot()
+    gaze_behavior_identifier.smooth_pursuit.plot()
+    gaze_behavior_identifier.plot()
 
     # Animate the results
     gaze_behavior_identifier.animate()

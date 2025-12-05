@@ -201,6 +201,7 @@ def angles_from_imu_fusion(
     gyroscope: A numpy array of shape (3, n_frames) containing the gyroscope data in deg/s.
     roll_offset: An offset representing the angle between head and IMU in degrees (to be added to the roll angle).
     pitch_offset: An offset representing the angle between head and IMU in degrees (to be added to the pitch angle).
+    TODO: Add magnetometer data in the fusion algorithm.
     """
     # Check that there are not NaNs in the acceleration or gyroscope data, otherwise the filter gets stuck
     if np.sum(np.isnan(acceleration)) != 0 or np.sum(np.isnan(gyroscope)) != 0:

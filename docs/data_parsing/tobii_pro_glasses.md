@@ -8,6 +8,8 @@ The data from the [Tobii Pro Glasses 3](https://www.tobii.com/products/eye-track
 # - `gaze_direct_L.x`, `gaze_direct_L.y`, and `gaze_direct_L.z`: The eyes' orientation expressed as a unit vector. 
 # - `helmet_rot_x`, `helmet_rot_y`, and `helmet_rot_z`: The head's orientation expressed as Euler angles in degrees.
 
+Note: This implementation is for Tobii Pro Glasses with firmware version above 1.29.
+
 ## How to build a data object
 ```python3
 data_object = TobiiProGlassesData(data_file_path, error_type, time_range)

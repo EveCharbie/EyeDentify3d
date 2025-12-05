@@ -8,7 +8,8 @@ import re
 from .abstract_data import Data, destroy_on_fail
 from ..error_type import ErrorType
 from ..time_range import TimeRange
-from ..utils.rotation_utils import unwrap_rotation
+from ..utils.rotation_utils import unwrap_rotation, angles_from_imu_fusion
+from ..utils.signal_utils import interpolate_to_specified_timestamps
 
 
 class TobiiProGlassesData(Data):
@@ -43,7 +44,7 @@ class TobiiProGlassesData(Data):
         self._set_time_vector()
         self._discard_data_out_of_range()
         self._set_dt()
-        self._remove_duplicates()  # This method is specific to HTC Vive Pro data, as it has duplicated frames
+        self._remove_duplicates()
 
         # Initialize variables
         self._set_eye_openness()
@@ -70,6 +71,11 @@ class TobiiProGlassesData(Data):
                 # Now transform the data from each line of the json
                 data = json.loads(line)
                 parsing_function(data, data_dict)
+
+        # Put the data back into numpy arrays
+        for key in data_dict.keys():
+            data_dict[key] = np.array(data_dict[key])
+
         return
 
     @staticmethod
@@ -89,7 +95,7 @@ class TobiiProGlassesData(Data):
                 else:
                     gaze_data_dict["pupil_diameter_right"] += [np.nan]
             else:
-                gaze_data_dict["gaze_vector"] += [np.nan]
+                gaze_data_dict["gaze_vector"] += [[np.nan, np.nan, np.nan]]
                 gaze_data_dict["pupil_diameter_left"] += [np.nan]
                 gaze_data_dict["pupil_diameter_right"] += [np.nan]
 
@@ -100,13 +106,6 @@ class TobiiProGlassesData(Data):
             imu_data_dict["accelerometer"] += [np.array(data["data"]["accelerometer"])]
             imu_data_dict["gyroscope"] += [np.array(data["data"]["gyroscope"])]
 
-    @staticmethod
-    def parse_event_data(data: dict[str, Any], event_data_dict: dict[str, Any]):
-        if "timestamp" in data.keys() and "data" in data.keys():
-            print(data["type"])
-            print(data["data"].keys())
-            event_data_dict["timestamp"] += [data["timestamp"]]
-
     def read_data(self):
         """
         This function reads the Tobii Pro Glasses 3 data file, which is a gzipped CSV file with weird JSON lines.
@@ -115,7 +114,6 @@ class TobiiProGlassesData(Data):
 
         gaze_data_file_path = self.data_folder_path + "gazedata.gz"
         imu_data_file_path = self.data_folder_path + "imudata.gz"
-        event_data_file_path = self.data_folder_path + "eventdata.gz"
 
         # Read the gaze data file
         gaze_data_dict = {
@@ -160,7 +158,7 @@ class TobiiProGlassesData(Data):
             self.error_type(error_str)
 
         if (
-            np.sum(np.logical_or(np.isnan(self.gaze_data_dict["gaze_vector"]),
+            np.sum(np.logical_or(np.sum(np.isnan(self.gaze_data_dict["gaze_vector"]), axis=1),
                                  np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
                                  np.isnan(self.gaze_data_dict["pupil_diameter_right"]),
                                  ))
@@ -210,7 +208,15 @@ class TobiiProGlassesData(Data):
         """
         indices_to_keep = self.time_range.get_indices(self.time_vector)
         self.time_vector = self.time_vector[indices_to_keep]
-        self.csv_data = self.csv_data.iloc[indices_to_keep, :]
+
+        self.gaze_data_dict["timestamp"] = self.gaze_data_dict["timestamp"][indices_to_keep]
+        self.gaze_data_dict["gaze_vector"] = self.gaze_data_dict["gaze_vector"][indices_to_keep]
+        self.gaze_data_dict["pupil_diameter_right"] = self.gaze_data_dict["pupil_diameter_right"][indices_to_keep]
+        self.gaze_data_dict["pupil_diameter_left"] = self.gaze_data_dict["pupil_diameter_left"][indices_to_keep]
+        self.imu_data_dict["timestamp"] = self.imu_data_dict["timestamp"][indices_to_keep]
+        self.imu_data_dict["accelerometer"] = self.imu_data_dict["accelerometer"][indices_to_keep]
+        self.imu_data_dict["gyroscope"] = self.imu_data_dict["gyroscope"][indices_to_keep]
+
 
 
     def interpolate_to_eye_timestamps(
@@ -228,36 +234,11 @@ class TobiiProGlassesData(Data):
         -------
         The modified numpy array of head angles aligned with the eye data timestamps (3, n_frames)
         """
-        # Check shapes
-        if len(unwrapped_head_angles.shape) != 2 or unwrapped_head_angles.shape[0] != 3:
-            raise NotImplementedError("This function was designed for head angles of shape (3, n_frames). ")
-
-        # Check if there is duplicated frames in the imu data
-        frame_diffs = np.linalg.norm(unwrapped_head_angles[:, 1:] - unwrapped_head_angles[:, :-1], axis=0)
-        if not np.all(frame_diffs > 1e-10):
-            raise RuntimeError(
-                "There were repeated frames in the imu data, which never happened with this eye-tracker. Please notify the developer."
-            )
-
-        # Interpolate the head angles to the eye timestamps
-        interpolated_head_angles = np.zeros((3, self.nb_frames))
-        for i_time, time in enumerate(self.time_vector):
-            if time < time_vector_imu[0] or time > time_vector_imu[-1]:
-                interpolated_head_angles[:, i_time] = np.nan
-            else:
-                if time in time_vector_imu:
-                    idx = np.where(time_vector_imu == time)[0][0]
-                    interpolated_head_angles[:, i_time] = unwrapped_head_angles[:, idx]
-                else:
-                    idx_before = np.where(time_vector_imu < time)[0][-1]
-                    idx_after = np.where(time_vector_imu > time)[0][0]
-                    t_before = time_vector_imu[idx_before]
-                    t_after = time_vector_imu[idx_after]
-                    angles_before = unwrapped_head_angles[:, idx_before]
-                    angles_after = unwrapped_head_angles[:, idx_after]
-                    interpolated_head_angles[:, i_time] = angles_before + (time - t_before) * (
-                        (angles_after - angles_before) / (t_after - t_before)
-                    )
+        interpolated_head_angles = interpolate_to_specified_timestamps(
+            time_vector_imu,
+            self.time_vector,
+            unwrapped_head_angles,
+        )
         return interpolated_head_angles
 
     @destroy_on_fail
@@ -275,107 +256,42 @@ class TobiiProGlassesData(Data):
         """
         self.eye_direction = np.array(self.gaze_data_dict["gaze_vector"]).T
 
-    def interpolate_repeated_frames(self, data_to_interpolate: np.ndarray[float]) -> np.ndarray[float]:
-        """
-        This function detects repeated frames and replace them with a linear interpolation between the last and the nex frame.
-        Unfortunately, this step is necessary as the HTC Vive Pro duplicates some frames.
-        This is particularly important as the velocities are computed as finite differences.
-
-        Parameters
-        ----------
-        data_to_interpolate: A numpy array matrix to modify to demove duplicates (3, n_frames)
-
-        Returns
-        -------
-        The modified numpy array matrix with duplicates removed, and replaced with a linear interpolation (3, n_frames)
-        """
-        # Check shapes
-        if len(data_to_interpolate.shape) != 2 or data_to_interpolate.shape[0] != 3:
-            raise NotImplementedError("This function was designed for matrix data of shape (3, n_frames). ")
-
-        # Avoid too small vectors
-        n_frames = data_to_interpolate.shape[1]
-        if n_frames < 2:
-            return data_to_interpolate
-
-        # Find where frames are different from the previous frame
-        frame_diffs = np.linalg.norm(data_to_interpolate[:, 1:] - data_to_interpolate[:, :-1], axis=0)
-        unique_frame_mask = np.concatenate([[True], frame_diffs > 1e-10])
-        unique_indices = np.where(unique_frame_mask)[0]
-
-        # Interpolate between unique frames
-        result = data_to_interpolate.copy()
-        for i in range(len(unique_indices) - 1):
-            start_idx = unique_indices[i]
-            end_idx = unique_indices[i + 1]
-            if end_idx - start_idx > 1:
-                # There are repeated frames to interpolate
-                for i_component in range(3):
-                    result[i_component, start_idx:end_idx] = np.linspace(
-                        data_to_interpolate[i_component, start_idx],
-                        data_to_interpolate[i_component, end_idx],
-                        end_idx - start_idx + 1,
-                    )[:-1]
-
-        return result
-
     @destroy_on_fail
     def _set_head_angles(self):
         """
-        Get the head orientation from the imu csv data. It is expressed as Euler angles in degrees and is measured by
-        the glasses IMU containing a gyroscope and accelerometer. If there are no tags in your experimental setup,
-        Pupil Invisible does not provide the yaw angle, so we approximate it here. But please note that this
-        approximation is less precise since there is no magnetometer in the glasses' IMU. So the yaw angle is prone to
-        drifting, but in our cas the effect should be minimal sinc we mainly compare frame through a small time interval.
+        Get the head orientation from the imu data. It is expressed as Euler angles in degrees and is measured by
+        the glasses IMU containing a gyroscope and accelerometer. Please note that this is an approximation of the head
+        orientation through sensor fusion, and it is less precise than the Tobii Pro Labs estimate.
+
+        NOTE: For now, the magnetometer data is not used in the fusion algorithm as it is sampled at 10 Hz. So the
+        angles may drift, but in our case the effect should be minimal since we mainly compare frame through a small
+        time interval. But if you need this a more precise estimate of the head orientation please open an issue on GitHub.
         """
         # Get the time vector of the imu data (not the same as the eye data)
-        time_vector_imu = np.array(self.imu_csv_data["timestamp [ns]"])
+        time_vector_imu = np.array(self.imu_data_dict["timestamp"])
 
-        tags_in_exp: bool = not np.all(np.isnan(self.imu_csv_data["yaw [deg]"]))
-        if tags_in_exp:
-            # The yaw angle is already provided by Pupil as there were tags in the experimental setup
-            head_angles = np.array(
-                [self.imu_csv_data["roll [deg]"], self.imu_csv_data["pitch [deg]"], self.imu_csv_data["yaw [deg]"]]
-            )
-        else:
-            # No tags were used in the experimental setup, so we approximate the yaw angle using a Madgwick filter
-            acceleration = np.array(
-                [
-                    self.imu_csv_data["acceleration x [g]"],
-                    self.imu_csv_data["acceleration y [g]"],
-                    self.imu_csv_data["acceleration z [g]"],
-                ]
-            )
-            gyroscope = np.array(
-                [
-                    self.imu_csv_data["gyro x [deg/s]"],
-                    self.imu_csv_data["gyro y [deg/s]"],
-                    self.imu_csv_data["gyro z [deg/s]"],
-                ]
-            )
-            roll, pitch, yaw = angles_from_imu_fusion(
-                time_vector_imu, acceleration, gyroscope, roll_offset=7, pitch_offset=90
-            )
-            head_angles = np.array([roll, pitch, yaw])
+        acceleration = self.imu_data_dict["accelerometer"].T / 9.81  # Convert to G for the fusion algorithm
+        gyroscope = self.imu_data_dict["gyroscope"].T
+
+        # Starting from firmware version 1.29, the IMU data is rotated and aligned with the Head Unit
+        # coordinate system, so that the data is expressed in the same coordinate system as the gaze data
+        roll, pitch, yaw = angles_from_imu_fusion(
+            time_vector_imu, acceleration, gyroscope, roll_offset=0, pitch_offset=0
+        )
+        head_angles = np.array([roll, pitch, yaw])
 
         unwrapped_head_angles = unwrap_rotation(head_angles)
         # We interpolate to align the head angles with the eye orientation timestamps
         self.head_angles = self.interpolate_to_eye_timestamps(time_vector_imu, unwrapped_head_angles)
 
 
-        self.imu_data_dict["accelerometer"]
-        self.imu_data_dict["gyroscope"]
-
-        unwrapped_head_angles = unwrap_rotation(head_angles)
-        # We interpolate to avoid duplicated frames, which would affect the finite difference computation
-        self.head_angles = self.interpolate_repeated_frames(unwrapped_head_angles)
-
-
-        self.head_angles = self.interpolate_to_eye_timestamps(time_vector_imu, unwrapped_head_angles)
-
     @destroy_on_fail
     def _set_data_invalidity(self):
         """
         Get a numpy array of bool indicating if the eye-tracker declared this data frame as invalid.
         """
-        self.data_invalidity = np.logical_or(self.csv_data["eye_valid_L"] != 31, self.csv_data["eye_valid_R"] != 31)
+        self.data_invalidity = np.logical_or(
+            np.sum(np.isnan(self.gaze_data_dict["gaze_vector"]), axis=1),
+            np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
+            np.isnan(self.gaze_data_dict["pupil_diameter_right"]),
+        )
