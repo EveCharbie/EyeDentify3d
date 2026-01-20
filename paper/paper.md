@@ -33,7 +33,6 @@ bibliography: paper.bib
 ---
 
 # Summary
-
 With the technological advances of mobile eye-tracking technologies, researchers can now place participants in 
 real-world settings (or in virtual environments that simulate the real world) and measure their head and eye orientation 
 to get the gaze orientation in 3D space. 
@@ -48,9 +47,20 @@ discrepancies that impede cross-study comparison and the interpretation of resul
 understanding of gaze behavior-related phenomena.
 To address this gap, we developed `EyeDentify3D`, an automated and modulable pipeline for analyzing 360° eye-tracking data.
 
-
 # Statement of need
+`EyeDentify3D` is a Python package for identifying multiple gaze behaviors (blinks, fixations, saccades, smooth pursuits, 
+visual scannings) from mobile eye-tracking data. 
+It was designed to:
+1. Interpret data from various mobile eye-tracking systems (e.g., Pupil Invisible), including those embedded in head-mounted displays (e.g., HTC Vive Pro, Pico Neo 3 Pro Eye).
+2. Provide a simple user interface, where only a few lines of code are needed to identify the desired gaze behaviors and extract related metrics.
+3. Enable visual inspection of the classification results.
 
+`EyeDentify3D` was designed to be used in science and human performance analysis.
+Our objective is to distribute the toolbox openly to help researchers more reliably identify and analyze gaze behaviors 
+in real-world scenarios, which involve movements of the head, and promote standardization in gaze analysis, thereby 
+improving our understanding of visual strategies.
+
+# State of the field
 To address the need for automating the identification of gaze behaviors from eye-tracking data, a few open-source 
 packages have been developed over the years.
 Most of them have focused primarily on the identification of fixations, either from fixed-screen eye-tracker data 
@@ -59,23 +69,11 @@ Some have extended their identification capabilities to include other behaviors 
 micro-saccades, although these have remained limited to fixed-screen eye-trackers [@Ghose:2020, @ berger:2012].
 Notably, none of the existing packages have included the identification of gaze behaviors in dynamic environments that 
 involve large eye and head movements, such as smooth pursuit and visual scanning.
-
-`EyeDentify3D` is a Python package for identifying multiple gaze behaviors (blinks, fixations, saccades, smooth pursuits, 
-visual scannings) from mobile eye-tracking data. 
-It was designed to:
-1. Interpret data from various mobile eye-tracking systems (e.g., Pupil Invisible), including those embedded in head-mounted displays (e.g., HTC Vive Pro, Pico Neo 3 Pro Eye).
-2. Provide a simple user interface, where only a few lines of code are needed to identify the desired gaze behaviors and extract related metrics.
-3. Enable visual inspection of the classification results.
-
-`EyeDentify3D` was designed to be used in science and human performance analysis. It has already been used in sport 
-psychology to analyze the gaze behavior of basketball players [@Trempe:2025], and was used in pilot studies trampolinists and boxers. 
-Our objective is to distribute the toolbox openly to help researchers more reliably identify and analyze gaze behaviors 
-in real-world scenarios, which involve movements of the head, and promote standardization in gaze analysis, thereby 
-improving our understanding of visual strategies.
-
+As `EyeDentify3D` interprets the eye-tracking data in spherical coordinates (360°), its gaze behavior identification features
+could not be integrated into existing portable eye-tracking data analysis packages, which were designed 
+for Cartesian coordinates [@Munn:2009] or area of interest based analyses [West:2006].
 
 # Gaze behavior identification
-
 For each trial recorded during an experiment, the eyes and head rotations are extracted from the data collected by the 
 eye-tracker and the inertial measurement unit, respectively.
 The gaze orientation (head and eye rotations combined) expressed over a 360° range is then analyzed frame-by-frame.
@@ -102,6 +100,24 @@ Finally, `EyeDentify3D` enables visualisation of the classified gaze data and ex
 the behaviors (e.g., mean duration, time ratio spent in each behavior, number of occurrences, saccade amplitude, smooth 
 pursuit trajectory length, etc.).
 
+# Software design
+The package is organized around two types of classes: `Data` and `Event`.
+Classes inheriting from `Data` are responsible for loading, storing, and preprocessing the raw eye-tracking data 
+from different eye-trackers, and classes inheriting form `Event` are responsible for identifying and analyzing 
+specific gaze behaviors.
+This separation facilitates extending the features of `EyeDentify3D` by supporting new eye-trackers or gaze 
+behaviors.
+The modular design also allows users to customize their analysis pipeline by selecting which gaze behaviors they 
+want to identify and in which order.
+
+# Research impact statement
+The package has already been used in sport psychology to analyze the gaze behavior of basketball players [@Trempe:2025], 
+and has been used in pilot studies involving trampolinists and boxers.
+As shown in the `examples` folder, the package is fully ready to be used by researchers.
+Moreover, the test coverage of the package is above 90%, which ensures the reliability and reproducibility of the results.
+To help researcher get started with the package, we provide a detailed documentation 
+available at [https://evecharbie.github.io/EyeDentify3d](https://evecharbie.github.io/EyeDentify3d).
+
 # Note on the implementation
 We believe that the choices made in `EyeDentify3D` are the most suitable for the analysis of gaze behavior in 3D space 
 (especially in sporting context). However, we are very open to implement other identification methods that might be more 
@@ -113,9 +129,10 @@ This project was supported by a Research and Creative Activity grant from Bishop
 # Conflict of interest
 The authors declare no conflict of interest.
 
-# Declaration of generative AI
+# AI usage disclosure
 During the preparation of this work the developer used ChatGPT, Claude, and Copilot to speed up development and enhance 
 code clarity. Aider and Claude were also used to write tests. After using these tools/services, the developer reviewed 
-and edited the content as needed and takes full responsibility for the content of the repository.
+and edited the content as needed and takes full responsibility for the content of the repository. ChatGPT was also used 
+in the writing of the manuscript to revise sentences' clarity and language.
 
 # References
