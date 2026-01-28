@@ -1,12 +1,26 @@
 # Tobii Pro Glasses 3
 
-The data from the [Tobii Pro Glasses 3](https://www.tobii.com/products/eye-trackers/wearables/tobii-pro-glasses-3) (Tobii Technology, Sweden).
-# eye-tracker is stored in a `.csv` file containing the following columns:
-# - `time(100ns)`: The time vector in 100 nanoseconds.
-# - `eye_valid_L` and `eye_valid_R`: As estimate of the validity of the eye-tracking data. The data can either be valid (`31`) or not (`0`). Please note that this eye-tracker does not provide any indication on the confidence of the gaze orientation estimates, so we consider that as long as the value is `31`, the eye-tracker data is valid.
-# - `openness_L` and `openness_R`: The eyes' openness ranging between closed (`0`) and opened (`1`).
-# - `gaze_direct_L.x`, `gaze_direct_L.y`, and `gaze_direct_L.z`: The eyes' orientation expressed as a unit vector. 
-# - `helmet_rot_x`, `helmet_rot_y`, and `helmet_rot_z`: The head's orientation expressed as Euler angles in degrees.
+The data from the [Tobii Pro Glasses 3](https://www.tobii.com/products/eye-trackers/wearables/tobii-pro-glasses-3) (Tobii Technology, Sweden) eye-tracker is stored in multiple files.
+From them, we are interested in the following:
+- `gazedata.gz` containing the eye orientation.
+- `imudata.gz` containing the head motion data.
+
+## Gaze data
+The `gazedata.gz` file contains the following fields:
+- `timestamp`: The time vector in seconds.
+- `data`:
+  - `gaze3d`: The gaze orientation represented as a unit vector in 3D space.
+  - `eyeleft`/`eyeright`:
+    - `pupildiameter`: The eyes' pupil diameter in millimeters measured by the eye-tracker. Please note that this value is only used to identify invalid timestamps, where the pupil diameter is NaN.
+
+
+## IMU data
+The `imudata.gz` file contains the following fields:
+- `timestamp`: The time vector in seconds.
+- `data`:
+  - `accelerometer`: The head linear acceleration along the x, y, and z axes in meters per seconds squared measured by the accelerometer.
+  - `gyroscope`: The head angular velocity along the x, y, and z axes in degrees per second measured by the gyroscope.
+  - `magnetometer`: The magnetic field along the x, y, and z axes in microteslas measured by the magnetometer.
 
 Note: This implementation is for Tobii Pro Glasses with firmware version above 1.29.
 

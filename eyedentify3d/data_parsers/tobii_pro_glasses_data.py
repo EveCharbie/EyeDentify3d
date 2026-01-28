@@ -140,7 +140,7 @@ class TobiiProGlassesData(Data):
         imu_data_dict = {
             "timestamp_100Hz": [],  # in seconds
             "timestamp_10Hz": [],  # in seconds
-            "accelerometer": [],  # Euler angles in degrees
+            "accelerometer": [],  # meters per second squared
             "gyroscope": [],  # in degrees per second
             "magnetometer": [],  # in microtesla
         }
