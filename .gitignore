@@ -180,3 +180,11 @@ examples/results/HTC_Vive_Pro/full_trial_results.csv
 examples/results/HTC_Vive_Pro/post_cue_results.csv
 
 examples/results/HTC_Vive_Pro/pre_cue_results.csv
+
+examples/data/Tobii_Pro_Glasses_3/calibration_1/meta/
+
+*.g3
+
+*.mp4
+
+examples/data/Tobii_Pro_Glasses_3/calibration_1/snap0.jpg

@@ -174,7 +174,7 @@ class TobiiProGlassesData(Data):
         time_vector = np.array(self.gaze_data_dict["timestamp"])
         if len(time_vector) == 0:
             self._validity_flag = False
-            error_str = f"The file {self.data_folder_path + "gazedata.gz"} is empty. There is no element in the field 'timestamp'. Please check the file."
+            error_str = f"The file {self.data_folder_path}gazedata.gz is empty. There is no element in the field 'timestamp'. Please check the file."
             self.error_type(error_str)
 
         if (
@@ -185,13 +185,13 @@ class TobiiProGlassesData(Data):
             > len(self.gaze_data_dict["timestamp"]) / 2
         ):
             self._validity_flag = False
-            error_str = f"More than 50% of the data from file {self.data_folder_path + "gazedata.gz"} is declared invalid or in a blink by the eye-tracker, skipping this file."
+            error_str = f"More than 50% of the data from file {self.data_folder_path}gazedata.gz is declared invalid or in a blink by the eye-tracker, skipping this file."
             self.error_type(error_str)
             return
 
         if np.any((time_vector[1:] - time_vector[:-1]) < 0):
             self._validity_flag = False
-            error_str = f"The time vector in file {self.data_folder_path + "gazedata.gz"} is not strictly increasing. Please check the file."
+            error_str = f"The time vector in file {self.data_folder_path}gazedata.gz is not strictly increasing. Please check the file."
             self.error_type(error_str)
             return
 

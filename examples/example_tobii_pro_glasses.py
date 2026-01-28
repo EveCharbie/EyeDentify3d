@@ -9,11 +9,10 @@ from eyedentify3d import TobiiProGlassesData, TimeRange, ErrorType, GazeBehavior
 
 def main():
 
-    # Cut the data after the end of the trial (black screen happening at 7.180 seconds)
-    time_range = TimeRange(min_time=0, max_time=5.06)
+    time_range = TimeRange()
 
     # Load the data from the Tobii Pro glasses 3
-    data_folder_path = "data/Tobii_Pro_Glasses_3/calibration_tobii_1/"
+    data_folder_path = "data/Tobii_Pro_Glasses_3/calibration_1/"
     data_object = TobiiProGlassesData(data_folder_path, error_type=ErrorType.PRINT, time_range=time_range)
 
     # Create a GazeBehaviorIdentifier object
