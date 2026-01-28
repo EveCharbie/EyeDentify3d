@@ -1,5 +1,7 @@
 import numpy as np
 
+from .signal_utils import get_largest_non_nan_sequence
+
 
 def rot_x_matrix(angle):
     """
@@ -48,7 +50,11 @@ def unwrap_rotation(angles: np.ndarray) -> np.ndarray:
     ----------
     angles: A numpy array of shape (3, n_frames) containing Euler angles expressed in degrees.
     """
-    return np.unwrap(angles, period=360, axis=1)
+    unwrapped_angles = np.zeros_like(angles)
+    unwrapped_angles[:, :] = np.nan
+    start_idx, end_idx = get_largest_non_nan_sequence(angles)
+    unwrapped_angles[:, start_idx: end_idx] = np.unwrap(angles[:, start_idx: end_idx], period=360, axis=1)
+    return unwrapped_angles
 
 
 def rotation_matrix_from_euler_angles(angle_sequence: str, angles: np.ndarray):
@@ -186,12 +192,14 @@ def angles_from_imu_fusion(
     time_vector: np.ndarray[float],
     acceleration: np.ndarray[float],
     gyroscope: np.ndarray[float],
-    roll_offset: float,
-    pitch_offset: float,
+    magnetometer: np.ndarray[float] = None,
+    roll_offset: float = 0,
+    pitch_offset: float = 0,
 ) -> tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
     """
     Computes the Euler angles from the accelerometer and gyroscope data using the Madgwick filter algorithm.
     Code adapted from https://github.com/pupil-labs/pupil/blob/7a3cd9e8d2e54ac123ab0ed292d741732db899a2/pupil_src/shared_modules/imu_timeline.py
+    Magnetometer information was added to increase accuracy, when it is available.
     Note: The initial head orientation is assumed to be pitch=0, roll=0, yaw=0.
 
     Parameters
@@ -199,22 +207,20 @@ def angles_from_imu_fusion(
     time_vector: A numpy array of shape (n_frames,) containing the time vector of the data acquisition.
     acceleration: A numpy array of shape (3, n_frames) containing the acceleration data in G.
     gyroscope: A numpy array of shape (3, n_frames) containing the gyroscope data in deg/s.
+    magnetometer: A numpy array of shape (3, n_frames) containing the magnetometer data in microtesla.
     roll_offset: An offset representing the angle between head and IMU in degrees (to be added to the roll angle).
     pitch_offset: An offset representing the angle between head and IMU in degrees (to be added to the pitch angle).
-    TODO: Add magnetometer data in the fusion algorithm.
     """
-    # Check that there are not NaNs in the acceleration or gyroscope data, otherwise the filter gets stuck
-    if np.sum(np.isnan(acceleration)) != 0 or np.sum(np.isnan(gyroscope)) != 0:
-        raise NotImplementedError(
-            "The acceleration and/or gyroscope data contains NaNs, which is not handled gracefully."
-        )
+    # Get the largest sequence where the data is not NaN
+    acceleration_start_idx, acceleration_end_idx = get_largest_non_nan_sequence(acceleration)
 
     # Parameters
     nb_frames = time_vector.shape[0]
     gyroscope_error = 50 * np.pi / 180  # Default in Pupil Invisible code
-    beta = (
+    beta_acceleration = (
         np.sqrt(3.0 / 4.0) * gyroscope_error
     )  # compute beta (see README in original GitHub page: https://github.com/micropython-IMU/micropython-fusion)
+    beta_magnetometer = 0.1 * beta_acceleration  # less trust in magnetometer (but ratio is arbitrary)
 
     # Initialize orientation
     quaternion = np.zeros((4, nb_frames)) * np.nan
@@ -227,97 +233,177 @@ def angles_from_imu_fusion(
     yaw[0] = 0.0
 
     for i_frame in range(nb_frames - 1):
-        dt = time_vector[i_frame + 1] - time_vector[i_frame]
-        ax, ay, az = acceleration[:, i_frame]  # Units G (but later normalised)
-        gx, gy, gz = (np.radians(x) for x in gyroscope[:, i_frame])  # Units deg/s
-        q1, q2, q3, q4 = (quaternion[x, i_frame] for x in range(4))  # short name local variable for readability
-        # Auxiliary variables to avoid repeated arithmetic
-        _2q1 = 2 * q1
-        _2q2 = 2 * q2
-        _2q3 = 2 * q3
-        _2q4 = 2 * q4
-        _4q1 = 4 * q1
-        _4q2 = 4 * q2
-        _4q3 = 4 * q3
-        _8q2 = 8 * q2
-        _8q3 = 8 * q3
-        q1q1 = q1 * q1
-        q2q2 = q2 * q2
-        q3q3 = q3 * q3
-        q4q4 = q4 * q4
 
-        # Normalise accelerometer measurement
-        norm = np.sqrt(ax * ax + ay * ay + az * az)
-        if norm == 0:
-            # This is highly suspicious of a NaN somewhere
-            raise RuntimeError("This should not happen, please contact the developer.")
+        if i_frame < acceleration_start_idx or i_frame >= acceleration_end_idx - 1:
+            # Index outside valid range, set angles to NaN
+            pitch[i_frame + 1] = np.nan
+            roll[i_frame + 1] = np.nan
+            yaw[i_frame + 1] = np.nan
+            quaternion[:, i_frame + 1] = [1.0, 0.0, 0.0, 0.0]  # Reset quaternion
 
-        norm = 1 / norm  # use reciprocal for division
-        ax *= norm
-        ay *= norm
-        az *= norm
+        else:
 
-        # Gradient decent algorithm corrective step
-        s1 = _4q1 * q3q3 + _2q3 * ax + _4q1 * q2q2 - _2q2 * ay
-        s2 = _4q2 * q4q4 - _2q4 * ax + 4 * q1q1 * q2 - _2q1 * ay - _4q2 + _8q2 * q2q2 + _8q2 * q3q3 + _4q2 * az
-        s3 = 4 * q1q1 * q3 + _2q1 * ax + _4q3 * q4q4 - _2q4 * ay - _4q3 + _8q3 * q2q2 + _8q3 * q3q3 + _4q3 * az
-        s4 = 4 * q2q2 * q4 - _2q2 * ax + 4 * q3q3 * q4 - _2q3 * ay
-        norm = 1 / np.sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4)  # normalise step magnitude
-        s1 *= norm
-        s2 *= norm
-        s3 *= norm
-        s4 *= norm
+            dt = time_vector[i_frame + 1] - time_vector[i_frame]
+            ax, ay, az = acceleration[:, i_frame]  # Units G (but later normalised)
+            gx, gy, gz = np.radians(gyroscope[:, i_frame])  # Units deg/s
+            q1, q2, q3, q4 = quaternion[:, i_frame]  # short name local variable for readability
 
-        # Compute rate of change of quaternion
-        q_dot1 = 0.5 * (-q2 * gx - q3 * gy - q4 * gz) - beta * s1
-        q_dot2 = 0.5 * (q1 * gx + q3 * gz - q4 * gy) - beta * s2
-        q_dot3 = 0.5 * (q1 * gy - q2 * gz + q4 * gx) - beta * s3
-        q_dot4 = 0.5 * (q1 * gz + q2 * gy - q3 * gx) - beta * s4
+            # Auxiliary variables to avoid repeated arithmetic
+            _2q1 = 2 * q1
+            _2q2 = 2 * q2
+            _2q3 = 2 * q3
+            _2q4 = 2 * q4
+            _4q1 = 4 * q1
+            _4q2 = 4 * q2
+            _4q3 = 4 * q3
+            _8q2 = 8 * q2
+            _8q3 = 8 * q3
+            q1q1 = q1 * q1
+            q2q2 = q2 * q2
+            q3q3 = q3 * q3
+            q4q4 = q4 * q4
 
-        # Integrate to yield quaternion
-        q1 += q_dot1 * dt
-        q2 += q_dot2 * dt
-        q3 += q_dot3 * dt
-        q4 += q_dot4 * dt
-        norm = 1 / np.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4)  # normalise quaternion
-        this_quaternion = q1 * norm, q2 * norm, q3 * norm, q4 * norm
-        quaternion[:, i_frame + 1] = this_quaternion
+            # Normalise accelerometer measurement
+            norm_a = np.sqrt(ax * ax + ay * ay + az * az)
+            if norm_a == 0:
+                # This is highly suspicious of a NaN somewhere
+                raise RuntimeError("This should not happen, please contact the developer.")
 
-        # These are modified to account for Invisible IMU coordinate system and positioning of
-        # the IMU within the invisible headset
-        this_roll = (
-            np.degrees(
-                -np.arcsin(2.0 * (this_quaternion[1] * this_quaternion[3] - this_quaternion[0] * this_quaternion[2]))
+            # --- Compute corrective step for magnetometer if available --- #
+            s_mag_1, s_mag_2, s_mag_3, s_mag_4 = 0.0, 0.0, 0.0, 0.0
+            if magnetometer is not None and np.sum(np.isnan(magnetometer[:, i_frame])) == 0:
+                mx, my, mz = magnetometer[:, i_frame] # Units microtesla
+
+                # Normalize magnetometer
+                norm_m = 1 / np.sqrt(mx * mx + my * my + mz * mz)
+                mx *= norm_m
+                my *= norm_m
+                mz *= norm_m
+
+                # Reference direction of Earth's magnetic field (in Earth frame)
+                # Rotate magnetometer reading to Earth frame and extract horizontal component
+                hx = (mx * (q1q1 + q2q2 - q3q3 - q4q4) +
+                      my * 2 * (q2 * q3 - q1 * q4) +
+                      mz * 2 * (q2 * q4 + q1 * q3))
+                hy = (mx * 2 * (q2 * q3 + q1 * q4) +
+                      my * (q1q1 - q2q2 + q3q3 - q4q4) +
+                      mz * 2 * (q3 * q4 - q1 * q2))
+                hz = (mx * 2 * (q2 * q4 - q1 * q3) +
+                      my * 2 * (q3 * q4 + q1 * q2) +
+                      mz * (q1q1 - q2q2 - q3q3 + q4q4))
+
+                # Compute reference field (horizontal component + vertical)
+                bx = np.sqrt(hx * hx + hy * hy)  # Horizontal magnitude
+                bz = hz  # Vertical component
+
+                # Magnetometer objective function gradient
+                _2bx, _2bz = 2 * bx, 2 * bz
+                _4bx, _4bz = 4 * bx, 4 * bz
+
+                # Expected magnetometer reading given current quaternion
+                # m_expected = R(q)^T * [bx, 0, bz]^T
+                mx_exp = bx * (q1q1 + q2q2 - q3q3 - q4q4) + bz * 2 * (q2 * q4 - q1 * q3)
+                my_exp = bx * 2 * (q2 * q3 - q1 * q4) + bz * 2 * (q1 * q2 + q3 * q4)
+                mz_exp = bx * 2 * (q1 * q3 + q2 * q4) + bz * (q1q1 - q2q2 - q3q3 + q4q4)
+
+                # Error
+                ex_m = mx_exp - mx
+                ey_m = my_exp - my
+                ez_m = mz_exp - mz
+
+                # Jacobian^T * error (gradient of objective function)
+                s_mag_1 = (-_2bz * q3) * ex_m + (-_2bx * q4 + _2bz * q2) * ey_m + (_2bx * q3) * ez_m
+                s_mag_2 = (_2bz * q4) * ex_m + (_2bx * q3 + _2bz * q1) * ey_m + (_2bx * q4 - _2bz * 2 * q2) * ez_m
+                s_mag_3 = (-_4bx * q3 - _2bz * q1) * ex_m + (_2bx * q2 + _2bz * q4) * ey_m + (_2bx * q1 - _2bz * 2 * q3) * ez_m
+                s_mag_4 = (-_4bx * q4 + _2bz * q2) * ex_m + (-_2bx * q1 + _2bz * q3) * ey_m + (_2bx * q2) * ez_m
+
+                # Normalize magnetometer gradient
+                norm_s_mag = 1 / np.sqrt(s_mag_1 ** 2 + s_mag_2 ** 2 + s_mag_3 ** 2 + s_mag_4 ** 2)
+                s_mag_1 *= norm_s_mag
+                s_mag_2 *= norm_s_mag
+                s_mag_3 *= norm_s_mag
+                s_mag_4 *= norm_s_mag
+
+            # --- Compute corrective step for accelerometer if available --- #
+            norm_a = 1 / norm_a  # use reciprocal for division
+            ax *= norm_a
+            ay *= norm_a
+            az *= norm_a
+
+            # Gradient decent algorithm corrective step for accelerometer
+            s1 = _4q1 * q3q3 + _2q3 * ax + _4q1 * q2q2 - _2q2 * ay
+            s2 = _4q2 * q4q4 - _2q4 * ax + 4 * q1q1 * q2 - _2q1 * ay - _4q2 + _8q2 * q2q2 + _8q2 * q3q3 + _4q2 * az
+            s3 = 4 * q1q1 * q3 + _2q1 * ax + _4q3 * q4q4 - _2q4 * ay - _4q3 + _8q3 * q2q2 + _8q3 * q3q3 + _4q3 * az
+            s4 = 4 * q2q2 * q4 - _2q2 * ax + 4 * q3q3 * q4 - _2q3 * ay
+
+            norm_s = 1 / np.sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4)  # normalise step magnitude
+            s1 *= norm_s
+            s2 *= norm_s
+            s3 *= norm_s
+            s4 *= norm_s
+
+            # Compute rate of change of quaternion
+            q_dot1 = 0.5 * (-q2 * gx - q3 * gy - q4 * gz)
+            q_dot2 = 0.5 * (q1 * gx + q3 * gz - q4 * gy)
+            q_dot3 = 0.5 * (q1 * gy - q2 * gz + q4 * gx)
+            q_dot4 = 0.5 * (q1 * gz + q2 * gy - q3 * gx)
+
+            # Apply accelerometer correction (always)
+            q_dot1 -= beta_acceleration * s1
+            q_dot2 -= beta_acceleration * s2
+            q_dot3 -= beta_acceleration * s3
+            q_dot4 -= beta_acceleration * s4
+
+            # Apply magnetometer correction (when available)
+            q_dot1 -= beta_magnetometer * s_mag_1
+            q_dot2 -= beta_magnetometer * s_mag_2
+            q_dot3 -= beta_magnetometer * s_mag_3
+            q_dot4 -= beta_magnetometer * s_mag_4
+
+            # Integrate to yield quaternion
+            q1 += q_dot1 * dt
+            q2 += q_dot2 * dt
+            q3 += q_dot3 * dt
+            q4 += q_dot4 * dt
+            norm_q = 1 / np.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4)  # normalise quaternion
+            this_quaternion = q1 * norm_q, q2 * norm_q, q3 * norm_q, q4 * norm_q
+            quaternion[:, i_frame + 1] = this_quaternion
+
+            # These are modified to account for Invisible IMU coordinate system and positioning of
+            # the IMU within the invisible headset
+            this_roll = (
+                np.degrees(
+                    -np.arcsin(2.0 * (this_quaternion[1] * this_quaternion[3] - this_quaternion[0] * this_quaternion[2]))
+                )
+                + roll_offset
             )
-            + roll_offset
-        )
-        # bring to range [-180, 180]
-        roll[i_frame + 1] = ((this_roll + 180) % 360) - 180
+            # bring to range [-180, 180]
+            roll[i_frame + 1] = ((this_roll + 180) % 360) - 180
 
-        this_pitch = (
-            np.degrees(
+            this_pitch = (
+                np.degrees(
+                    np.arctan2(
+                        2.0 * (this_quaternion[0] * this_quaternion[1] + this_quaternion[2] * this_quaternion[3]),
+                        this_quaternion[0] * this_quaternion[0]
+                        - this_quaternion[1] * this_quaternion[1]
+                        - this_quaternion[2] * this_quaternion[2]
+                        + this_quaternion[3] * this_quaternion[3],
+                    )
+                )
+                + pitch_offset
+            )
+            # bring to range [-180, 180]
+            pitch[i_frame + 1] = ((this_pitch + 180) % 360) - 180
+
+            this_yaw = np.degrees(
                 np.arctan2(
-                    2.0 * (this_quaternion[0] * this_quaternion[1] + this_quaternion[2] * this_quaternion[3]),
+                    2.0 * (this_quaternion[1] * this_quaternion[2] + this_quaternion[0] * this_quaternion[3]),
                     this_quaternion[0] * this_quaternion[0]
-                    - this_quaternion[1] * this_quaternion[1]
+                    + this_quaternion[1] * this_quaternion[1]
                     - this_quaternion[2] * this_quaternion[2]
-                    + this_quaternion[3] * this_quaternion[3],
+                    - this_quaternion[3] * this_quaternion[3],
                 )
             )
-            + pitch_offset
-        )
-        # bring to range [-180, 180]
-        pitch[i_frame + 1] = ((this_pitch + 180) % 360) - 180
-
-        this_yaw = np.degrees(
-            np.arctan2(
-                2.0 * (this_quaternion[1] * this_quaternion[2] + this_quaternion[0] * this_quaternion[3]),
-                this_quaternion[0] * this_quaternion[0]
-                + this_quaternion[1] * this_quaternion[1]
-                - this_quaternion[2] * this_quaternion[2]
-                - this_quaternion[3] * this_quaternion[3],
-            )
-        )
-        yaw[i_frame + 1] = ((this_yaw + 180) % 360) - 180
+            yaw[i_frame + 1] = ((this_yaw + 180) % 360) - 180
 
     return pitch, roll, yaw

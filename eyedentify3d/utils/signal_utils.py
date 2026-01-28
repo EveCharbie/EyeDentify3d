@@ -74,10 +74,10 @@ def filter_data(data: np.ndarray, cutoff_freq: float = 0.2, order: int = 8, padl
 
 
 def interpolate_to_specified_timestamps(
-    current_time_vector: np.ndarray[float],
-    desired_time_vector: np.ndarray[float],
-    angles_to_interpolate: np.ndarray[float]
-) -> np.ndarray[float]:
+    current_time_vector: np.ndarray,
+    desired_time_vector: np.ndarray,
+    angles_to_interpolate: np.ndarray
+) -> np.ndarray:
     """
     This function gets the angles_to_interpolate acquired at the current_time_vector instants and interpolates it to
     the desired_time_vector instants.
@@ -122,3 +122,32 @@ def interpolate_to_specified_timestamps(
                     (angles_after - angles_before) / (t_after - t_before)
                 )
     return interpolated_data
+
+def get_largest_non_nan_sequence(data: np.ndarray) -> tuple[int, int]:
+    """
+    Find the start and end indices of the largest continuous sequence without NaN values.
+
+    Parameters
+    ----------
+    data: A numpy array of shape (n_components, n_frames) containing the data to analyze.
+    """
+    if np.sum(np.isnan(data)) == 0:
+        # If there is no NaN, in the data, return the full range
+        start_idx = 0
+        end_idx = data.shape[1]
+    else:
+        invalid_indices = np.where(np.sum(np.isnan(data), axis=0) != 0)[0]
+        if len(invalid_indices) == 1:
+            if invalid_indices[0] == 0:
+                return 1, data.shape[1]
+            elif invalid_indices[0] == data.shape[1] - 1:
+                return 0, data.shape[1] - 1
+            else:
+                if len(list(range(0, invalid_indices[0]))) >= len(list(range(invalid_indices[0] + 1, data.shape[1]))):
+                    return 0, invalid_indices[0]
+                else:
+                    return invalid_indices[0] + 1, data.shape[1]
+        largest_gap = np.argmax(invalid_indices[1:] - invalid_indices[:-1])
+        start_idx = invalid_indices[largest_gap] + 1
+        end_idx = invalid_indices[largest_gap + 1]
+    return start_idx, end_idx

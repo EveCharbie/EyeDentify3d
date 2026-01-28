@@ -101,10 +101,21 @@ class TobiiProGlassesData(Data):
 
     @staticmethod
     def parse_imu_data(data: dict[str, Any], imu_data_dict: dict[str, Any]):
-        if "timestamp" in data.keys() and "data" in data.keys() and "accelerometer" in data["data"].keys() and "gyroscope" in data["data"].keys():
-            imu_data_dict["timestamp"] += [data["timestamp"]]
-            imu_data_dict["accelerometer"] += [np.array(data["data"]["accelerometer"])]
-            imu_data_dict["gyroscope"] += [np.array(data["data"]["gyroscope"])]
+        if "timestamp" in data.keys():
+            if "data" in data.keys() and "accelerometer" in data["data"].keys() and "gyroscope" in data["data"].keys():
+                imu_data_dict["timestamp_100Hz"] += [data["timestamp"]]
+                imu_data_dict["accelerometer"] += [np.array(data["data"]["accelerometer"])]
+                imu_data_dict["gyroscope"] += [np.array(data["data"]["gyroscope"])]
+            elif "magnetometer" in data["data"].keys():
+                imu_data_dict["timestamp_10Hz"] += [data["timestamp"]]
+                imu_data_dict["magnetometer"] += [np.array(data["data"]["magnetometer"])]
+
+    @staticmethod
+    def parse_event_data(data: dict[str, Any], event_data_dict: dict[str, Any]):
+        """
+        This function could be implemented if in the future we want to extract data from the event data file.
+        """
+        pass
 
     def read_data(self):
         """
@@ -114,6 +125,7 @@ class TobiiProGlassesData(Data):
 
         gaze_data_file_path = self.data_folder_path + "gazedata.gz"
         imu_data_file_path = self.data_folder_path + "imudata.gz"
+        # event_data_file_path = self.data_folder_path + "eventdata.gz"
 
         # Read the gaze data file
         gaze_data_dict = {
@@ -126,11 +138,19 @@ class TobiiProGlassesData(Data):
 
         # Read the IMU data file
         imu_data_dict = {
-            "timestamp": [],  # in seconds
+            "timestamp_100Hz": [],  # in seconds
+            "timestamp_10Hz": [],  # in seconds
             "accelerometer": [],  # Euler angles in degrees
             "gyroscope": [],  # in degrees per second
+            "magnetometer": [],  # in microtesla
         }
         self.parse_gz(imu_data_file_path, imu_data_dict, self.parse_imu_data)
+
+        # # Read the event data file
+        # event_data_dict = {
+        #     "timestamp": [],  # in seconds
+        # }
+        # self.parse_gz(event_data_file_path, event_data_dict, self.parse_event_data)
 
         return gaze_data_dict, imu_data_dict
 
@@ -189,7 +209,8 @@ class TobiiProGlassesData(Data):
         self.time_vector = (time_vector - initial_time)
 
         # also transform imu timings
-        self.imu_data_dict["timestamp"] = np.array(self.imu_data_dict["timestamp"]) - initial_time
+        self.imu_data_dict["timestamp_100Hz"] = np.array(self.imu_data_dict["timestamp_100Hz"]) - initial_time
+        self.imu_data_dict["timestamp_10Hz"] = np.array(self.imu_data_dict["timestamp_10Hz"]) - initial_time
 
     @destroy_on_fail
     def _remove_duplicates(self):
@@ -206,40 +227,57 @@ class TobiiProGlassesData(Data):
         """
         Discard the data that is out of the time range specified in the time_range attribute.
         """
-        indices_to_keep = self.time_range.get_indices(self.time_vector)
-        self.time_vector = self.time_vector[indices_to_keep]
+        # Gaze timestamps
+        indices_to_keep_gaze = self.time_range.get_indices(self.time_vector)
+        self.time_vector = self.time_vector[indices_to_keep_gaze]
+        self.gaze_data_dict["timestamp"] = self.gaze_data_dict["timestamp"][indices_to_keep_gaze]
+        self.gaze_data_dict["gaze_vector"] = self.gaze_data_dict["gaze_vector"][indices_to_keep_gaze]
+        self.gaze_data_dict["pupil_diameter_right"] = self.gaze_data_dict["pupil_diameter_right"][indices_to_keep_gaze]
+        self.gaze_data_dict["pupil_diameter_left"] = self.gaze_data_dict["pupil_diameter_left"][indices_to_keep_gaze]
 
-        self.gaze_data_dict["timestamp"] = self.gaze_data_dict["timestamp"][indices_to_keep]
-        self.gaze_data_dict["gaze_vector"] = self.gaze_data_dict["gaze_vector"][indices_to_keep]
-        self.gaze_data_dict["pupil_diameter_right"] = self.gaze_data_dict["pupil_diameter_right"][indices_to_keep]
-        self.gaze_data_dict["pupil_diameter_left"] = self.gaze_data_dict["pupil_diameter_left"][indices_to_keep]
-        self.imu_data_dict["timestamp"] = self.imu_data_dict["timestamp"][indices_to_keep]
-        self.imu_data_dict["accelerometer"] = self.imu_data_dict["accelerometer"][indices_to_keep]
-        self.imu_data_dict["gyroscope"] = self.imu_data_dict["gyroscope"][indices_to_keep]
+        # Accelero/gyro timestamps
+        indices_to_keep_imu = self.time_range.get_indices(self.imu_data_dict["timestamp_100Hz"])
+        self.imu_data_dict["timestamp_100Hz"] = self.imu_data_dict["timestamp_100Hz"][indices_to_keep_imu]
+        self.imu_data_dict["accelerometer"] = self.imu_data_dict["accelerometer"][indices_to_keep_imu]
+        self.imu_data_dict["gyroscope"] = self.imu_data_dict["gyroscope"][indices_to_keep_imu]
 
+        # Magneto timestamps
+        indices_to_keep_magneto = self.time_range.get_indices(self.imu_data_dict["timestamp_10Hz"])
+        self.imu_data_dict["timestamp_10Hz"] = self.imu_data_dict["timestamp_10Hz"][indices_to_keep_magneto]
+        self.imu_data_dict["magnetometer"] = self.imu_data_dict["magnetometer"][indices_to_keep_magneto]
 
 
     def interpolate_to_eye_timestamps(
-        self, time_vector_imu: np.ndarray[float], unwrapped_head_angles: np.ndarray[float]
-    ) -> np.ndarray[float]:
+        self,
+    ) -> dict[str, np.ndarray[float]]:
         """
-        This function gets the head orientation at the eye data time stamps by interpolating if necessary.
-
-        Parameters
-        ----------
-        time_vector_imu: The time vector of the imu data (not the same as the eye data) (n_frames_imu)
-        unwrapped_head_angles: The unwrapped head angles (roll, pitch, yaw) in degrees (3, n_frames_imu)
+        This function gets the imu data at the eye data time stamps by interpolating if necessary.
 
         Returns
         -------
-        The modified numpy array of head angles aligned with the eye data timestamps (3, n_frames)
+        The modified version of the imu data aligned with the eye data timestamps (3, n_frames)
         """
-        interpolated_head_angles = interpolate_to_specified_timestamps(
-            time_vector_imu,
+        interpolated_accelerometer = interpolate_to_specified_timestamps(
+            self.imu_data_dict["timestamp_100Hz"],
             self.time_vector,
-            unwrapped_head_angles,
+            self.imu_data_dict["accelerometer"].T,
         )
-        return interpolated_head_angles
+        interpolated_gyroscope = interpolate_to_specified_timestamps(
+            self.imu_data_dict["timestamp_100Hz"],
+            self.time_vector,
+            self.imu_data_dict["gyroscope"].T,
+        )
+        interpolated_magnetometer = interpolate_to_specified_timestamps(
+            self.imu_data_dict["timestamp_10Hz"],
+            self.time_vector,
+            self.imu_data_dict["magnetometer"].T,
+        )
+        interpolated_imu = {
+            "accelerometer": interpolated_accelerometer,
+            "gyroscope": interpolated_gyroscope,
+            "magnetometer": interpolated_magnetometer,
+        }
+        return interpolated_imu
 
     @destroy_on_fail
     def _set_eye_openness(self) -> None:
@@ -260,29 +298,26 @@ class TobiiProGlassesData(Data):
     def _set_head_angles(self):
         """
         Get the head orientation from the imu data. It is expressed as Euler angles in degrees and is measured by
-        the glasses IMU containing a gyroscope and accelerometer. Please note that this is an approximation of the head
-        orientation through sensor fusion, and it is less precise than the Tobii Pro Labs estimate.
-
-        NOTE: For now, the magnetometer data is not used in the fusion algorithm as it is sampled at 10 Hz. So the
-        angles may drift, but in our case the effect should be minimal since we mainly compare frame through a small
-        time interval. But if you need this a more precise estimate of the head orientation please open an issue on GitHub.
+        the glasses IMU containing a gyroscope, accelerometer, and magnetometer. Please note that this is an
+        approximation of the head orientation through sensor fusion, and we do not offer any guarantee that the angles
+        are as precise as the Tobii Pro Labs estimate.
         """
-        # Get the time vector of the imu data (not the same as the eye data)
-        time_vector_imu = np.array(self.imu_data_dict["timestamp"])
 
-        acceleration = self.imu_data_dict["accelerometer"].T / 9.81  # Convert to G for the fusion algorithm
-        gyroscope = self.imu_data_dict["gyroscope"].T
+        # We interpolate to align the imu data with the eye orientation timestamps
+        interpolated_imu = self.interpolate_to_eye_timestamps()
 
         # Starting from firmware version 1.29, the IMU data is rotated and aligned with the Head Unit
         # coordinate system, so that the data is expressed in the same coordinate system as the gaze data
         roll, pitch, yaw = angles_from_imu_fusion(
-            time_vector_imu, acceleration, gyroscope, roll_offset=0, pitch_offset=0
+            time_vector=self.time_vector,
+            acceleration=interpolated_imu["accelerometer"],
+            gyroscope=interpolated_imu["gyroscope"],
+            magnetometer=interpolated_imu["magnetometer"],
+            roll_offset=0, pitch_offset=0
         )
-        head_angles = np.array([roll, pitch, yaw])
+        head_angles = np.array([roll, np.zeros_like(pitch), np.zeros_like(roll)])
 
-        unwrapped_head_angles = unwrap_rotation(head_angles)
-        # We interpolate to align the head angles with the eye orientation timestamps
-        self.head_angles = self.interpolate_to_eye_timestamps(time_vector_imu, unwrapped_head_angles)
+        self.head_angles = unwrap_rotation(head_angles)
 
 
     @destroy_on_fail
