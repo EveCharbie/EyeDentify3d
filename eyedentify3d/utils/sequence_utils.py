@@ -4,7 +4,6 @@ from .rotation_utils import get_angle_between_vectors
 from ..time_range import TimeRange
 from ..utils.signal_utils import find_time_index
 
-
 # TODO: This could be transformed into a class that handles the sequences and their properties
 
 

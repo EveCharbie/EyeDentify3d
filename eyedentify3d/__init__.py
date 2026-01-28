@@ -8,7 +8,6 @@ from .identification.gaze_behavior_identifier import GazeBehaviorIdentifier
 from .time_range import TimeRange
 from .version import __version__
 
-
 __all__ = [
     "HtcViveProData",
     "PicoNeoData",

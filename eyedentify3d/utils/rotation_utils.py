@@ -53,7 +53,7 @@ def unwrap_rotation(angles: np.ndarray) -> np.ndarray:
     unwrapped_angles = np.zeros_like(angles)
     unwrapped_angles[:, :] = np.nan
     start_idx, end_idx = get_largest_non_nan_sequence(angles)
-    unwrapped_angles[:, start_idx: end_idx] = np.unwrap(angles[:, start_idx: end_idx], period=360, axis=1)
+    unwrapped_angles[:, start_idx:end_idx] = np.unwrap(angles[:, start_idx:end_idx], period=360, axis=1)
     return unwrapped_angles
 
 
@@ -272,7 +272,7 @@ def angles_from_imu_fusion(
             # --- Compute corrective step for magnetometer if available --- #
             s_mag_1, s_mag_2, s_mag_3, s_mag_4 = 0.0, 0.0, 0.0, 0.0
             if magnetometer is not None and np.sum(np.isnan(magnetometer[:, i_frame])) == 0:
-                mx, my, mz = magnetometer[:, i_frame] # Units microtesla
+                mx, my, mz = magnetometer[:, i_frame]  # Units microtesla
 
                 # Normalize magnetometer
                 norm_m = 1 / np.sqrt(mx * mx + my * my + mz * mz)
@@ -282,15 +282,9 @@ def angles_from_imu_fusion(
 
                 # Reference direction of Earth's magnetic field (in Earth frame)
                 # Rotate magnetometer reading to Earth frame and extract horizontal component
-                hx = (mx * (q1q1 + q2q2 - q3q3 - q4q4) +
-                      my * 2 * (q2 * q3 - q1 * q4) +
-                      mz * 2 * (q2 * q4 + q1 * q3))
-                hy = (mx * 2 * (q2 * q3 + q1 * q4) +
-                      my * (q1q1 - q2q2 + q3q3 - q4q4) +
-                      mz * 2 * (q3 * q4 - q1 * q2))
-                hz = (mx * 2 * (q2 * q4 - q1 * q3) +
-                      my * 2 * (q3 * q4 + q1 * q2) +
-                      mz * (q1q1 - q2q2 - q3q3 + q4q4))
+                hx = mx * (q1q1 + q2q2 - q3q3 - q4q4) + my * 2 * (q2 * q3 - q1 * q4) + mz * 2 * (q2 * q4 + q1 * q3)
+                hy = mx * 2 * (q2 * q3 + q1 * q4) + my * (q1q1 - q2q2 + q3q3 - q4q4) + mz * 2 * (q3 * q4 - q1 * q2)
+                hz = mx * 2 * (q2 * q4 - q1 * q3) + my * 2 * (q3 * q4 + q1 * q2) + mz * (q1q1 - q2q2 - q3q3 + q4q4)
 
                 # Compute reference field (horizontal component + vertical)
                 bx = np.sqrt(hx * hx + hy * hy)  # Horizontal magnitude
@@ -314,11 +308,15 @@ def angles_from_imu_fusion(
                 # Jacobian^T * error (gradient of objective function)
                 s_mag_1 = (-_2bz * q3) * ex_m + (-_2bx * q4 + _2bz * q2) * ey_m + (_2bx * q3) * ez_m
                 s_mag_2 = (_2bz * q4) * ex_m + (_2bx * q3 + _2bz * q1) * ey_m + (_2bx * q4 - _2bz * 2 * q2) * ez_m
-                s_mag_3 = (-_4bx * q3 - _2bz * q1) * ex_m + (_2bx * q2 + _2bz * q4) * ey_m + (_2bx * q1 - _2bz * 2 * q3) * ez_m
+                s_mag_3 = (
+                    (-_4bx * q3 - _2bz * q1) * ex_m
+                    + (_2bx * q2 + _2bz * q4) * ey_m
+                    + (_2bx * q1 - _2bz * 2 * q3) * ez_m
+                )
                 s_mag_4 = (-_4bx * q4 + _2bz * q2) * ex_m + (-_2bx * q1 + _2bz * q3) * ey_m + (_2bx * q2) * ez_m
 
                 # Normalize magnetometer gradient
-                norm_s_mag = 1 / np.sqrt(s_mag_1 ** 2 + s_mag_2 ** 2 + s_mag_3 ** 2 + s_mag_4 ** 2)
+                norm_s_mag = 1 / np.sqrt(s_mag_1**2 + s_mag_2**2 + s_mag_3**2 + s_mag_4**2)
                 s_mag_1 *= norm_s_mag
                 s_mag_2 *= norm_s_mag
                 s_mag_3 *= norm_s_mag
@@ -373,7 +371,9 @@ def angles_from_imu_fusion(
             # the IMU within the invisible headset
             this_roll = (
                 np.degrees(
-                    -np.arcsin(2.0 * (this_quaternion[1] * this_quaternion[3] - this_quaternion[0] * this_quaternion[2]))
+                    -np.arcsin(
+                        2.0 * (this_quaternion[1] * this_quaternion[3] - this_quaternion[0] * this_quaternion[2])
+                    )
                 )
                 + roll_offset
             )

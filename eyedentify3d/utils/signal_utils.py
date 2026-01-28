@@ -74,9 +74,7 @@ def filter_data(data: np.ndarray, cutoff_freq: float = 0.2, order: int = 8, padl
 
 
 def interpolate_to_specified_timestamps(
-    current_time_vector: np.ndarray,
-    desired_time_vector: np.ndarray,
-    angles_to_interpolate: np.ndarray
+    current_time_vector: np.ndarray, desired_time_vector: np.ndarray, angles_to_interpolate: np.ndarray
 ) -> np.ndarray:
     """
     This function gets the angles_to_interpolate acquired at the current_time_vector instants and interpolates it to
@@ -122,6 +120,7 @@ def interpolate_to_specified_timestamps(
                     (angles_after - angles_before) / (t_after - t_before)
                 )
     return interpolated_data
+
 
 def get_largest_non_nan_sequence(data: np.ndarray) -> tuple[int, int]:
     """

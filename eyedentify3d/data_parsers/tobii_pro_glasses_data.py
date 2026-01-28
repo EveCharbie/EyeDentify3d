@@ -59,14 +59,14 @@ class TobiiProGlassesData(Data):
 
     @staticmethod
     def parse_gz(file_path: str, data_dict: dict[str, Any], parsing_function: Callable):
-        with gzip.open(file_path, 'rt') as f:
+        with gzip.open(file_path, "rt") as f:
             reader = csv.reader(f)
             for row in reader:
                 # Join the row back into a single string
-                line = ','.join(row)
+                line = ",".join(row)
 
                 # Replace patterns like 'key:' with '"key":'
-                line = re.sub(r'(\w+):', r'"\1":', line)
+                line = re.sub(r"(\w+):", r'"\1":', line)
 
                 # Now transform the data from each line of the json
                 data = json.loads(line)
@@ -86,11 +86,11 @@ class TobiiProGlassesData(Data):
                 # Normalize the gaze direction vector
                 gaze3d = np.array(data["data"]["gaze3d"])
                 gaze_data_dict["gaze_vector"] += [gaze3d / np.linalg.norm(gaze3d)]
-                if "eyeleft" in data["data"].keys() and "pupildiameter" in data["data"]["eyeleft"].keys() :
+                if "eyeleft" in data["data"].keys() and "pupildiameter" in data["data"]["eyeleft"].keys():
                     gaze_data_dict["pupil_diameter_left"] += [data["data"]["eyeleft"]["pupildiameter"]]
                 else:
                     gaze_data_dict["pupil_diameter_left"] += [np.nan]
-                if "eyeright" in data["data"].keys() and "pupildiameter" in data["data"]["eyeright"].keys() :
+                if "eyeright" in data["data"].keys() and "pupildiameter" in data["data"]["eyeright"].keys():
                     gaze_data_dict["pupil_diameter_right"] += [data["data"]["eyeright"]["pupildiameter"]]
                 else:
                     gaze_data_dict["pupil_diameter_right"] += [np.nan]
@@ -178,10 +178,13 @@ class TobiiProGlassesData(Data):
             self.error_type(error_str)
 
         if (
-            np.sum(np.logical_or(np.sum(np.isnan(self.gaze_data_dict["gaze_vector"]), axis=1),
-                                 np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
-                                 np.isnan(self.gaze_data_dict["pupil_diameter_right"]),
-                                 ))
+            np.sum(
+                np.logical_or(
+                    np.sum(np.isnan(self.gaze_data_dict["gaze_vector"]), axis=1),
+                    np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
+                    np.isnan(self.gaze_data_dict["pupil_diameter_right"]),
+                )
+            )
             > len(self.gaze_data_dict["timestamp"]) / 2
         ):
             self._validity_flag = False
@@ -206,7 +209,7 @@ class TobiiProGlassesData(Data):
         # Set the time vector (already in seconds)
         time_vector = np.array(self.gaze_data_dict["timestamp"])
         initial_time = time_vector[0]
-        self.time_vector = (time_vector - initial_time)
+        self.time_vector = time_vector - initial_time
 
         # also transform imu timings
         self.imu_data_dict["timestamp_100Hz"] = np.array(self.imu_data_dict["timestamp_100Hz"]) - initial_time
@@ -245,7 +248,6 @@ class TobiiProGlassesData(Data):
         indices_to_keep_magneto = self.time_range.get_indices(self.imu_data_dict["timestamp_10Hz"])
         self.imu_data_dict["timestamp_10Hz"] = self.imu_data_dict["timestamp_10Hz"][indices_to_keep_magneto]
         self.imu_data_dict["magnetometer"] = self.imu_data_dict["magnetometer"][indices_to_keep_magneto]
-
 
     def interpolate_to_eye_timestamps(
         self,
@@ -313,12 +315,12 @@ class TobiiProGlassesData(Data):
             acceleration=interpolated_imu["accelerometer"],
             gyroscope=interpolated_imu["gyroscope"],
             magnetometer=interpolated_imu["magnetometer"],
-            roll_offset=0, pitch_offset=0
+            roll_offset=0,
+            pitch_offset=0,
         )
         head_angles = np.array([roll, np.zeros_like(pitch), np.zeros_like(roll)])
 
         self.head_angles = unwrap_rotation(head_angles)
-
 
     @destroy_on_fail
     def _set_data_invalidity(self):
