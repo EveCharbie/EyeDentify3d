@@ -67,7 +67,7 @@ def filter_data(data: np.ndarray, cutoff_freq: float = 0.2, order: int = 8, padl
     padlen: The number of elements by which to extend the data at both ends of axis before applying the filter.
     """
     b, a = signal.butter(order, cutoff_freq)
-    filtered_data = np.zeros_like(data)
+    filtered_data = np.zeros_like(data, dtype=float)
     for i_component in range(data.shape[0]):
         filtered_data[i_component, :] = signal.filtfilt(b, a, data[i_component, :], padlen=padlen)
     return filtered_data

@@ -50,7 +50,7 @@ def unwrap_rotation(angles: np.ndarray) -> np.ndarray:
     ----------
     angles: A numpy array of shape (3, n_frames) containing Euler angles expressed in degrees.
     """
-    unwrapped_angles = np.zeros_like(angles)
+    unwrapped_angles = np.zeros_like(angles).astype(float)
     unwrapped_angles[:, :] = np.nan
     start_idx, end_idx = get_largest_non_nan_sequence(angles)
     unwrapped_angles[:, start_idx:end_idx] = np.unwrap(angles[:, start_idx:end_idx], period=360, axis=1)
