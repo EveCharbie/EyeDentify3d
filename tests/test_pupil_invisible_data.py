@@ -189,9 +189,9 @@ def test_check_validity_non_increasing_time(mock_read_csv, mock_csv_data):
     mock_read_csv.side_effect = side_effect
 
     data = PupilInvisibleData("test_folder/", error_type=ErrorType.SKIP)
-    data.gaze_csv_data["timestamp [ns]"][:] = np.array(data.gaze_csv_data["timestamp [ns]"])[
-        ::-1
-    ]  # Reverse to make non-increasing
+    # Reverse to make non-increasing
+    time_vector_reversed = np.array(data.gaze_csv_data["timestamp [ns]"])[::-1]
+    data.gaze_csv_data["timestamp [ns]"][:] = time_vector_reversed
 
     data._validity_flag = True
 
