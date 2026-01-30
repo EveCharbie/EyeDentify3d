@@ -27,11 +27,11 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install jupyter-book
+        pip install 'jupyter-book<1.0'
 
     - name: Build the book
       run: |
-        jupyter-book build docs --builder html
+        jupyter-book build docs
 
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
