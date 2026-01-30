@@ -234,20 +234,20 @@ class TobiiProGlassesData(Data):
         indices_to_keep_gaze = self.time_range.get_indices(self.time_vector)
         self.time_vector = self.time_vector[indices_to_keep_gaze]
         self.gaze_data_dict["timestamp"] = self.gaze_data_dict["timestamp"][indices_to_keep_gaze]
-        self.gaze_data_dict["gaze_vector"] = self.gaze_data_dict["gaze_vector"][indices_to_keep_gaze]
+        self.gaze_data_dict["gaze_vector"] = self.gaze_data_dict["gaze_vector"][indices_to_keep_gaze, :]
         self.gaze_data_dict["pupil_diameter_right"] = self.gaze_data_dict["pupil_diameter_right"][indices_to_keep_gaze]
         self.gaze_data_dict["pupil_diameter_left"] = self.gaze_data_dict["pupil_diameter_left"][indices_to_keep_gaze]
 
         # Accelero/gyro timestamps
         indices_to_keep_imu = self.time_range.get_indices(self.imu_data_dict["timestamp_100Hz"])
         self.imu_data_dict["timestamp_100Hz"] = self.imu_data_dict["timestamp_100Hz"][indices_to_keep_imu]
-        self.imu_data_dict["accelerometer"] = self.imu_data_dict["accelerometer"][indices_to_keep_imu]
-        self.imu_data_dict["gyroscope"] = self.imu_data_dict["gyroscope"][indices_to_keep_imu]
+        self.imu_data_dict["accelerometer"] = self.imu_data_dict["accelerometer"][indices_to_keep_imu, :]
+        self.imu_data_dict["gyroscope"] = self.imu_data_dict["gyroscope"][indices_to_keep_imu, :]
 
         # Magneto timestamps
         indices_to_keep_magneto = self.time_range.get_indices(self.imu_data_dict["timestamp_10Hz"])
         self.imu_data_dict["timestamp_10Hz"] = self.imu_data_dict["timestamp_10Hz"][indices_to_keep_magneto]
-        self.imu_data_dict["magnetometer"] = self.imu_data_dict["magnetometer"][indices_to_keep_magneto]
+        self.imu_data_dict["magnetometer"] = self.imu_data_dict["magnetometer"][indices_to_keep_magneto, :]
 
     def interpolate_to_eye_timestamps(
         self,
@@ -294,6 +294,10 @@ class TobiiProGlassesData(Data):
         """
         Get the eye direction from the gaze data. It is a unit vector in the same direction as the eyes.
         """
+        for i_frame in range(self.gaze_data_dict["gaze_vector"].shape[0]):
+            norm = np.linalg.norm(self.gaze_data_dict["gaze_vector"][i_frame, :])
+            if np.abs(norm - 1.0) > 1e-10:
+                raise RuntimeError("The gaze direction norm should be 1.0, please check the data.")
         self.eye_direction = np.array(self.gaze_data_dict["gaze_vector"]).T
 
     @destroy_on_fail
@@ -329,6 +333,6 @@ class TobiiProGlassesData(Data):
         """
         self.data_invalidity = np.logical_or(
             np.sum(np.isnan(self.gaze_data_dict["gaze_vector"]), axis=1),
-            np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
-            np.isnan(self.gaze_data_dict["pupil_diameter_right"]),
+            np.logical_or(np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
+            np.isnan(self.gaze_data_dict["pupil_diameter_right"])),
         )
