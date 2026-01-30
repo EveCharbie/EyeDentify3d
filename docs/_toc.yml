@@ -9,6 +9,7 @@ chapters:
   - file: data_parsing/htc_vive_pro
   - file: data_parsing/pupil_invisible
   - file: data_parsing/pico_neo
+  - file: data_parsing/tobii_pro_glasses
 - file: behavior_identification/index
   sections:
   - file: behavior_identification/blink
