@@ -333,6 +333,8 @@ class TobiiProGlassesData(Data):
         """
         self.data_invalidity = np.logical_or(
             np.sum(np.isnan(self.gaze_data_dict["gaze_vector"]), axis=1),
-            np.logical_or(np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
-            np.isnan(self.gaze_data_dict["pupil_diameter_right"])),
+            np.logical_or(
+                np.isnan(self.gaze_data_dict["pupil_diameter_left"]),
+                np.isnan(self.gaze_data_dict["pupil_diameter_right"]),
+            ),
         )

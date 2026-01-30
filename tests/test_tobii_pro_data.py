@@ -17,7 +17,7 @@ def mock_gz_data():
         gaze3d = [
             -10 + 20 * i / 199,  # azimuth from -10 to 10
             -5 + 10 * i / 199,  # elevation from -5 to 5
-            0.5  # z component (will be normalized anyway)
+            0.5,  # z component (will be normalized anyway)
         ]
         pupil_left = np.nan if 100 <= i < 110 else 1.0
         pupil_right = np.nan if 50 <= i < 60 else 1.0
@@ -27,11 +27,11 @@ def mock_gz_data():
             "data": {
                 "gaze3d": gaze3d,
                 "eyeleft": {"pupildiameter": pupil_left},
-                "eyeright": {"pupildiameter": pupil_right}
-            }
+                "eyeright": {"pupildiameter": pupil_right},
+            },
         }
         # Format as the weird JSON format with key: instead of "key":
-        line = json.dumps(line_data).replace('"timestamp":', 'timestamp:').replace('"data":', 'data:')
+        line = json.dumps(line_data).replace('"timestamp":', "timestamp:").replace('"data":', "data:")
         gaze_lines.append(line)
 
     imu_lines = []
@@ -43,34 +43,20 @@ def mock_gz_data():
             line_data = {
                 "timestamp": t,
                 "data": {
-                    "accelerometer": [
-                        -10 + 20 * i / 199,  # x -10 to 10
-                        -5 + 10 * i / 199,  # y -5 to 5
-                        0.5
-                    ],
-                    "gyroscope": [
-                        -20 + 20 * i / 199,
-                        -15 + 10 * i / 199,
-                        -5 + 5 * i / 199
-                    ]
-                }
+                    "accelerometer": [-10 + 20 * i / 199, -5 + 10 * i / 199, 0.5],  # x -10 to 10  # y -5 to 5
+                    "gyroscope": [-20 + 20 * i / 199, -15 + 10 * i / 199, -5 + 5 * i / 199],
+                },
             }
-            line = json.dumps(line_data).replace('"timestamp":', 'timestamp:').replace('"data":', 'data:')
+            line = json.dumps(line_data).replace('"timestamp":', "timestamp:").replace('"data":', "data:")
             imu_lines.append(line)
 
         # 10Hz data (magnetometer)
         if i % 10 == 0:  # Every 10th sample for 10Hz
             line_data = {
                 "timestamp": t,
-                "data": {
-                    "magnetometer": [
-                        -100 + 100 * i / 199,
-                        -50 + 50 * i / 199,
-                        -75 + 75 * i / 199
-                    ]
-                }
+                "data": {"magnetometer": [-100 + 100 * i / 199, -50 + 50 * i / 199, -75 + 75 * i / 199]},
             }
-            line = json.dumps(line_data).replace('"timestamp":', 'timestamp:').replace('"data":', 'data:')
+            line = json.dumps(line_data).replace('"timestamp":', "timestamp:").replace('"data":', "data:")
             imu_lines.append(line)
 
     return {"gazedata": gaze_lines, "imudata": imu_lines}
@@ -81,7 +67,7 @@ def test_tobii_pro_data_init(mock_gzip_open, mock_gz_data):
     """Test initialization of TobiiProGlassesData"""
 
     # Configure the mock to return different file contents for different file paths
-    def side_effect(path, mode='rt'):
+    def side_effect(path, mode="rt"):
         mock_file = MagicMock()
         if path.endswith("gazedata.gz"):
             # Create a CSV reader-like iterator
@@ -135,7 +121,7 @@ def test_check_validity_empty_file(mock_gzip_open, mock_gz_data):
     """Test _check_validity with empty file"""
 
     # Configure the mock to return different file contents for different file paths
-    def side_effect(path, mode='rt'):
+    def side_effect(path, mode="rt"):
         mock_file = MagicMock()
         if path.endswith("gazedata.gz"):
             # Create a CSV reader-like iterator
@@ -162,7 +148,7 @@ def test_check_validity_invalid_data(mock_gzip_open, mock_gz_data):
     """Test _check_validity with mostly invalid data"""
 
     # Configure the mock to return different file contents for different file paths
-    def side_effect(path, mode='rt'):
+    def side_effect(path, mode="rt"):
         mock_file = MagicMock()
         if path.endswith("gazedata.gz"):
             # Create a CSV reader-like iterator
@@ -190,7 +176,7 @@ def test_check_validity_non_increasing_time(mock_gzip_open, mock_gz_data):
     """Test _check_validity with non-increasing time vector"""
 
     # Configure the mock to return different file contents for different file paths
-    def side_effect(path, mode='rt'):
+    def side_effect(path, mode="rt"):
         mock_file = MagicMock()
         if path.endswith("gazedata.gz"):
             # Create a CSV reader-like iterator
@@ -264,17 +250,17 @@ def test_discard_data_out_of_range():
     data = TobiiProGlassesData.__new__(TobiiProGlassesData)
     data._validity_flag = True
     data.gaze_data_dict = {}
-    data.gaze_data_dict["timestamp"] = np.array([0.1*i for i in range(200)])
+    data.gaze_data_dict["timestamp"] = np.array([0.1 * i for i in range(200)])
     data.gaze_data_dict["gaze_vector"] = np.array([[1, 0, 0] for _ in range(200)])
-    data.gaze_data_dict["pupil_diameter_right"] = np.ones((200, ))
-    data.gaze_data_dict["pupil_diameter_left"] = np.ones((200, ))
+    data.gaze_data_dict["pupil_diameter_right"] = np.ones((200,))
+    data.gaze_data_dict["pupil_diameter_left"] = np.ones((200,))
     data.imu_data_dict = {}
-    data.imu_data_dict["timestamp_100Hz"] = np.array([0.1*i for i in range(200)])
-    data.imu_data_dict["accelerometer"] = np.array([[0.1*i, 0.2*i, 0.3*i] for i in range(1, 201)])
-    data.imu_data_dict["gyroscope"] = np.array([[0.1*i, 0.2*i, 0.3*i] for i in range(1, 201)])
-    data.imu_data_dict["timestamp_10Hz"] = np.array([0.1*i for i in range(200)])
-    data.imu_data_dict["magnetometer"] = np.array([[0.1*i, 0.2*i, 0.3*i] for i in range(1, 201)])
-    data.time_vector = np.array([0.1*i for i in range(200)])
+    data.imu_data_dict["timestamp_100Hz"] = np.array([0.1 * i for i in range(200)])
+    data.imu_data_dict["accelerometer"] = np.array([[0.1 * i, 0.2 * i, 0.3 * i] for i in range(1, 201)])
+    data.imu_data_dict["gyroscope"] = np.array([[0.1 * i, 0.2 * i, 0.3 * i] for i in range(1, 201)])
+    data.imu_data_dict["timestamp_10Hz"] = np.array([0.1 * i for i in range(200)])
+    data.imu_data_dict["magnetometer"] = np.array([[0.1 * i, 0.2 * i, 0.3 * i] for i in range(1, 201)])
+    data.time_vector = np.array([0.1 * i for i in range(200)])
     data.time_range = TimeRange(0.15, 15.25)
     data.dt = 0.1
 
@@ -308,8 +294,12 @@ def test_set_eye_openness():
     data.time_vector = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
 
     data.gaze_data_dict = {}
-    data.gaze_data_dict["pupil_diameter_right"] = np.array([1.0, np.nan, np.nan, np.nan, 1.0, 1.0, np.nan, np.nan, np.nan, 1.0])
-    data.gaze_data_dict["pupil_diameter_left"] = np.array([1.0, np.nan, np.nan, np.nan, 1.0, 1.0, np.nan, np.nan, np.nan, 1.0])
+    data.gaze_data_dict["pupil_diameter_right"] = np.array(
+        [1.0, np.nan, np.nan, np.nan, 1.0, 1.0, np.nan, np.nan, np.nan, 1.0]
+    )
+    data.gaze_data_dict["pupil_diameter_left"] = np.array(
+        [1.0, np.nan, np.nan, np.nan, 1.0, 1.0, np.nan, np.nan, np.nan, 1.0]
+    )
 
     data._set_eye_openness()
 
@@ -375,14 +365,21 @@ def test_interpolate_to_eye_timestamps():
 
     # Check interpolated values
     npt.assert_almost_equal(interpolated_imu["accelerometer"][:, 0], np.array([0.1, 0.2, 0.3]))  # t=0.0, exact match
-    npt.assert_almost_equal(interpolated_imu["accelerometer"][:, 1], np.array([0.15, 0.3 , 0.45]))  # t=0.1, interpolation between
+    npt.assert_almost_equal(
+        interpolated_imu["accelerometer"][:, 1], np.array([0.15, 0.3, 0.45])
+    )  # t=0.1, interpolation between
     npt.assert_almost_equal(interpolated_imu["accelerometer"][:, 2], np.array([0.2, 0.4, 0.6]))  # t=0.2, exact match
     npt.assert_almost_equal(interpolated_imu["gyroscope"][:, 0], np.array([0.1, 0.2, 0.3]))  # t=0.0, exact match
-    npt.assert_almost_equal(interpolated_imu["gyroscope"][:, 1], np.array([0.15, 0.3 , 0.45]))  # t=0.1, interpolation between
+    npt.assert_almost_equal(
+        interpolated_imu["gyroscope"][:, 1], np.array([0.15, 0.3, 0.45])
+    )  # t=0.1, interpolation between
     npt.assert_almost_equal(interpolated_imu["gyroscope"][:, 2], np.array([0.2, 0.4, 0.6]))  # t=0.2, exact match
     npt.assert_almost_equal(interpolated_imu["magnetometer"][:, 2], np.array([0.1, 0.2, 0.3]))  # t=0.2, exact match
-    npt.assert_almost_equal(interpolated_imu["magnetometer"][:, 3], np.array([0.15, 0.3 , 0.45]))  # t=0.3, interpolation between
+    npt.assert_almost_equal(
+        interpolated_imu["magnetometer"][:, 3], np.array([0.15, 0.3, 0.45])
+    )  # t=0.3, interpolation between
     npt.assert_almost_equal(interpolated_imu["magnetometer"][:, 4], np.array([0.2, 0.4, 0.6]))  # t=0.4, exact match
+
 
 def test_set_head_angles_without_tags():
     """Test _set_head_angles method without tags in experiment"""
@@ -404,11 +401,10 @@ def test_set_head_angles_without_tags():
 
     data._set_head_angles()
 
-    npt.assert_almost_equal(data.head_angles,
-                            np.array([[ 0.        ,  7.75185744, 15.40319576],
-                                       [ 0.        ,  0.        ,  0.        ],
-                                       [ 0.        ,  0.        ,  0.        ]]),
-                            )  # time_vector_imu
+    npt.assert_almost_equal(
+        data.head_angles,
+        np.array([[0.0, 7.75185744, 15.40319576], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+    )  # time_vector_imu
 
 
 def test_set_head_angular_velocity():
@@ -446,11 +442,17 @@ def test_set_data_invalidity():
     data._validity_flag = True
 
     data.gaze_data_dict = {}
-    data.gaze_data_dict["gaze_vector"] = np.array([[1, 0, 0] for _ in range (10)])
-    data.gaze_data_dict["pupil_diameter_right"] = np.array([1.0, 1.0,    np.nan, np.nan, 1.0, 1.0, np.nan, np.nan, np.nan, 1.0])
-    data.gaze_data_dict["pupil_diameter_left"] = np.array([ 1.0, np.nan, np.nan, np.nan, 1.0, 1.0, 1.0,    np.nan, np.nan, 1.0])
+    data.gaze_data_dict["gaze_vector"] = np.array([[1, 0, 0] for _ in range(10)])
+    data.gaze_data_dict["pupil_diameter_right"] = np.array(
+        [1.0, 1.0, np.nan, np.nan, 1.0, 1.0, np.nan, np.nan, np.nan, 1.0]
+    )
+    data.gaze_data_dict["pupil_diameter_left"] = np.array(
+        [1.0, np.nan, np.nan, np.nan, 1.0, 1.0, 1.0, np.nan, np.nan, 1.0]
+    )
 
     data._set_data_invalidity()
 
     assert data.data_invalidity is not None
-    npt.assert_almost_equal(data.data_invalidity, np.array([False, True, True, True, False, False, True, True, True, False]))
+    npt.assert_almost_equal(
+        data.data_invalidity, np.array([False, True, True, True, False, False, True, True, True, False])
+    )
