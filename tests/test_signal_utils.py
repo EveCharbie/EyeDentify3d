@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 from eyedentify3d.utils.signal_utils import (
     centered_finite_difference,
@@ -230,11 +231,9 @@ def test_get_largest_non_nan_sequence_all_nans():
     data = np.array([[np.nan, np.nan, np.nan],
                      [np.nan, np.nan, np.nan],
                      [np.nan, np.nan, np.nan]])
-    
-    start_idx, end_idx = get_largest_non_nan_sequence(data)
-    
-    assert start_idx == 0
-    assert end_idx == 0
+
+    with pytest.raises(RuntimeError, match="All data is NaN, please check the data."):
+        start_idx, end_idx = get_largest_non_nan_sequence(data)
 
 
 def test_get_largest_non_nan_sequence_single_valid_value():
@@ -283,6 +282,5 @@ def test_get_largest_non_nan_sequence_equal_length_sequences():
     
     # When sequences are equal, should return the first one
     # Sequences: [0-2) length 2, [3-5) length 2
-    # Should return the latter (rightmost)
-    assert start_idx == 3
-    assert end_idx == 5
+    assert start_idx == 0
+    assert end_idx == 2

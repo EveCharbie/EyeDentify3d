@@ -130,11 +130,15 @@ def get_largest_non_nan_sequence(data: np.ndarray) -> tuple[int, int]:
     ----------
     data: A numpy array of shape (n_components, n_frames) containing the data to analyze.
     """
+    if len(data.shape) == 1:
+        data = data.reshape(1, -1)
+
     if np.sum(np.isnan(data)) == 0:
         # If there is no NaN, in the data, return the full range
-        start_idx = 0
-        end_idx = data.shape[1]
+        return 0, data.shape[1]
     else:
+        if np.all(np.isnan(data)):
+            raise RuntimeError("All data is NaN, please check the data.")
         invalid_indices = np.where(np.sum(np.isnan(data), axis=0) != 0)[0]
         if len(invalid_indices) == 1:
             if invalid_indices[0] == 0:
@@ -147,6 +151,17 @@ def get_largest_non_nan_sequence(data: np.ndarray) -> tuple[int, int]:
                 else:
                     return invalid_indices[0] + 1, data.shape[1]
         largest_gap = np.argmax(invalid_indices[1:] - invalid_indices[:-1])
-        start_idx = invalid_indices[largest_gap] + 1
-        end_idx = invalid_indices[largest_gap + 1]
-    return start_idx, end_idx
+        first_gap = invalid_indices[0] if invalid_indices[0] != 0 else 0
+        last_gap = data.shape[1] - invalid_indices[-1] - 1 if invalid_indices[-1] != data.shape[1] - 1 else 0
+        if np.max(np.array([largest_gap, first_gap, last_gap])) == largest_gap:
+            start_idx = invalid_indices[largest_gap] + 1
+            end_idx = invalid_indices[largest_gap + 1]
+            return start_idx, end_idx
+        elif np.max(np.array([largest_gap, first_gap, last_gap])) == first_gap:
+            start_idx = 0
+            end_idx = invalid_indices[0]
+            return start_idx, end_idx
+        else:
+            start_idx = invalid_indices[-1] + 1
+            end_idx = data.shape[1]
+            return start_idx, end_idx
