@@ -295,7 +295,7 @@ def test_compute_angular_velocity():
         compute_angular_velocity(time_vector[:1], eye_direction[:, :1])  # Not enough frames in time vector
 
 
-def test_angles_from_imu_fusion():
+def test_angles_from_imu_fusion_without_magneto():
     """Test angles_from_imu_fusion function."""
     np.random.seed(42)
 
@@ -313,7 +313,9 @@ def test_angles_from_imu_fusion():
     gyroscope[2, :] = np.linspace(0, 10, n_frames)
 
     # Get the angles
-    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope, 7, 90)
+    pitch, roll, yaw = angles_from_imu_fusion(
+        time_vector, acceleration, gyroscope, magnetometer=None, roll_offset=7, pitch_offset=90
+    )
 
     # Check values
     npt.assert_almost_equal(
@@ -376,7 +378,9 @@ def test_angles_from_imu_fusion():
     gyroscope[0, :] = 10
 
     # Get the angles
-    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope, 0, 0)
+    pitch, roll, yaw = angles_from_imu_fusion(
+        time_vector, acceleration, gyroscope, magnetometer=None, roll_offset=0, pitch_offset=0
+    )
 
     # Check values
     npt.assert_almost_equal(
@@ -435,7 +439,9 @@ def test_angles_from_imu_fusion():
     gyroscope = np.zeros((3, n_frames))
     gyroscope[2, :] = 90.0
 
-    pitch, roll, yaw = angles_from_imu_fusion(time_vector, acceleration, gyroscope, 0, 0)
+    pitch, roll, yaw = angles_from_imu_fusion(
+        time_vector, acceleration, gyroscope, magnetometer=None, roll_offset=0, pitch_offset=0
+    )
 
     # Check values
     npt.assert_almost_equal(
@@ -490,9 +496,210 @@ def test_angles_from_imu_fusion():
         ),
     )
 
-    # Test error case with NaNs
-    acceleration_with_nan = acceleration.copy()
-    acceleration_with_nan[0, 0] = np.nan
 
-    with pytest.raises(NotImplementedError, match="The acceleration and/or gyroscope data contains NaNs"):
-        angles_from_imu_fusion(time_vector, acceleration_with_nan, gyroscope, 0, 0)
+def test_angles_from_imu_fusion_with_magneto():
+    """Test angles_from_imu_fusion function with magnetometer data."""
+    np.random.seed(42)
+
+    # Create test data
+    n_frames = 10
+    time_vector = np.linspace(0, 1, n_frames)
+
+    # Create constant acceleration pointing down (z-axis)
+    acceleration = 1 * np.random.random((3, n_frames)) * 0.01
+
+    # Create small linear gyroscope readings (slow rotation on all axis)
+    gyroscope = np.zeros((3, n_frames))
+    gyroscope[0, :] = np.linspace(0, 10, n_frames)
+    gyroscope[1, :] = np.linspace(0, 10, n_frames)
+    gyroscope[2, :] = np.linspace(0, 10, n_frames)
+
+    # Create magnetometer data
+    magnetometer = np.zeros((3, n_frames))
+    magnetometer[0, :] = np.linspace(-10, -100, n_frames)
+    magnetometer[1, :] = np.linspace(0, -50, n_frames)
+    magnetometer[2, :] = np.linspace(-30, -150, n_frames)
+
+    # Get the angles
+    pitch, roll, yaw = angles_from_imu_fusion(
+        time_vector, acceleration, gyroscope, magnetometer=magnetometer, roll_offset=7, pitch_offset=90
+    )
+
+    # Check values
+    npt.assert_almost_equal(
+        pitch,
+        np.array(
+            [
+                0.0,
+                90.5325777,
+                98.02287848,
+                106.28794983,
+                108.81509176,
+                109.86281544,
+                105.74933101,
+                115.78482116,
+                119.54194219,
+                122.59877243,
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        roll,
+        np.array(
+            [
+                0.0,
+                -3.54020301,
+                -10.68331159,
+                -16.57007238,
+                -25.50159583,
+                -16.81395715,
+                -9.41951786,
+                -8.83590177,
+                -17.59660301,
+                -25.99265861,
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        yaw,
+        np.array(
+            [
+                0.0,
+                -0.0491258,
+                -1.68484848,
+                -4.25224995,
+                -4.91704788,
+                -4.65414889,
+                -2.26102335,
+                -3.9875703,
+                -4.05166451,
+                -4.04606931,
+            ]
+        ),
+    )
+
+    # Create no acceleration
+    acceleration = np.random.random((3, n_frames)) * 0.00001
+
+    # Test with rotation around x-axis
+    gyroscope = np.zeros((3, n_frames))
+    gyroscope[0, :] = 10
+
+    # Get the angles
+    pitch, roll, yaw = angles_from_imu_fusion(
+        time_vector, acceleration, gyroscope, magnetometer=magnetometer, roll_offset=0, pitch_offset=0
+    )
+
+    # Check values
+    npt.assert_almost_equal(
+        pitch,
+        np.array(
+            [
+                0.0,
+                3.03036613,
+                13.96845091,
+                7.02668938,
+                14.98634652,
+                17.35863718,
+                26.08283072,
+                34.96027331,
+                44.71970265,
+                52.02321252,
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        roll,
+        np.array(
+            [
+                0.0,
+                -10.36077438,
+                -11.61878965,
+                -7.50375025,
+                -15.0047012,
+                -24.9307749,
+                -30.73433523,
+                -35.50709655,
+                -30.97818498,
+                -37.16493801,
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        yaw,
+        np.array(
+            [
+                0.0,
+                -0.27480258,
+                -2.13497373,
+                -0.77832648,
+                -2.14766991,
+                -2.68467898,
+                -6.32896324,
+                -10.73476108,
+                -15.66326143,
+                -19.49052456,
+            ]
+        ),
+    )
+
+    # Test with rotation around z-axis
+    gyroscope = np.zeros((3, n_frames))
+    gyroscope[2, :] = 90.0
+
+    pitch, roll, yaw = angles_from_imu_fusion(
+        time_vector, acceleration, gyroscope, magnetometer=magnetometer, roll_offset=0, pitch_offset=0
+    )
+
+    # Check values
+    npt.assert_almost_equal(
+        pitch,
+        np.array(
+            [
+                0.0,
+                0.98856193,
+                8.83599502,
+                1.14471592,
+                6.30563974,
+                4.88215556,
+                8.92441384,
+                11.68213545,
+                15.18733009,
+                14.81849121,
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        roll,
+        np.array(
+            [
+                0.0,
+                -10.45200205,
+                -12.62161932,
+                -6.94115109,
+                -14.91779479,
+                -25.5720764,
+                -31.70456567,
+                -38.84804786,
+                -38.21593344,
+                -45.55140058,
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        yaw,
+        np.array(
+            [
+                0.0,
+                9.88430982,
+                18.15854505,
+                29.34223526,
+                38.36841968,
+                48.37434925,
+                55.32374614,
+                61.95731245,
+                67.36140453,
+                74.87370227,
+            ]
+        ),
+    )

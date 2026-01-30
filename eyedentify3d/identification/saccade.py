@@ -238,7 +238,10 @@ class SaccadeEvent(Event):
 
         # Plot the eye acceleration
         axs[2].plot(
-            self.data_object.time_vector, self.eye_angular_acceleration, color="tab:blue", label="Eye acceleration"
+            self.data_object.time_vector,
+            np.abs(self.eye_angular_acceleration),
+            color="tab:blue",
+            label="Eye acceleration",
         )
         axs[2].axhline(
             self.min_acceleration_threshold,

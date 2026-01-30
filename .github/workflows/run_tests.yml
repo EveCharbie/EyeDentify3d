@@ -44,7 +44,13 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          conda install -c conda-forge pytest pytest-cov codecov black pytest-mpl
+          conda install -c conda-forge pytest pytest-cov codecov black pandas=2.3.1 pytest-mpl
+
+      - name: Print conde environment info
+        run: |
+          conda info
+          conda list
+          python --version
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=eyedentify3d tests --mpl-baseline-path=eyedentify/tests/plot_reference_images
