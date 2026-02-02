@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-from .event import Event
+from .behavior_type import BehaviorType
 from ..utils.data_utils import DataObject
 from ..utils.check_utils import check_save_name
 
 
-class InvalidEvent(Event):
+class InvalidEvent(BehaviorType):
     """
     Class to detect invalid sequences.
     An invalid event is detected when the eye-tracker declares the frame as invalid.

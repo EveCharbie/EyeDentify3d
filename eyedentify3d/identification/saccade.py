@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-from .event import Event
+from .behavior_type import BehaviorType
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import split_sequences, merge_close_sequences
 from ..utils.rotation_utils import get_angle_between_vectors, compute_angular_velocity
@@ -10,7 +10,7 @@ from ..utils.signal_utils import centered_finite_difference
 from ..utils.check_utils import check_save_name
 
 
-class SaccadeEvent(Event):
+class SaccadeEvent(BehaviorType):
     """
     Class to detect saccade sequences.
     A saccade event is detected when both conditions are met:

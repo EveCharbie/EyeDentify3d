@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-from .event import Event
+from .behavior_type import BehaviorType
 from ..utils.data_utils import DataObject
 from ..utils.check_utils import check_save_name
 
 
-class BlinkEvent(Event):
+class BlinkEvent(BehaviorType):
     """
     Class to detect blink sequences.
     A blink event is detected when both eye openness drop bellow the threshold (default 0.5).

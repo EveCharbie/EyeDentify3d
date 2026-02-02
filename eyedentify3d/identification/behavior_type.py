@@ -5,7 +5,7 @@ import numpy as np
 from ..utils.sequence_utils import split_sequences, apply_minimal_duration
 
 
-class Event(ABC):
+class BehaviorType(ABC):
     """
     Generic class to detect event sequences.
     """
