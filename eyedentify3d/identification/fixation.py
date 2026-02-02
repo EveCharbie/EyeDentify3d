@@ -2,13 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-from .event import Event
+from .behavior_type import BehaviorType
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import merge_close_sequences
 from ..utils.check_utils import check_save_name
 
 
-class FixationEvent(Event):
+class FixationEvent(BehaviorType):
     """
     Class to detect fixation sequences.
     See eyedentify3d/identification/inter_sacadic.py for more details on the identification if fixation indices.

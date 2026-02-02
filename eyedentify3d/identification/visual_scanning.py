@@ -2,13 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 
-from .event import Event
+from .behavior_type import BehaviorType
 from ..utils.data_utils import DataObject
 from ..utils.sequence_utils import merge_close_sequences
 from ..utils.check_utils import check_save_name
 
 
-class VisualScanningEvent(Event):
+class VisualScanningEvent(BehaviorType):
     """
     Class to detect visual scanning sequences.
     A visual scanning event is detected when the gaze velocity is larger than min_velocity_threshold deg/s, but which are not saccades.

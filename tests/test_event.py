@@ -3,11 +3,11 @@ import numpy.testing as npt
 import pytest
 from unittest.mock import MagicMock
 
-from eyedentify3d.identification.event import Event
+from eyedentify3d.identification.behavior_type import BehaviorType
 
 
-class MockEvent(Event):
-    """Mock implementation of the abstract Event class for testing."""
+class MockEvent(BehaviorType):
+    """Mock implementation of the abstract BehaviorType class for testing."""
 
     def __init__(self, data_object=None, minimal_duration=None):
         super().__init__()
@@ -30,7 +30,7 @@ def mock_data_object():
 
 
 def test_event_initialization():
-    """Test that Event initializes correctly."""
+    """Test that BehaviorType initializes correctly."""
     event = MockEvent()
     assert event.frame_indices is None
     assert event.sequences == []

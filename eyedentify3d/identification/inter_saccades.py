@@ -4,7 +4,7 @@ from matplotlib.axes import Axes
 import pingouin as pg
 from copy import deepcopy
 
-from .event import Event
+from .behavior_type import BehaviorType
 from ..utils.data_utils import DataObject
 from ..utils.rotation_utils import get_angle_between_vectors
 from ..utils.sequence_utils import split_sequences, apply_minimal_duration, merge_sequence_lists
@@ -12,7 +12,7 @@ from ..utils.signal_utils import find_time_index
 from ..utils.check_utils import check_save_name
 
 
-class InterSaccadicEvent(Event):
+class InterSaccadicEvent(BehaviorType):
     """
     Class to extract 'inter-saccadic' sequences. These sequences are defined as the sequences of frames that have not
     been yet identified (this is partly why order matters in the identification of the behaviors).
