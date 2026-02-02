@@ -17,9 +17,6 @@ jobs:
           - os: macos-latest
             label: osx-arm64
             prefix: /Users/runner/miniconda3/envs/eyedentify3d
-          - os: macos-13
-            label: osx-intel
-            prefix: /Users/runner/miniconda3/envs/eyedentify3d
           - os: windows-latest
             label: win-64
             prefix: C:\Miniconda3\envs\eyedentify3d
