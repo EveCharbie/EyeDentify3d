@@ -18,7 +18,7 @@ conda env create -f environment.yml
 ```
 
 ## Documentation
-you can find the paper accompanying our JOSS submission [here](paper/paper.pdf) and a deeper documentation of the 
+You can find the paper accompanying our JOSS submission [here](paper/paper.pdf) and a deeper documentation of the 
 package features and underlying mathematical choices [here](https://evecharbie.github.io/EyeDentify3d).
 
 ## Examples
