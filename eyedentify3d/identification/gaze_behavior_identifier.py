@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 
 from ..utils.data_utils import DataObject
+from ..data_parsers.abstract_data import EmptyData
 from ..utils.sequence_utils import get_sequences_in_range
 from ..utils.check_utils import check_save_name
 from ..utils.plot_utils import format_color_to_rgb
@@ -61,12 +62,15 @@ class GazeBehaviorIdentifier:
     def data_object(self, value: DataObject):
         if not isinstance(value, DataObject):
             raise ValueError(
-                f"The data_object must be an instance of HtcViveProData, PupilInvisibleData, or PicoNeoData, got {value}."
+                f"The data_object must be an instance of HtcViveProData, PupilInvisibleData, PicoNeoData, or EmptyData, got {value}."
             )
         self._data_object = value
 
     def _initialize_unavailable_indices(self):
-        self.unavailable_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
+        if isinstance(self.data_object, EmptyData):
+            self.unavailable_indices = np.empty(0, dtype=bool)
+        else:
+            self.unavailable_indices = np.empty((self.data_object.time_vector.shape[0],), dtype=bool)
         self.unavailable_indices.fill(False)
 
     def remove_bad_frames(self, event_identifier):
@@ -272,20 +276,23 @@ class GazeBehaviorIdentifier:
         Returns the indices of the frames that are not identified as any event.
         Here we deliberately exclude frames that have a large gaze velocity but that are not part of a visual scanning
         """
-        unidentified_indices = np.ones(
-            (self.data_object.time_vector.shape[0]), dtype=bool
-        )  # Initialize as all frames identified
-        for sequence in (
-            self.blink.sequences
-            + self.saccade.sequences
-            + self.visual_scanning.sequences
-            + self.fixation.sequences
-            + self.smooth_pursuit.sequences
-        ):
-            if len(sequence) != 0:
-                unidentified_indices[sequence] = False  # Mark identified frames as False
+        if isinstance(self.data_object, EmptyData):
+            return np.empty(0, dtype=bool)
+        else:
+            unidentified_indices = np.ones(
+                (self.data_object.time_vector.shape[0]), dtype=bool
+            )  # Initialize as all frames identified
+            for sequence in (
+                self.blink.sequences
+                + self.saccade.sequences
+                + self.visual_scanning.sequences
+                + self.fixation.sequences
+                + self.smooth_pursuit.sequences
+            ):
+                if len(sequence) != 0:
+                    unidentified_indices[sequence] = False  # Mark identified frames as False
 
-        return unidentified_indices
+            return unidentified_indices
 
     @property
     def identified_indices(self):
@@ -497,22 +504,33 @@ class GazeBehaviorIdentifier:
         # There was no event happening at the split timing
         return None, timing, timing
 
-    def _get_a_reduced_gaze_behavior_identifier(self, time_range: TimeRange) -> Self:
+    def _get_a_reduced_gaze_behavior_identifier(self, time_range: TimeRange) -> Self | None:
 
-        # Build a reduced data object based on the time range
-        reduced_data_object = ReducedData(
-            self.data_object.dt,
-            self.data_object.time_vector,
-            self.data_object.right_eye_openness,
-            self.data_object.left_eye_openness,
-            self.data_object.eye_direction,
-            self.data_object.head_angles,
-            self.data_object.gaze_direction,
-            self.data_object.head_angular_velocity,
-            self.data_object.head_velocity_norm,
-            self.data_object.data_invalidity,
-            time_range,
+        nb_frames = len(
+            np.where(
+                np.logical_and(
+                    self.data_object.time_vector >= time_range.min_time,
+                    self.data_object.time_vector <= time_range.max_time,
+                )
+            )[0]
         )
+        if nb_frames < 3:
+            reduced_data_object = EmptyData()
+        else:
+            # Build a reduced data object based on the time range
+            reduced_data_object = ReducedData(
+                self.data_object.dt,
+                self.data_object.time_vector,
+                self.data_object.right_eye_openness,
+                self.data_object.left_eye_openness,
+                self.data_object.eye_direction,
+                self.data_object.head_angles,
+                self.data_object.gaze_direction,
+                self.data_object.head_angular_velocity,
+                self.data_object.head_velocity_norm,
+                self.data_object.data_invalidity,
+                time_range,
+            )
 
         # Build a reduced GazeBehaviorIdentifier
         reduced_gaze_behavior_identifier = GazeBehaviorIdentifier(reduced_data_object)
@@ -738,12 +756,17 @@ class GazeBehaviorIdentifier:
         fixation_results = self.fixation.get_results() if self.fixation is not None else {}
         smooth_pursuit_results = self.smooth_pursuit.get_results() if self.smooth_pursuit is not None else {}
 
+        if isinstance(self.data_object, EmptyData):
+            head_velocity_norm = None
+        else:
+            head_velocity_norm = float(np.nanmean(self.data_object.head_velocity_norm))
+
         # Other results
         other_results = {
             "total_identified_ratio": [self.identified_ratio()],
             "total_unidentified_ratio": [self.unidentified_ratio()],
             "total_trial_duration": [self.data_object.trial_duration],
-            "mean_head_velocity_norm": [float(np.nanmean(self.data_object.head_velocity_norm))],
+            "mean_head_velocity_norm": [head_velocity_norm],
         }
 
         # Concatenate all results

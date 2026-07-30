@@ -246,3 +246,67 @@ class Data(ABC):
         self.gaze_direction = None
         self.head_angular_velocity = None
         self.head_velocity_norm = None
+
+
+class EmptyData(Data):
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def time_range(self):
+        return None
+
+    @time_range.setter
+    def time_range(self, value: TimeRange):
+        pass
+
+    @property
+    def trial_duration(self):
+        return 0
+
+    def _set_dt(self):
+        pass
+
+    def _set_gaze_direction(self):
+        pass
+
+    def _set_head_angular_velocity(self):
+        pass
+
+    @property
+    def file_name(self):
+        return None
+
+    @property
+    def nb_frames(self):
+        return 0
+
+    def _check_validity(self):
+        pass
+
+    def _set_time_vector(self):
+        pass
+
+    def _discard_data_out_of_range(self):
+        pass
+
+    def _set_eye_openness(self):
+        pass
+
+    def _set_eye_direction(self):
+        pass
+
+    def _set_head_angles(self):
+        pass
+
+    def _set_data_invalidity(self):
+        pass
+
+    def set_gaze_angular_velocity(self):
+        pass
+
+    def finalize(self):
+        self.is_finalized = True
+
+    def plot_gaze_vector(self, ax: Axes):
+        pass
