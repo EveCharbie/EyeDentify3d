@@ -247,6 +247,7 @@ class Data(ABC):
         self.head_angular_velocity = None
         self.head_velocity_norm = None
 
+
 class EmptyData(Data):
     def __init__(self):
         super().__init__()

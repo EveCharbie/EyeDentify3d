@@ -12,7 +12,6 @@ from eyedentify3d.data_parsers.abstract_data import EmptyData
 from eyedentify3d.data_parsers.reduced_data import ReducedData
 
 
-
 # ---------------------------------------------------------------------------
 # Unit tests for the EmptyData data object
 # ---------------------------------------------------------------------------

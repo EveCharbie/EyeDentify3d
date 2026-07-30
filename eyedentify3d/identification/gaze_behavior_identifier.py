@@ -507,10 +507,12 @@ class GazeBehaviorIdentifier:
     def _get_a_reduced_gaze_behavior_identifier(self, time_range: TimeRange) -> Self | None:
 
         nb_frames = len(
-                np.where(np.logical_and(
+            np.where(
+                np.logical_and(
                     self.data_object.time_vector >= time_range.min_time,
                     self.data_object.time_vector <= time_range.max_time,
-                ))[0]
+                )
+            )[0]
         )
         if nb_frames < 3:
             reduced_data_object = EmptyData()
