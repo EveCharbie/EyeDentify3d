@@ -284,8 +284,12 @@ class SaccadeEvent(BehaviorType):
         saccade_total_duration = self.total_duration()
         saccade_mean_duration = self.mean_duration()
         saccade_max_duration = self.max_duration()
-        saccade_mean_amplitudes = float(np.nanmean(self.saccade_amplitudes))
-        saccade_max_amplitudes = float(np.nanmax(self.saccade_amplitudes))
+        if self.nb_events() > 0:
+            saccade_mean_amplitudes = float(np.nanmean(self.saccade_amplitudes))
+            saccade_max_amplitudes = float(np.nanmax(self.saccade_amplitudes))
+        else:
+            saccade_mean_amplitudes = None
+            saccade_max_amplitudes = None
 
         results = {
             "saccade_number": [saccade_number],

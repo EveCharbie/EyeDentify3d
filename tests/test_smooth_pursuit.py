@@ -203,6 +203,42 @@ def test_measure_smooth_pursuit_trajectory_with_nan(identified_indices, smooth_p
     assert not np.isnan(event.smooth_pursuit_trajectories[0])
 
 
+def test_get_results_with_smooth_pursuits(identified_indices, smooth_pursuit_indices):
+    """Test that get_results returns numeric trajectories when smooth pursuits are detected."""
+    mock_data = mock_data_object()
+
+    event = SmoothPursuitEvent(mock_data, identified_indices, smooth_pursuit_indices)
+    event.sequences = [np.arange(30, 40), np.arange(60, 70)]
+    event.smooth_pursuit_trajectories = np.array([1.8, 1.35])
+
+    results = event.get_results()
+
+    assert results["smooth_pursuit_number"] == [2]
+    npt.assert_almost_equal(results["smooth_pursuit_mean_trajectory"], [1.575])
+    npt.assert_almost_equal(results["smooth_pursuit_max_trajectory"], [1.8])
+
+
+def test_get_results_no_smooth_pursuits(identified_indices, smooth_pursuit_indices):
+    """Test that get_results returns None trajectories when no smooth pursuits are detected."""
+    mock_data = mock_data_object()
+
+    event = SmoothPursuitEvent(mock_data, identified_indices, smooth_pursuit_indices)
+    # No smooth pursuits detected: no sequences and an empty trajectory array.
+    event.sequences = []
+    event.smooth_pursuit_trajectories = np.array([])
+
+    results = event.get_results()
+
+    assert event.nb_events() == 0
+    assert results["smooth_pursuit_number"] == [0]
+    assert results["smooth_pursuit_ratio"] == [0.0]
+    assert results["smooth_pursuit_total_duration"] == [None]
+    assert results["smooth_pursuit_mean_duration"] == [None]
+    assert results["smooth_pursuit_max_duration"] == [None]
+    assert results["smooth_pursuit_mean_trajectory"] == [None]
+    assert results["smooth_pursuit_max_trajectory"] == [None]
+
+
 def test_end_to_end_smooth_pursuit_detection(identified_indices, smooth_pursuit_indices):
     """Test the complete smooth pursuit detection process."""
     mock_data = mock_data_object()

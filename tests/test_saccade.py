@@ -246,6 +246,47 @@ def test_measure_saccade_amplitude(mock_data_object):
     np.testing.assert_array_equal(event.saccade_amplitudes, [20.0, 16.0])
 
 
+def test_get_results_with_saccades(mock_data_object):
+    """Test that get_results returns numeric amplitudes when saccades are detected."""
+    mock_data, identified_indices = mock_data_object
+    mock_data.trial_duration = mock_data.time_vector[-1] - mock_data.time_vector[0]
+
+    event = SaccadeEvent(mock_data, identified_indices)
+    event.sequences = [np.arange(30, 35), np.arange(70, 75)]
+    event.saccade_amplitudes = np.array([20.0, 16.0])
+
+    results = event.get_results()
+
+    assert results["saccade_number"] == [2]
+    assert results["saccade_mean_amplitudes"] == [18.0]
+    assert results["saccade_max_amplitudes"] == [20.0]
+
+
+def test_get_results_no_saccades(mock_data_object):
+    """Test that get_results returns None amplitudes when no saccades are detected.
+
+    Regression test: previously np.nanmean/np.nanmax on the empty amplitude array
+    raised a warning and returned nan; the amplitudes should be None instead.
+    """
+    mock_data, identified_indices = mock_data_object
+
+    event = SaccadeEvent(mock_data, identified_indices)
+    # No saccades detected: no sequences and an empty amplitude array.
+    event.sequences = []
+    event.saccade_amplitudes = np.array([])
+
+    results = event.get_results()
+
+    assert event.nb_events() == 0
+    assert results["saccade_number"] == [0]
+    assert results["saccade_ratio"] == [0.0]
+    assert results["saccade_total_duration"] == [None]
+    assert results["saccade_mean_duration"] == [None]
+    assert results["saccade_max_duration"] == [None]
+    assert results["saccade_mean_amplitudes"] == [None]
+    assert results["saccade_max_amplitudes"] == [None]
+
+
 def test_initialize(mock_data_object):
     """Test that initialize correctly sets up the event."""
     mock_data, identified_indices = mock_data_object
