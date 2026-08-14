@@ -67,7 +67,7 @@ packages have been developed over the years.
 Most of the packages have focused primarily on the identification of fixations, either from fixed-screen eye-tracker data
 [@Krassanakis:2014] or mobile eye-tracker data [@West:2006; @Munn:2009].
 Some have extended their identification capabilities to include other behaviours such as saccades, blinks, and
-micro-saccades, although these have remained limited to fixed-screen eye-trackers [@Ghose:2020, @ berger:2012].
+micro-saccades, although these have remained limited to fixed-screen eye-trackers [@Ghose:2020; @ berger:2012].
 Notably, none of the existing packages have included the identification of gaze behaviours in dynamic environments that
 involve large eye and head movements, such as smooth pursuit and visual scanning.
 Existing eye-tracking data analysis packages are designed for Cartesian coordinates [@Munn:2009] or areas of interest
