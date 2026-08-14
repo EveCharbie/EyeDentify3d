@@ -113,7 +113,7 @@ The modular design also allows users to customize their analysis pipeline by sel
 want to identify and in what order.
 
 # Research impact statement
-The package has already been used in sport psychology to analyze the gaze behaviour of basketball players [@Trempe:2025],
+The package has already been used in sport psychology to analyze the gaze behaviour of basketball players [@Trempe:2026],
 and has been used in pilot studies involving trampolinists and boxers.
 As shown in the examples folder, the package is fully ready to be used by researchers and currently supports four
 commonly used eye-trackers.
