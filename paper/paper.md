@@ -65,13 +65,13 @@ improving our understanding of visual strategies.
 To address the need for automating the identification of gaze behaviours from eye-tracking data, a few open-source
 packages have been developed over the years.
 Most of the packages have focused primarily on the identification of fixations, either from fixed-screen eye-tracker data
-[@Krassanakis:2014] or mobile eye-tracker data [@West:2006, @Munn:2009].
+[@Krassanakis:2014] or mobile eye-tracker data [@West:2006; @Munn:2009].
 Some have extended their identification capabilities to include other behaviours such as saccades, blinks, and
 micro-saccades, although these have remained limited to fixed-screen eye-trackers [@Ghose:2020, @ berger:2012].
 Notably, none of the existing packages have included the identification of gaze behaviours in dynamic environments that
 involve large eye and head movements, such as smooth pursuit and visual scanning.
 Existing eye-tracking data analysis packages are designed for Cartesian coordinates [@Munn:2009] or areas of interest
-based analyses [West:2006].
+based analyses [@West:2006].
 `EyeDentify3D` differs by interpreting the eye-tracking data in spherical coordinates (360°), which is less prone to
 vergence errors and avoids the need to pre-define areas of interest, thus its gaze behaviour identification features
 could not be integrated into existing portable eye-tracking data analysis packages.
