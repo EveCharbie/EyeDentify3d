@@ -203,7 +203,7 @@ def test_mean_duration_empty():
     event.sequences = []
 
     # Check mean duration
-    assert event.mean_duration() is None
+    assert event.mean_duration() == 0.0
 
 
 def test_max_duration(mock_data_object):
@@ -225,7 +225,7 @@ def test_max_duration_empty():
     event.sequences = []
 
     # Check max duration
-    assert event.max_duration() is None
+    assert event.max_duration() == 0.0
 
 
 def test_total_duration(mock_data_object):
@@ -247,7 +247,7 @@ def test_total_duration_empty():
     event.sequences = []
 
     # Check total duration
-    assert event.total_duration() is None
+    assert event.total_duration() == 0.0
 
 
 def test_ratio(mock_data_object):
