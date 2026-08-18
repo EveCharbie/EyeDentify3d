@@ -280,11 +280,11 @@ def test_get_results_no_saccades(mock_data_object):
     assert event.nb_events() == 0
     assert results["saccade_number"] == [0]
     assert results["saccade_ratio"] == [0.0]
-    assert results["saccade_total_duration"] == [None]
-    assert results["saccade_mean_duration"] == [None]
-    assert results["saccade_max_duration"] == [None]
-    assert results["saccade_mean_amplitudes"] == [None]
-    assert results["saccade_max_amplitudes"] == [None]
+    assert results["saccade_total_duration"] == [0.0]
+    assert results["saccade_mean_duration"] == [0.0]
+    assert results["saccade_max_duration"] == [0.0]
+    assert results["saccade_mean_amplitudes"] == [0.0]
+    assert results["saccade_max_amplitudes"] == [0.0]
 
 
 def test_initialize(mock_data_object):

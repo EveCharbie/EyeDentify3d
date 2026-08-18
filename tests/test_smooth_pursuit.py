@@ -232,11 +232,11 @@ def test_get_results_no_smooth_pursuits(identified_indices, smooth_pursuit_indic
     assert event.nb_events() == 0
     assert results["smooth_pursuit_number"] == [0]
     assert results["smooth_pursuit_ratio"] == [0.0]
-    assert results["smooth_pursuit_total_duration"] == [None]
-    assert results["smooth_pursuit_mean_duration"] == [None]
-    assert results["smooth_pursuit_max_duration"] == [None]
-    assert results["smooth_pursuit_mean_trajectory"] == [None]
-    assert results["smooth_pursuit_max_trajectory"] == [None]
+    assert results["smooth_pursuit_total_duration"] == [0.0]
+    assert results["smooth_pursuit_mean_duration"] == [0.0]
+    assert results["smooth_pursuit_max_duration"] == [0.0]
+    assert results["smooth_pursuit_mean_trajectory"] == [0.0]
+    assert results["smooth_pursuit_max_trajectory"] == [0.0]
 
 
 def test_end_to_end_smooth_pursuit_detection(identified_indices, smooth_pursuit_indices):

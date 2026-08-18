@@ -239,3 +239,23 @@ def test_fixation_with_short_sequences(identified_indices):
     # So it should be filtered out
     assert len(event.sequences) == 1
     np.testing.assert_array_equal(event.sequences[0], np.arange(60, 70))
+
+
+def test_get_results_no_fixation():
+    """Test that get_results returns 0 when no fixation are detected.
+    """
+    mock_data = mock_data_object()
+    event = FixationEvent(mock_data)
+
+    # No fixation detected: no sequences.
+    assert event.sequences == []
+
+    results = event.get_results()
+
+    assert event.nb_events() == 0
+    assert results["fixation_number"] == [0]
+    assert results["fixation_ratio"] == [0.0]
+    assert results["fixation_total_duration"] == [0.0]
+    assert results["fixation_mean_duration"] == [0.0]
+    assert results["fixation_max_duration"] == [0.0]
+    assert results["fixation_search_rate"] == [0.0]

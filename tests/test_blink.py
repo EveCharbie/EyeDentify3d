@@ -126,3 +126,21 @@ def test_one_eye_closed_not_counted_as_blink(mock_data_object):
     # Frames 6 and 9 have only one eye closed, so they should not be in frame_indices
     assert 6 not in event.frame_indices
     assert 9 not in event.frame_indices
+
+
+def test_get_results_no_blink(mock_data_object):
+    """Test that get_results returns 0 when no blinks are detected.
+    """
+    event = BlinkEvent(mock_data_object)
+
+    # No blinks detected: no sequences.
+    assert event.sequences == []
+
+    results = event.get_results()
+
+    assert event.nb_events() == 0
+    assert results["blink_number"] == [0]
+    assert results["blink_ratio"] == [0.0]
+    assert results["blink_total_duration"] == [0.0]
+    assert results["blink_mean_duration"] == [0.0]
+    assert results["blink_max_duration"] == [0.0]

@@ -113,3 +113,18 @@ def test_initialize_with_all_invalid_frames():
     # Check that sequences contains a single sequence with all indices
     assert len(event.sequences) == 1
     np.testing.assert_array_equal(event.sequences[0], np.arange(10))
+
+
+def test_get_results_no_invalid(mock_data_object):
+    """Test that get_results returns 0 when no ivalid sequence are detected.
+    """
+    event = InvalidEvent(mock_data_object)
+
+    # No invalid detected: no sequences.
+    assert event.sequences == []
+
+    results = event.get_results()
+
+    assert event.nb_events() == 0
+    assert results["invalid_ratio"] == [0.0]
+    assert results["invalid_total_duration"] == [0.0]

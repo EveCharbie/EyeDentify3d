@@ -270,3 +270,18 @@ def test_ratio_empty(mock_data_object):
 
     # Check ratio
     npt.assert_almost_equal(event.ratio(), 0.0)
+
+
+def test_get_results_is_abstract(mock_data_object):
+    """Test that get_results returns 0 when no blinks are detected.
+    """
+    event = MockEvent(mock_data_object)
+
+    with pytest.raises(
+        AttributeError,
+        match=r"'MockEvent' object has no attribute 'get_results'",
+    ):
+        results = event.get_results()
+
+
+
