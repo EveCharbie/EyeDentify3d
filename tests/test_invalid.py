@@ -116,8 +116,7 @@ def test_initialize_with_all_invalid_frames():
 
 
 def test_get_results_no_invalid(mock_data_object):
-    """Test that get_results returns 0 when no ivalid sequence are detected.
-    """
+    """Test that get_results returns 0 when no ivalid sequence are detected."""
     event = InvalidEvent(mock_data_object)
 
     # No invalid detected: no sequences.

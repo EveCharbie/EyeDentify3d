@@ -129,8 +129,7 @@ def test_one_eye_closed_not_counted_as_blink(mock_data_object):
 
 
 def test_get_results_no_blink(mock_data_object):
-    """Test that get_results returns 0 when no blinks are detected.
-    """
+    """Test that get_results returns 0 when no blinks are detected."""
     event = BlinkEvent(mock_data_object)
 
     # No blinks detected: no sequences.

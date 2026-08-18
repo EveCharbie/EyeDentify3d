@@ -242,8 +242,7 @@ def test_fixation_with_short_sequences(identified_indices):
 
 
 def test_get_results_no_fixation():
-    """Test that get_results returns 0 when no fixation are detected.
-    """
+    """Test that get_results returns 0 when no fixation are detected."""
     mock_data = mock_data_object()
     event = FixationEvent(mock_data)
 

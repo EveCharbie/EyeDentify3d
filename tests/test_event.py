@@ -273,8 +273,7 @@ def test_ratio_empty(mock_data_object):
 
 
 def test_get_results_is_abstract(mock_data_object):
-    """Test that get_results returns 0 when no blinks are detected.
-    """
+    """Test that get_results returns 0 when no blinks are detected."""
     event = MockEvent(mock_data_object)
 
     with pytest.raises(
@@ -282,6 +281,3 @@ def test_get_results_is_abstract(mock_data_object):
         match=r"'MockEvent' object has no attribute 'get_results'",
     ):
         results = event.get_results()
-
-
-
