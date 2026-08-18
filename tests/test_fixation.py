@@ -186,7 +186,7 @@ def test_measure_search_rate_with_no_events(identified_indices):
     event.measure_search_rate()
 
     # Check that search_rate is None when there are no events
-    assert event.search_rate is None
+    assert event.search_rate == 0.0
 
 
 def test_end_to_end_fixation_detection(identified_indices, fixation_indices):

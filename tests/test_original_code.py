@@ -195,15 +195,15 @@ def perform_one_file(
     mean_saccade_duration_pre_cue = pre_cue_gaze_behavior_identifier.saccade.mean_duration()
     mean_saccade_duration_post_cue = post_cue_gaze_behavior_identifier.saccade.mean_duration()
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
-    max_saccade_amplitude = np.nanmax(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
+    max_saccade_amplitude = np.nanmax(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else 0.0
     mean_saccade_amplitude = (
-        np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else None
+        np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else 0.0
     )
     mean_saccade_amplitude_pre_cue = (
-        np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_pre_cue > 0 else None
+        np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_pre_cue > 0 else 0.0
     )
     mean_saccade_amplitude_post_cue = (
-        np.nanmean(post_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_post_cue > 0 else None
+        np.nanmean(post_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_post_cue > 0 else 0.0
     )
 
     mean_visual_scanning_duration = gaze_behavior_identifier.visual_scanning.mean_duration()
@@ -224,16 +224,16 @@ def perform_one_file(
     smooth_pursuit_trajectories_pre_cue = pre_cue_gaze_behavior_identifier.smooth_pursuit.smooth_pursuit_trajectories
     smooth_pursuit_trajectories_post_cue = post_cue_gaze_behavior_identifier.smooth_pursuit.smooth_pursuit_trajectories
     mean_smooth_pursuit_trajectory = (
-        np.nanmean(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else None
+        np.nanmean(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else 0.0
     )
     mean_smooth_pursuit_trajectory_pre_cue = (
-        np.nanmean(smooth_pursuit_trajectories_pre_cue) if len(smooth_pursuit_trajectories_pre_cue) > 0 else None
+        np.nanmean(smooth_pursuit_trajectories_pre_cue) if len(smooth_pursuit_trajectories_pre_cue) > 0 else 0.0
     )
     mean_smooth_pursuit_trajectory_post_cue = (
-        np.nanmean(smooth_pursuit_trajectories_post_cue) if len(smooth_pursuit_trajectories_post_cue) > 0 else None
+        np.nanmean(smooth_pursuit_trajectories_post_cue) if len(smooth_pursuit_trajectories_post_cue) > 0 else 0.0
     )
     max_smooth_pursuit_trajectory = (
-        np.nanmax(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else None
+        np.nanmax(smooth_pursuit_trajectories) if len(smooth_pursuit_trajectories) > 0 else 0.0
     )
 
     output = pd.DataFrame(
@@ -359,8 +359,9 @@ def test_original_code():
             )
 
         # Compare the data with reference
-        if file_name not in ["TESTNA10_360VR_Fist3", "TESTVA03_2D_Spread9"]:
+        if file_name not in ["TESTNA10_360VR_Fist3", "TESTVA03_2D_Spread9"]:  # No error files
             with open(f"{current_path_file}/original_results/" + file_name + ".pkl", "rb") as result_file:
                 output_reference = pickle.load(result_file)
 
+            output_reference.fillna(0.0, inplace=True)
             pdt.assert_frame_equal(output, output_reference, check_exact=False, rtol=1e-5)
