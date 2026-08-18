@@ -81,19 +81,19 @@ class BehaviorType(ABC):
         """
         Get the mean duration of the events detected.
         """
-        return np.mean(self.duration()) if self.nb_events() > 0 else None
+        return np.mean(self.duration()) if self.nb_events() > 0 else 0.0
 
     def max_duration(self) -> float | None:
         """
         Get the maximum duration of the events detected.
         """
-        return np.max(self.duration()) if self.nb_events() > 0 else None
+        return np.max(self.duration()) if self.nb_events() > 0 else 0.0
 
     def total_duration(self) -> float | None:
         """
         Get the total duration of all events detected.
         """
-        return np.sum(self.duration()) if self.nb_events() > 0 else None
+        return np.sum(self.duration()) if self.nb_events() > 0 else 0.0
 
     def ratio(self):
         """

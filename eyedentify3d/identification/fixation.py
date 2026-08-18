@@ -68,7 +68,7 @@ class FixationEvent(BehaviorType):
         """
         nb_fixations = self.nb_events()
         if nb_fixations == 0:
-            self.search_rate = None
+            self.search_rate = 0.0
         else:
             mean_fixation_duration = self.mean_duration()
             self.search_rate = nb_fixations / mean_fixation_duration
