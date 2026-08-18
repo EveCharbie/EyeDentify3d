@@ -12,6 +12,9 @@ Figure 1 - Plot obtained using `gaze_behavior_identifier.plot(save_name)`.
 ```{tableofcontents}
 ```
 
+** Please note that if there is no event detected all metrics (duration, ratio, search rate, amplitude, ...) will default to zero.
+
+
 For a quick overview, here is a list of the algorithm parameters that you can modify.
 
 | Parameter name                    | Description                                                                                                           | Default value | Related behavior |
