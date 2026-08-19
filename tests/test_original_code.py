@@ -196,9 +196,7 @@ def perform_one_file(
     mean_saccade_duration_post_cue = post_cue_gaze_behavior_identifier.saccade.mean_duration()
     saccade_amplitudes = gaze_behavior_identifier.saccade.saccade_amplitudes
     max_saccade_amplitude = np.nanmax(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else 0.0
-    mean_saccade_amplitude = (
-        np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else 0.0
-    )
+    mean_saccade_amplitude = np.nanmean(gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades > 0 else 0.0
     mean_saccade_amplitude_pre_cue = (
         np.nanmean(pre_cue_gaze_behavior_identifier.saccade.saccade_amplitudes) if nb_saccades_pre_cue > 0 else 0.0
     )
