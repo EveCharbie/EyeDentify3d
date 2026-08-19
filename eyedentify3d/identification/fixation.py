@@ -68,7 +68,7 @@ class FixationEvent(BehaviorType):
         """
         nb_fixations = self.nb_events()
         if nb_fixations == 0:
-            self.search_rate = None
+            self.search_rate = 0.0
         else:
             mean_fixation_duration = self.mean_duration()
             self.search_rate = nb_fixations / mean_fixation_duration
@@ -150,7 +150,11 @@ class FixationEvent(BehaviorType):
         fixation_total_duration = self.total_duration()
         fixation_mean_duration = self.mean_duration()
         fixation_max_duration = self.max_duration()
-        fixation_search_rate = self.search_rate
+
+        if self.nb_events() > 0:
+            fixation_search_rate = self.search_rate
+        else:
+            fixation_search_rate = 0
 
         results = {
             "fixation_number": [fixation_number],
