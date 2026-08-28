@@ -131,21 +131,22 @@ class SaccadeEvent(BehaviorType):
         # Get saccade sequences
         saccade_sequence_candidates = split_sequences(self.frame_indices)
 
-        # Only seep the sequences where the eye angular acceleration is above the threshold for at least two frames
+        # Only keep the sequences where the eye angular acceleration is above the threshold for at least two frames
         # There should be at least one acceleration to leave the current fixation and one deceleration on target arrival.
         self.sequences = []
-        for i in saccade_sequence_candidates:
-            if len(i) <= 1:
-                # One frame is not long enough for a sequence
-                continue
-            # The frame before the sequence is also considered, except if the trial begins with a saccade
-            first_frame_to_consider = i[0] - 1 if i[0] > 0 else 0
-            acceleration_above_threshold = np.where(
-                np.abs(self.eye_angular_acceleration[first_frame_to_consider : i[-1] + 1])
-                > self.min_acceleration_threshold
-            )[0]
-            if len(acceleration_above_threshold) >= self.nb_acceleration_frames:
-                self.sequences += [i]
+        if len(saccade_sequence_candidates) > 0:
+            for i in saccade_sequence_candidates:
+                if len(i) <= 1:
+                    # One frame is not long enough for a sequence
+                    continue
+                # The frame before the sequence is also considered, except if the trial begins with a saccade
+                first_frame_to_consider = i[0] - 1 if i[0] > 0 else 0
+                acceleration_above_threshold = np.where(
+                    np.abs(self.eye_angular_acceleration[first_frame_to_consider : i[-1] + 1])
+                    > self.min_acceleration_threshold
+                )[0]
+                if len(acceleration_above_threshold) >= self.nb_acceleration_frames:
+                    self.sequences += [i]
 
     def merge_sequences(self):
         """
