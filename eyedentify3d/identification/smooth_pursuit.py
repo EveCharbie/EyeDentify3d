@@ -66,14 +66,20 @@ class SmoothPursuitEvent(BehaviorType):
         """
         Compute the length of the smooth pursuit trajectory as the sum of the angle between two frames in degrees.
         It can be seen as the integral of the angular velocity.
+        Note that if the trial ends with a smooth pursuit, the last frame of the trial does not have a next frame to
+        compute the duration of this frame, so the duration of the previous frame is used instead (as it is done for the
+        angular velocity).
         """
         smooth_pursuit_trajectories = []
         for sequence in self.sequences:
+            nb_frames = self.data_object.time_vector.shape[0]
             trajectory_this_time = 0
             for idx in sequence:
-                time_beginning = self.data_object.time_vector[idx]
-                time_end = self.data_object.time_vector[idx + 1]
-                d_trajectory = np.abs(self.data_object.gaze_angular_velocity[idx]) * (time_end - time_beginning)
+                if idx + 1 < nb_frames:
+                    frame_duration = self.data_object.time_vector[idx + 1] - self.data_object.time_vector[idx]
+                else:
+                    frame_duration = self.data_object.time_vector[idx] - self.data_object.time_vector[idx - 1]
+                d_trajectory = np.abs(self.data_object.gaze_angular_velocity[idx]) * frame_duration
                 if not np.isnan(d_trajectory):
                     trajectory_this_time += d_trajectory
             smooth_pursuit_trajectories += [trajectory_this_time]
